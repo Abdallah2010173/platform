@@ -1,5 +1,6 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 
 export class LoginDto {
   @ApiProperty({ example: 'admin@platform.local' })
@@ -12,10 +13,69 @@ export class LoginDto {
   password!: string;
 }
 
+export class RegisterDto {
+  @ApiProperty({ example: 'john@example.com' })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: 'Password@123' })
+  @IsString()
+  @MinLength(8)
+  password!: string;
+
+  @ApiProperty({ example: 'John' })
+  @IsString()
+  firstName!: string;
+
+  @ApiProperty({ example: 'Doe' })
+  @IsString()
+  lastName!: string;
+
+  @ApiPropertyOptional({ example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  displayName?: string;
+}
+
 export class RefreshTokenDto {
   @ApiProperty()
   @IsString()
   refreshToken!: string;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty()
+  @IsString()
+  token!: string;
+
+  @ApiProperty({ example: 'NewPassword@123' })
+  @IsString()
+  @MinLength(8)
+  password!: string;
+}
+
+export class VerifyEmailDto {
+  @ApiProperty()
+  @IsString()
+  token!: string;
+}
+
+export class ChangePasswordDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  currentPassword!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
 }
 
 export class AuthTokensResponseDto {
@@ -27,6 +87,17 @@ export class AuthTokensResponseDto {
 
   @ApiProperty()
   expiresIn!: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  user?: {
+    id: string;
+    email: string;
+    role: Role;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
+  };
 }
 
 export class UserResponseDto {
@@ -44,4 +115,71 @@ export class UserResponseDto {
 
   @ApiProperty({ required: false })
   lastName?: string;
+
+  @ApiProperty({ required: false })
+  avatarUrl?: string;
+
+  @ApiProperty({ required: false })
+  isActive?: boolean;
+
+  @ApiProperty({ required: false })
+  emailVerified?: boolean;
+
+  @ApiProperty({ required: false })
+  createdAt?: Date;
+}
+
+export class SessionDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({ required: false })
+  deviceId?: string | null;
+
+  @ApiProperty({ required: false })
+  ipAddress?: string | null;
+
+  @ApiProperty({ required: false })
+  userAgent?: string | null;
+
+  @ApiProperty()
+  expiresAt!: Date;
+
+  @ApiProperty()
+  lastActiveAt!: Date;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class DeviceDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({ required: false })
+  deviceName?: string | null;
+
+  @ApiProperty()
+  deviceType!: string;
+
+  @ApiProperty({ required: false })
+  os?: string | null;
+
+  @ApiProperty({ required: false })
+  browser?: string | null;
+
+  @ApiProperty({ required: false })
+  ipAddress?: string | null;
+
+  @ApiProperty()
+  isTrusted!: boolean;
+
+  @ApiProperty()
+  lastUsedAt!: Date;
+
+  @ApiProperty()
+  createdAt!: Date;
 }

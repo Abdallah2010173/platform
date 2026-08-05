@@ -1,27 +1,90 @@
+'use client';
+
 import Link from 'next/link';
-import { GraduationCap, ArrowRight } from 'lucide-react';
+import {
+  GraduationCap,
+  ArrowRight,
+  LayoutDashboard,
+  BookOpen,
+  Users,
+  Video,
+  ClipboardList,
+  BarChart3,
+  Award,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ROLE_LABELS, UserRole } from '@platform/shared';
+import { useAuth } from '@/components/auth/protected-route';
+import { roleToRoute } from '@/lib/auth';
 
 const roles = Object.values(UserRole);
 
+const features = [
+  {
+    icon: BookOpen,
+    title: 'Courses',
+    desc: 'Categories, subjects, chapters, lessons, videos, PDFs, and resources.',
+  },
+  {
+    icon: Video,
+    title: 'Live Classes',
+    desc: 'Zoom meetings, live classes, attendance, and recordings.',
+  },
+  {
+    icon: ClipboardList,
+    title: 'Assignments & Exams',
+    desc: 'Homework, assignments, quizzes, exams, and automated grading.',
+  },
+  {
+    icon: Award,
+    title: 'Certificates',
+    desc: 'Issue and verify completion certificates for your students.',
+  },
+  {
+    icon: Users,
+    title: 'User Roles',
+    desc: 'Admin, Teacher, Student, and Moderator with full RBAC.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Analytics',
+    desc: 'Reports, analytics, payments, and platform oversight.',
+  },
+];
+
 export default function HomePage() {
+  const { user, isAuthenticated, ready } = useAuth();
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">
-            <GraduationCap className="h-6 w-6 text-primary" />
+            <GraduationCap className="text-primary h-6 w-6" />
             <span>Platform LMS</span>
           </Link>
           <nav className="flex items-center gap-4">
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
-              Sign in
-            </Link>
-            <Button asChild size="sm">
-              <Link href="/login">Get Started</Link>
-            </Button>
+            {ready && isAuthenticated && user ? (
+              <>
+                <span className="text-muted-foreground text-sm">{ROLE_LABELS[user.role]}</span>
+                <Button asChild size="sm">
+                  <Link href={roleToRoute(user.role)}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-muted-foreground hover:text-foreground text-sm">
+                  Sign in
+                </Link>
+                <Button asChild size="sm">
+                  <Link href="/login">Get Started</Link>
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -32,16 +95,24 @@ export default function HomePage() {
             Enterprise Learning
             <span className="text-primary"> Management System</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            A production-ready LMS platform built with Next.js 15, NestJS, PostgreSQL, and Prisma.
-            Phase 1 foundation is complete — authentication, RBAC, and clean architecture are in place.
+          <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg">
+            A production-ready LMS platform built with Next.js, NestJS, PostgreSQL, and Prisma.
+            Full-featured with authentication, RBAC, courses, exams, live classes, and more.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Button asChild size="lg">
-              <Link href="/login">
-                Sign In <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+            {ready && isAuthenticated && user ? (
+              <Button asChild size="lg">
+                <Link href={roleToRoute(user.role)}>
+                  Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link href="/login">
+                  Sign In <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
             <Button asChild variant="outline" size="lg">
               <Link href="http://localhost:4000/docs" target="_blank">
                 API Docs
@@ -50,7 +121,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="border-t bg-muted/40 py-16">
+        <section className="bg-muted/40 border-t py-16">
           <div className="container mx-auto px-4">
             <h2 className="mb-8 text-center text-2xl font-semibold">Supported Roles</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -69,20 +140,16 @@ export default function HomePage() {
         </section>
 
         <section className="container mx-auto px-4 py-16">
-          <h2 className="mb-8 text-center text-2xl font-semibold">Phase 1 — Foundation</h2>
+          <h2 className="mb-8 text-center text-2xl font-semibold">Platform Features</h2>
           <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { title: 'Monorepo', desc: 'pnpm workspaces with Turbo, shared packages' },
-              { title: 'Clean Architecture', desc: 'Domain, application, infrastructure, presentation layers' },
-              { title: 'JWT Auth', desc: 'Access + refresh tokens with rotation and RBAC guards' },
-              { title: 'PostgreSQL + Prisma', desc: 'Initial schema with users, roles, permissions, audit logs' },
-              { title: 'Docker', desc: 'PostgreSQL and Redis containers ready' },
-              { title: 'Next.js 15 + shadcn/ui', desc: 'Tailwind CSS v4, dark mode, Redux, React Query' },
-            ].map((item) => (
-              <Card key={item.title}>
+            {features.map((feature) => (
+              <Card key={feature.title}>
                 <CardHeader>
-                  <CardTitle className="text-base">{item.title}</CardTitle>
-                  <CardDescription>{item.desc}</CardDescription>
+                  <div className="bg-primary/10 mb-2 flex h-10 w-10 items-center justify-center rounded-lg">
+                    <feature.icon className="text-primary h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-base">{feature.title}</CardTitle>
+                  <CardDescription>{feature.desc}</CardDescription>
                 </CardHeader>
               </Card>
             ))}
@@ -90,8 +157,8 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        Platform LMS &copy; {new Date().getFullYear()} — Phase 1 Foundation
+      <footer className="text-muted-foreground border-t py-8 text-center text-sm">
+        Platform LMS &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );

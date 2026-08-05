@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { loginRequest } from '@/lib/api/client';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/lib/store';
+import { setCredentials } from '@/lib/store/slices/auth.slice';
+import { AuthUser, roleToRoute } from '@/lib/auth';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -18,9 +24,12 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginFormInner() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dispatch = useDispatch<AppDispatch>();
 
   const {
     register,
@@ -35,19 +44,23 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message ?? 'Login failed');
+      const payload = await loginRequest(data.email, data.password);
+      const user = payload.user as AuthUser;
+      const accessToken = payload.accessToken;
+      const refreshToken = payload.refreshToken;
+
+      if (!accessToken || !refreshToken || !user) {
+        throw new Error('Invalid login response');
       }
-      const tokens = await res.json();
-      localStorage.setItem('accessToken', tokens.accessToken);
-      localStorage.setItem('refreshToken', tokens.refreshToken);
-      window.location.href = '/';
+
+      // Persist session + update Redux auth state.
+      dispatch(setCredentials({ user, accessToken, refreshToken }));
+
+      // Respect a requested redirect if it is safe and belongs to the user's role,
+      // otherwise fall back to the role-based dashboard.
+      const requested = searchParams.get('redirect');
+      const target = requested && requested.startsWith('/') ? requested : roleToRoute(user.role);
+      router.replace(target);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed');
     } finally {
@@ -56,38 +69,55 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
-            <GraduationCap className="h-8 w-8 text-primary" />
-          </Link>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Enter your credentials to access the platform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register('password')} />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
+          <GraduationCap className="text-primary h-8 w-8" />
+        </Link>
+        <CardTitle>Sign in</CardTitle>
+        <CardDescription>Enter your credentials to access the platform</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...register('email')} />
+            {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" {...register('password')} />
+            {errors.password && (
+              <p className="text-destructive text-sm">{errors.password.message}</p>
+            )}
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign in'}
+          </Button>
+          <div className="flex items-center justify-between text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Forgot password?
+            </Link>
+            <Link href="/register" className="text-primary hover:underline">
+              Create account
+            </Link>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <div className="bg-muted/40 flex min-h-screen items-center justify-center px-4">
+      <Suspense fallback={<div className="text-muted-foreground">Loading...</div>}>
+        <LoginFormInner />
+      </Suspense>
     </div>
   );
 }

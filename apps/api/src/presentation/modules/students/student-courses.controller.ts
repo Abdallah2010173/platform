@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { AuthenticatedUser } from './student.helper';
@@ -24,6 +24,30 @@ export class StudentCoursesController {
   @ApiOperation({ summary: 'Get favorite courses' })
   getFavorites(@CurrentUser() user: AuthenticatedUser) {
     return this.courseService.getFavorites(user);
+  }
+
+  @Post(':courseId/enroll')
+  @ApiOperation({ summary: 'Enroll in a course' })
+  enroll(@CurrentUser() user: AuthenticatedUser, @Param('courseId') courseId: string) {
+    return this.courseService.enroll(user, courseId);
+  }
+
+  @Delete(':courseId/enroll')
+  @ApiOperation({ summary: 'Unenroll from a course' })
+  unenroll(@CurrentUser() user: AuthenticatedUser, @Param('courseId') courseId: string) {
+    return this.courseService.unenroll(user, courseId);
+  }
+
+  @Get(':courseId/enrollment-status')
+  @ApiOperation({ summary: 'Get enrollment status for a course' })
+  getEnrollmentStatus(@CurrentUser() user: AuthenticatedUser, @Param('courseId') courseId: string) {
+    return this.courseService.getEnrollmentStatus(user, courseId);
+  }
+
+  @Post(':courseId/favorite')
+  @ApiOperation({ summary: 'Toggle favorite for a course' })
+  toggleFavorite(@CurrentUser() user: AuthenticatedUser, @Param('courseId') courseId: string) {
+    return this.courseService.toggleFavorite(user, courseId);
   }
 
   @Get(':courseId')

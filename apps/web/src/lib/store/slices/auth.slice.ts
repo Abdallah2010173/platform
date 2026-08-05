@@ -1,13 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { UserRole } from '@platform/shared';
-
-interface AuthUser {
-  id: string;
-  email: string;
-  role: UserRole;
-  firstName?: string;
-  lastName?: string;
-}
+import { AuthUser, clearSession, getStoredTokens, getStoredUser, persistSession } from '@/lib/auth';
 
 export interface AuthState {
   user: AuthUser | null;
@@ -35,22 +27,38 @@ const authSlice = createSlice({
         refreshToken: string;
       }>,
     ) => {
-      state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
+      const { user, accessToken, refreshToken } = action.payload;
+      state.user = user;
+      state.accessToken = accessToken;
+      state.refreshToken = refreshToken;
       state.isAuthenticated = true;
+      persistSession(accessToken, refreshToken, user);
     },
     clearCredentials: (state) => {
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
+      clearSession();
     },
     updateAccessToken: (state, action: PayloadAction<string>) => {
       state.accessToken = action.payload;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', action.payload);
+      }
+    },
+    hydrate: (state) => {
+      const { accessToken, refreshToken } = getStoredTokens();
+      const user = getStoredUser();
+      if (accessToken && refreshToken && user) {
+        state.accessToken = accessToken;
+        state.refreshToken = refreshToken;
+        state.user = user;
+        state.isAuthenticated = true;
+      }
     },
   },
 });
 
-export const { setCredentials, clearCredentials, updateAccessToken } = authSlice.actions;
+export const { setCredentials, clearCredentials, updateAccessToken, hydrate } = authSlice.actions;
 export default authSlice.reducer;

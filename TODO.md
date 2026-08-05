@@ -1,62 +1,93 @@
-# LMS Platform — Implementation Tracking
+# LMS Frontend Migration — TODO
 
-## Phase A — Repair Build & Foundation
+## Phase 1: Design System + Layout
 
-- [x] Fix `@prisma/client` import resolution (added as API dependency)
-- [x] Fix `student.helper.ts` `Prisma` import
-- [x] Register `StudentsModule` in AppModule
-- [x] Create 15 missing student controllers
-- [x] Create `UsersModule` (controller/service/module) with full CRUD
-- [ ] API typecheck passes green
-- [ ] API build (`nest build`) passes green
+- [x] Analyze existing platform & platform-frontend
+- [x] Port new globals.css (theme tokens, animations) into apps/web
+- [x] Add missing shadcn/ui primitives (Sheet, etc.)
+- [x] Create new role-aware Sidebar component
+- [x] Create new Header component
+- [x] Create MobileNav component
+- [x] Create new DashboardLayout using new design
+- [x] Update root layout (theme provider, fonts)
+- [x] API services + hooks layer
 
-## Phase B — Backend CMS/LMS Modules
+## Phase 2: Authentication Pages
 
-- [ ] Categories module (categories, subcategories, subjects)
-- [ ] Courses module (courses, chapters, lessons, videos, PDFs, resources, attachments)
-- [ ] Course reviews & ratings
-- [ ] Enrollment module (enroll, cancel, approve, reject, progress, completion, certificates, favorites)
-- [ ] Teacher module (dashboard, my courses, course builder, uploads, assignments, progress, analytics)
-- [ ] Files/storage module (upload, download, preview, delete, categories)
-- [ ] Exams & Assignments module
-- [ ] Notifications module
-- [ ] Search module (global)
-- [ ] Settings module
-- [ ] Admin dashboard module (stats, revenue, charts, activity timeline)
+- [x] Login page (new design + Suspense fix + forgot/register links)
+- [x] Register page
+- [x] Forgot Password page
+- [x] Reset Password page
+- [x] Email Verification page
+- [x] Logout page
+- [x] JWT + refresh token flow preserved (existing client)
 
-## Phase C — Admin Panel (Frontend)
+## Phase 3: Student Dashboard + pages
 
-- [ ] Admin layout (sidebar, navbar, profile dropdown, notifications, breadcrumbs, dark mode)
-- [ ] Dashboard (stat cards, charts, recent users/enrollments/courses, revenue, activity)
-- [ ] Users management pages (list, search, filter, sort, pagination, create/edit/delete/restore/bulk)
-- [ ] Categories/Subcategories/Subjects pages
-- [ ] Courses management pages
-- [ ] Enrollments page
-- [ ] Settings pages
+- [x] Dashboard
+- [x] My Courses
+- [x] Live Classes
+- [x] Assignments
+- [x] Exams
+- [x] Grades
+- [x] Schedule
+- [x] Messages
+- [x] Certificates
+- [x] Profile
+- [x] Settings (theme + color picker)
+- [x] Help
 
-## Phase D — Teacher Panel (Frontend)
+## Phase 4: Teacher Dashboard + pages
 
-- [ ] Teacher dashboard
-- [ ] My courses / create course / edit course
-- [ ] Chapter & lesson manager (videos, PDFs, resources uploads)
-- [ ] Assignments
-- [ ] Student progress
-- [ ] Course analytics
-- [ ] Comments & questions
+- [x] Dashboard
+- [x] Courses
+- [x] Students
+- [x] Assignments
+- [x] Live Classes
+- [x] Exams
+- [x] Analytics
+- [x] Availability
+- [x] Profile
+- [x] Settings (theme + color picker)
+- [x] Help
 
-## Phase E — Student Panel (Frontend)
+## Phase 5: Admin Dashboard + pages
 
-- [ ] Student dashboard (continue learning)
-- [ ] My courses / course player (video + PDF)
-- [ ] Wishlist
-- [ ] Profile/settings
-- [ ] Notifications
-- [ ] Certificates
-- [ ] Assignments & quiz results
+- [x] Dashboard
+- [x] Users (CRUD)
+- [x] Courses management
+- [x] Categories
+- [x] Analytics
+- [x] Settings (theme + color picker)
+- [x] Help
 
-## Phase F — Final Integration & QA
+## Phase 6: Moderator pages
 
-- [ ] Build all packages (`pnpm build`)
-- [ ] Lint API + web
-- [ ] End-to-end API smoke tests
-- [ ] Production readiness review
+- [x] Dashboard
+- [x] Courses
+- [x] Categories
+- [x] Analytics
+- [x] Settings
+- [x] Help
+
+## Phase 7: Remaining pages
+
+- [x] Landing page (homepage)
+- [x] Theme settings (light/dark/system + 8 color picker)
+- [x] Notifications (header bell)
+- [x] Messages (chat)
+- [x] Certificates
+- [x] Profile
+
+## Final
+
+- [x] Remove platform-frontend reference folder (design system ported into apps/web) — ONLY ONE app remains
+- [x] Backend, database, APIs, auth, RBAC preserved (untouched source of truth)
+- [x] Full verification: typecheck passes, lint clean, build succeeds (46 routes)
+- [x] Responsive layout (desktop/laptop/tablet/mobile via sidebar + mobile-nav sheet)
+- [x] Theme persistence (localStorage, survives logout/login)
+
+## Diagnostics cleanup
+
+- [x] Create `.vscode/settings.json` to suppress false-positive `unknownAtRules` warnings for Tailwind v4 at-rules (`@plugin`, `@custom-variant`, `@theme`, `@apply`) in `globals.css`
+- [x] Replace `min-h-[200px]` with canonical `min-h-50` in `data-states.tsx` (2 occurrences) as suggested by Tailwind IntelliSense

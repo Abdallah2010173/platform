@@ -40,6 +40,7 @@ export interface CreateUserData {
   role?: Role;
   firstName: string;
   lastName: string;
+  displayName?: string;
 }
 
 export interface IUserRepository {

@@ -5,6 +5,7 @@ import { Roles } from '../../decorators/roles.decorator';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto, ChangeUserPasswordDto } from './dto/users.dto';
 import { PaginationDto, BulkActionDto } from '../../common/dto/pagination.dto';
+import { ParsePaginationPipe } from '../../common/pipes/parse-pagination.pipe';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -15,7 +16,7 @@ export class UsersController {
   @Get()
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
   @ApiOperation({ summary: 'List all users with pagination, search, filter, sort' })
-  findAll(@Query() query: PaginationDto & { role?: Role }) {
+  findAll(@Query(new ParsePaginationPipe()) query: PaginationDto & { role?: Role }) {
     return this.usersService.findAll(query);
   }
 
@@ -81,7 +82,7 @@ export class UsersController {
     summary: 'Bulk actions: DELETE, HARD_DELETE, RESTORE, ACTIVATE, DEACTIVATE, CHANGE_ROLE',
   })
   bulk(@Body() dto: BulkActionDto) {
-    return this.usersService.bulkAction(dto.ids, dto.action, (dto as any).extra);
+    return this.usersService.bulkAction(dto.ids, dto.action, dto.extra);
   }
 
   @Put(':id')

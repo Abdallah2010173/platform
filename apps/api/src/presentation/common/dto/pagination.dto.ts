@@ -1,10 +1,17 @@
 import { IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+const toNumber = ({ value }: { value: unknown }): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const n = Number(value);
+  return Number.isNaN(n) ? undefined : n;
+};
 
 export class PaginationDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
+  @Transform(toNumber)
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -12,6 +19,7 @@ export class PaginationDto {
 
   @ApiPropertyOptional({ default: 20 })
   @IsOptional()
+  @Transform(toNumber)
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -51,6 +59,12 @@ export class BulkActionDto {
   @ApiPropertyOptional()
   @IsString()
   action!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  extra?: {
+    role?: string;
+  };
 }
 
 export interface PaginatedResult<T> {

@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -34,6 +40,32 @@ export class AuthService implements IAuthService {
     await this.userRepository.updateLastLogin(user.id);
 
     return { id: user.id, email: user.email, role: user.role };
+  }
+
+  async register(dto: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    displayName?: string;
+  }): Promise<ITokens> {
+    const existing = await this.userRepository.findByEmail(dto.email);
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const user = await this.userRepository.create({
+      email: dto.email,
+      passwordHash,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      displayName: dto.displayName,
+      role: Role.STUDENT,
+    });
+
+    return this.generateTokens(user.id, user.email, user.role);
   }
 
   async generateTokens(userId: string, email: string, role: Role): Promise<ITokens> {
@@ -110,6 +142,115 @@ export class AuthService implements IAuthService {
     } catch {
       // Token already invalid — no action needed
     }
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findByEmail(email);
+    // Always return generic message to avoid user enumeration
+    if (!user) {
+      return { message: 'If that email exists, a password reset link has been sent.' };
+    }
+
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 3600_000); // 1 hour
+
+    await this.userRepository.createPasswordResetToken({
+      userId: user.id,
+      email,
+      token,
+      expiresAt,
+    });
+
+    return { message: 'If that email exists, a password reset link has been sent.' };
+  }
+
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    const resetToken = await this.userRepository.findPasswordResetToken(token);
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    if (!resetToken.userId) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await this.userRepository.updatePassword(resetToken.userId, passwordHash);
+    await this.userRepository.markPasswordResetTokenUsed(resetToken.id);
+
+    return { message: 'Password has been reset successfully' };
+  }
+
+  async generateEmailVerification(userId: string): Promise<string> {
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 24 * 3600_000); // 24 hours
+    await this.userRepository.createEmailVerificationToken({
+      userId,
+      token,
+      expiresAt,
+    });
+    return token;
+  }
+
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const verificationToken = await this.userRepository.findEmailVerificationToken(token);
+    if (
+      !verificationToken ||
+      verificationToken.usedAt ||
+      verificationToken.expiresAt < new Date()
+    ) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    if (!verificationToken.userId) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    await this.userRepository.markEmailVerified(verificationToken.userId);
+    await this.userRepository.markEmailVerificationTokenUsed(verificationToken.id);
+
+    return { message: 'Email verified successfully' };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user || !user.passwordHash) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.userRepository.updatePassword(userId, passwordHash);
+
+    return { message: 'Password changed successfully' };
+  }
+
+  async getUserSessions(userId: string) {
+    return this.userRepository.findSessions(userId);
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    return this.userRepository.revokeSession(userId, sessionId);
+  }
+
+  async revokeAllSessions(userId: string) {
+    return this.userRepository.revokeAllSessions(userId);
+  }
+
+  async getUserDevices(userId: string) {
+    return this.userRepository.findDevices(userId);
+  }
+
+  async revokeDevice(userId: string, deviceId: string) {
+    return this.userRepository.revokeDevice(userId, deviceId);
   }
 
   private parseExpiry(expiry: string): number {

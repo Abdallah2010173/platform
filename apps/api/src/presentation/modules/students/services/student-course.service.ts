@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { StudentHelper, AuthenticatedUser } from '../student.helper';
 
@@ -273,14 +273,14 @@ export class StudentCourseService {
   async getFavorites(user: AuthenticatedUser): Promise<Record<string, any>[]> {
     const studentId = await this.studentHelper.getStudentId(user);
 
-    // Favorites are tracked via bookmark-like behavior; for now return courses with progress
+    // Favorites are tracked via the isFavorite flag on the enrollment
     const enrollments = await this.prisma.courseStudent.findMany({
-      where: { studentId },
+      where: { studentId, isFavorite: true },
       include: {
         course: { select: { id: true, title: true, slug: true, thumbnailUrl: true, level: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 20,
     });
 
     return enrollments.map((e) => ({
@@ -291,5 +291,131 @@ export class StudentCourseService {
       level: e.course.level,
       progress: Number(e.progress),
     }));
+  }
+
+  async enroll(user: AuthenticatedUser, courseId: string) {
+    const studentId = await this.studentHelper.getStudentId(user);
+
+    const course = await this.prisma.course.findFirst({
+      where: { id: courseId, deletedAt: null, isPublished: true, status: 'PUBLISHED' },
+    });
+    if (!course) {
+      throw new NotFoundException('Course not found or not published');
+    }
+
+    const existing = await this.prisma.courseStudent.findUnique({
+      where: { courseId_studentId: { courseId, studentId } },
+    });
+    if (existing) {
+      throw new ConflictException('You are already enrolled in this course');
+    }
+
+    const enrollment = await this.prisma.courseStudent.create({
+      data: {
+        courseId,
+        studentId,
+        enrolledAt: new Date(),
+        progress: 0,
+        status: 'ACTIVE',
+        certificateEligible: false,
+      },
+      include: { course: { select: { id: true, title: true, slug: true } } },
+    });
+
+    // Increment course student count
+    await this.prisma.course.update({
+      where: { id: courseId },
+      data: { totalStudents: { increment: 1 } },
+    });
+
+    // Create analytics
+    await this.prisma.courseAnalytics.upsert({
+      where: { courseId },
+      create: { courseId, enrollmentCount: 1 },
+      update: { enrollmentCount: { increment: 1 } },
+    });
+
+    return {
+      success: true,
+      enrollment: {
+        id: enrollment.id,
+        courseId: enrollment.courseId,
+        title: enrollment.course.title,
+        slug: enrollment.course.slug,
+        status: enrollment.status,
+        enrolledAt: enrollment.enrolledAt,
+      },
+    };
+  }
+
+  async unenroll(user: AuthenticatedUser, courseId: string) {
+    const studentId = await this.studentHelper.getStudentId(user);
+
+    const existing = await this.prisma.courseStudent.findUnique({
+      where: { courseId_studentId: { courseId, studentId } },
+    });
+    if (!existing) {
+      throw new NotFoundException('You are not enrolled in this course');
+    }
+
+    await this.prisma.courseStudent.update({
+      where: { id: existing.id },
+      data: { status: 'CANCELED', canceledAt: new Date(), deletedAt: new Date() },
+    });
+
+    await this.prisma.course.update({
+      where: { id: courseId },
+      data: { totalStudents: { decrement: 1 } },
+    });
+
+    return { success: true };
+  }
+
+  async toggleFavorite(user: AuthenticatedUser, courseId: string) {
+    const studentId = await this.studentHelper.getStudentId(user);
+
+    const existing = await this.prisma.courseStudent.findUnique({
+      where: { courseId_studentId: { courseId, studentId } },
+    });
+    if (!existing) {
+      throw new NotFoundException('You are not enrolled in this course');
+    }
+
+    const updated = await this.prisma.courseStudent.update({
+      where: { id: existing.id },
+      data: { isFavorite: !existing.isFavorite },
+    });
+
+    return { success: true, isFavorite: updated.isFavorite };
+  }
+
+  async getEnrollmentStatus(user: AuthenticatedUser, courseId: string) {
+    const studentId = await this.studentHelper.getStudentId(user);
+
+    const enrollment = await this.prisma.courseStudent.findUnique({
+      where: { courseId_studentId: { courseId, studentId } },
+      select: {
+        id: true,
+        status: true,
+        progress: true,
+        isFavorite: true,
+        enrolledAt: true,
+        completedAt: true,
+      },
+    });
+
+    return {
+      isEnrolled: !!enrollment,
+      enrollment: enrollment
+        ? {
+            id: enrollment.id,
+            status: enrollment.status,
+            progress: Number(enrollment.progress),
+            isFavorite: enrollment.isFavorite,
+            enrolledAt: enrollment.enrolledAt,
+            completedAt: enrollment.completedAt,
+          }
+        : null,
+    };
   }
 }
