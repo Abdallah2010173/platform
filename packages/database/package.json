@@ -5,6 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "prebuild": "prisma generate",
     "build": "tsc",
     "generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
@@ -24,8 +25,5 @@
     "prisma": "^6.2.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }
