@@ -7,6 +7,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "nest start",
+    "prestart:prod": "pnpm --filter @platform/database generate && pnpm --filter @platform/database migrate:deploy",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "typecheck": "tsc --noEmit"

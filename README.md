@@ -130,6 +130,45 @@ pnpm db:seed          # Seed roles, permissions, super admin
 pnpm db:studio        # Open Prisma Studio
 ```
 
+## Deployment (Production)
+
+The app is deployed via **Railway** (`railway.json`). The deploy pipeline is:
+
+1. **Build**: `pnpm install && pnpm build` (runs `prisma generate` via the database package's `prebuild`).
+2. **Start**: `pnpm --filter @platform/api start:prod`, which first runs `prisma migrate deploy`
+   (via the `prestart:prod` hook) and then starts `node dist/main`.
+
+### `DATABASE_URL` is required
+
+Prisma reads `DATABASE_URL` from the schema (`url = env("DATABASE_URL")`) and from the driver
+adapter at runtime. If it is missing or malformed, you will see:
+
+```
+Error validating datasource `db`: the URL must start with the protocol `postgresql://` or `postgres://`.
+```
+
+**Root cause when this happens:** `DATABASE_URL` is not present in the process environment at
+container start. The `.env` file is gitignored and **not shipped in the image**, so you **must**
+inject `DATABASE_URL` via your platform's environment configuration:
+
+- **Railway**: add a `DATABASE_URL` variable in the service's Variables/Secrets (from a Postgres
+  plugin or a real external connection string).
+- **Docker Compose**: set it via the `environment:` block / `-e` flag.
+- **Kubernetes**: use a Secret mounted as an env var.
+
+The database package's `loadEnv()` will load `.env` from the monorepo root when present (local dev),
+and fails fast with a clear message if `DATABASE_URL` is missing or doesn't start with
+`postgresql://` / `postgres://`. No URL is hardcoded anywhere.
+
+Make sure the value is a real connection string:
+
+```
+postgresql://USER:PASSWORD@HOST:PORT/DBNAME
+```
+
+Do **not** include literal quotes or a placeholder like `changeme`. Add `?sslmode=require` (or
+similar) if your managed Postgres provider requires it.
+
 ## Clean Architecture (API)
 
 ```

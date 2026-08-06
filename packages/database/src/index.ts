@@ -168,14 +168,28 @@ export type {
 } from '@prisma/client';
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { loadEnv, getDatabaseUrl } from './load-env';
+
+// Load `.env` from the monorepo root BEFORE constructing the Prisma client so
+// that `process.env.DATABASE_URL` is always populated, regardless of how the
+// process is started (local dev, `node dist/main`, or a container).
+loadEnv();
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createPrismaClient(): PrismaClient {
+  // Fail fast with a clear message if DATABASE_URL is missing or malformed,
+  // instead of letting Prisma fail obscurely on connect.
+  const connectionString = getDatabaseUrl();
+  const adapter = new PrismaPg({ connectionString });
+  return new PrismaClient({
+    adapter,
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;

@@ -18,8 +18,14 @@ import {
   ResourceCategoryType,
 } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { loadEnv, getDatabaseUrl } from '../src/load-env';
 
-const prisma = new PrismaClient();
+// Load `.env` from the monorepo root and validate DATABASE_URL before seeding.
+loadEnv();
+
+const adapter = new PrismaPg({ connectionString: getDatabaseUrl() });
+const prisma = new PrismaClient({ adapter });
 
 // ─── Seed data definitions ───────────────────────────────────────────────────
 

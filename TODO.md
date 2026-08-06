@@ -1,39 +1,32 @@
-# LMS Production-Readiness Audit — Progress
+# TODO — Fix DATABASE_URL loading + production-ready Prisma pipeline (Prisma 6.19.3)
 
-## Phase 1: Functional fixes & CRUD implementation — DONE
+## Goal
+Make the project production-ready by ensuring Prisma always loads `DATABASE_URL`
+from the correct `.env` file, failing fast with a clear message when it's missing,
+and wiring Prisma generate/migrate into the build & start pipeline — without
+hardcoding any URL and without upgrading to Prisma 7.
 
-### Dashboard stats (real data)
-- [x] **Admin dashboard stats** — Real API fields mapped (`total`, `students`, `teachers`, `published`, `total` courses) in `admin/page.tsx`.
-- [x] **Admin analytics** — Field mapping fixed in `admin/analytics/page.tsx`.
-- [x] **Moderator dashboard** — Replaced admin-only endpoints (403) with `useModeratorStats` in `moderator/page.tsx`.
-- [x] **Moderator analytics** — Replaced admin-only endpoints with `useModeratorStats` in `moderator/analytics/page.tsx`.
-- [x] **Teacher dashboard & analytics** — Real stats fields mapped in `teacher/page.tsx` & `teacher/analytics/page.tsx`.
+## Steps
+- [x] Analyze root cause: `packages/database/src/index.ts` constructs Prisma with
+      `process.env.DATABASE_URL` at import time but never loads `.env`
+- [x] 1. `packages/database/src/load-env.ts` — new helper that loads `.env` from the
+         monorepo root and validates `DATABASE_URL` (fail-fast, no hardcoded URL)
+- [x] 2. `packages/database/src/index.ts` — call `loadEnv()` before constructing the
+         Prisma client and use `getDatabaseUrl()` for the adapter connection string
+- [x] 3. `packages/database/prisma/seed.ts` — use the same `loadEnv()` + `getDatabaseUrl()`
+         (replaces bare `import 'dotenv/config'`)
+- [x] 4. `apps/api/package.json` — add `prestart:prod` running `prisma generate` +
+         `prisma migrate deploy` before `node dist/main`
+- [x] 5. `.env.example` — document required vars + production injection note
+- [x] 6. `README.md` — document deployment env-var requirement + new start pipeline
+- [x] 7. Run `pnpm --filter @platform/database build` + `typecheck` — **PASS, zero errors**
+- [x] 8. Run `pnpm --filter @platform/api build` — **PASS, zero Prisma/DATABASE_URL errors**
+         (`apps/api/dist/main.js` and `packages/database/dist/load-env.js` both generated)
 
-### CRUD
-- [x] **Admin Users CRUD** — Create/edit user modal, activate/deactivate, role change, reset password in `admin/users/page.tsx`.
-- [x] **Admin Categories CRUD** — Create/edit/delete in `admin/categories/page.tsx`.
-- [x] **Admin Courses CRUD** — Create/edit/delete/publish actions in `admin/courses/page.tsx`.
-
-## Phase 2: Integrations
-
-### Google OAuth — DONE
-- [x] **Google OAuth login/signup** — `GoogleSignInButton` on login & register pages; backend `@Post('auth/google')` route auto-creates user on first login.
-
-### Theme system — DONE
-- [x] **Theme persistence** — Light/Dark/System + accent color saved in localStorage & applied on load (already present).
-
-### Notification center — DONE
-- [x] **Notification bell wired** — Replaced broken placeholder bell in `header.tsx` with functional `NotificationCenter`.
-- [x] **Mark as read / mark all read** — Mutations call real backend endpoints for student & teacher roles.
-- [x] **Unread badge** — Shows real unread count from backend.
-
-### Remaining (require real external credentials/services)
-- [ ] **Google Calendar integration** — Backend service + "Add to Google Calendar" one-click (needs OAuth creds).
-- [ ] **Zoom integration** — Backend service for create/start/end/record meetings (needs Zoom app creds).
-- [ ] **Email provider** — Verification, password reset, enrollment, booking, reminders, certificate emails (SMTP configured in env).
-- [ ] **Push notifications** — Future-ready channel (in-app + email already wired).
-
-## Verification
-- [x] `pnpm typecheck` passes (forced full run: 6/6 successful)
-- [ ] `pnpm lint` passes (resolve warnings)
-- [ ] `pnpm build` succeeds
+## Notes
+- Prisma remains pinned to 6.19.3 (`prisma`, `@prisma/client`, `@prisma/adapter-pg`).
+- No `prisma.config.ts` added (Prisma 7-only, would break Prisma 6 `generate`).
+- No database URL is hardcoded anywhere.
+- `loadEnv()` resolves `.env` from repo root (`packages/database/dist` → `../../../.env`),
+  falling back to `process.cwd()/.env`.
+</content>
