@@ -1,41 +1,44 @@
 'use client';
 
-import { Users, BookOpen, FolderOpen } from 'lucide-react';
+import { BookOpen, FolderOpen, TrendingUp, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAdminUserStats, useCourseStats } from '@/lib/api/hooks';
+import { useModeratorStats } from '@/lib/api/hooks';
 import { LoadingState } from '@/components/dashboard/data-states';
 
-interface UserStats {
-  totalUsers?: number;
-  totalStudents?: number;
-  [key: string]: unknown;
-}
-
-interface CourseStat {
+interface ModeratorStats {
   totalCourses?: number;
+  publishedCourses?: number;
+  pendingReview?: number;
   totalCategories?: number;
   [key: string]: unknown;
 }
 
 export default function ModeratorDashboardPage() {
-  const { data: userStats, isLoading: loadingUsers } = useAdminUserStats();
-  const { data: courseStats, isLoading: loadingCourses } = useCourseStats();
+  const { data, isLoading } = useModeratorStats();
 
-  const users = (userStats as UserStats | undefined) ?? {};
-  const courses = (courseStats as CourseStat | undefined) ?? {};
+  const stats = (data as ModeratorStats | undefined) ?? {};
 
-  if (loadingUsers || loadingCourses) {
+  if (isLoading) {
     return <LoadingState label="Loading moderator dashboard..." />;
   }
 
   const cards = [
-    { label: 'Total Users', value: users.totalUsers ?? 0, icon: Users },
-    { label: 'Total Courses', value: courses.totalCourses ?? 0, icon: BookOpen },
-    { label: 'Total Categories', value: courses.totalCategories ?? 0, icon: FolderOpen },
+    { label: 'Total Courses', value: stats.totalCourses ?? 0, icon: BookOpen },
+    {
+      label: 'Published Courses',
+      value: stats.publishedCourses ?? 0,
+      icon: TrendingUp,
+    },
+    {
+      label: 'Pending Review',
+      value: stats.pendingReview ?? 0,
+      icon: Clock,
+    },
+    { label: 'Total Categories', value: stats.totalCategories ?? 0, icon: FolderOpen },
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((c) => (
         <Card key={c.label}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

@@ -43,6 +43,12 @@ export class RefreshTokenDto {
   refreshToken!: string;
 }
 
+export class GoogleAuthDto {
+  @ApiProperty({ description: 'Google ID token from Google Identity Services' })
+  @IsString()
+  token!: string;
+}
+
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsEmail()

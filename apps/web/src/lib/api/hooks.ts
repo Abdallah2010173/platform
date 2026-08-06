@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { studentApi, teacherApi, adminApi, courseApi, authApi } from './services';
+import { studentApi, teacherApi, adminApi, courseApi, authApi, moderatorApi } from './services';
 import { toast } from 'sonner';
 import { formatApiError } from './services';
 
@@ -68,6 +68,28 @@ export const useStudentNotifications = () =>
     queryKey: ['student', 'notifications'],
     queryFn: () => studentApi.notifications(),
   });
+
+export const useMarkNotificationRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId: string) => studentApi.markNotificationRead(notificationId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student', 'notifications'] });
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useMarkAllNotificationsRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => studentApi.markAllNotificationsRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student', 'notifications'] });
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
 
 export const useStudentCertificates = () =>
   useQuery({
@@ -242,6 +264,26 @@ export const useAdminUsers = (params?: Record<string, string>) =>
 export const useAdminUserStats = () =>
   useQuery({ queryKey: ['admin', 'user-stats'], queryFn: () => adminApi.userStats() });
 
+export const useAdminUser = (id: string | null) =>
+  useQuery({
+    queryKey: ['admin', 'user', id],
+    queryFn: () => adminApi.user(id as string),
+    enabled: !!id,
+  });
+
+export const useChangeUserPassword = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      adminApi.changePassword(id, password),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      toast.success('Password reset successfully');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useCreateUser = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -280,17 +322,111 @@ export const useDeleteUser = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
+// MODERATOR HOOKS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const useModeratorStats = () =>
+  useQuery({ queryKey: ['moderator', 'stats'], queryFn: () => moderatorApi.stats() });
+
+// ═══════════════════════════════════════════════════════════════════════════
 // COURSE HOOKS
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const useCategories = (params?: Record<string, string>) =>
   useQuery({ queryKey: ['categories', params], queryFn: () => courseApi.categories(params) });
 
+export const useCreateCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => courseApi.createCategory(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Category created');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useUpdateCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      courseApi.updateCategory(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Category updated');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => courseApi.deleteCategory(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Category deleted');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useAllCourses = (params?: Record<string, string>) =>
   useQuery({ queryKey: ['courses', params], queryFn: () => courseApi.courses(params) });
 
 export const useCourseStats = () =>
   useQuery({ queryKey: ['courses', 'stats'], queryFn: () => courseApi.courseStats() });
+
+export const useCreateCourse = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => courseApi.createCourse(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course created');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useUpdateCourse = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      courseApi.updateCourse(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course updated');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useUpdateCourseStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      courseApi.updateCourseStatus(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course status updated');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteCourse = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => courseApi.deleteCourse(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course deleted');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
 
 export const useChangePassword = () =>
   useMutation({

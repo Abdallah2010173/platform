@@ -18,6 +18,7 @@ import {
   LoginDto,
   RegisterDto,
   RefreshTokenDto,
+  GoogleAuthDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   VerifyEmailDto,
@@ -59,7 +60,7 @@ export class AuthController {
     };
   }
 
-  @Public()
+@Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new student account' })
@@ -70,6 +71,30 @@ export class AuthController {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
+      user: fullUser
+        ? {
+            id: fullUser.id,
+            email: fullUser.email,
+            role: fullUser.role,
+            firstName: fullUser.profile?.firstName,
+            lastName: fullUser.profile?.lastName,
+            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
+          }
+        : undefined,
+    };
+  }
+
+  @Public()
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Authenticate or register via Google ID token' })
+  async google(@Body() dto: GoogleAuthDto): Promise<AuthTokensResponseDto> {
+    const result = await this.authService.googleLogin(dto.token);
+    const fullUser = await this.userRepository.findById(result.user.id);
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: result.expiresIn,
       user: fullUser
         ? {
             id: fullUser.id,

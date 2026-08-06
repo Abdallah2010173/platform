@@ -17,6 +17,8 @@ export const authApi = {
     getApiData(await apiClient.post('/auth/verify-email', { token })),
   changePassword: async (currentPassword: string, newPassword: string) =>
     getApiData(await apiClient.post('/auth/change-password', { currentPassword, newPassword })),
+  googleLogin: async (token: string) =>
+    getApiData(await apiClient.post('/auth/google', { token })),
   me: async () => getApiData(await apiClient.get('/auth/me')),
 };
 
@@ -93,8 +95,12 @@ export const studentApi = {
     getApiData(await apiClient.get('/student/bookings', { params })),
   teacherAvailability: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/student/bookings/availability', { params })),
-  notifications: async (params?: Record<string, string>) =>
+notifications: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/student/notifications', { params })),
+  markNotificationRead: async (notificationId: string) =>
+    getApiData(await apiClient.patch(`/student/notifications/${notificationId}/read`)),
+  markAllNotificationsRead: async () =>
+    getApiData(await apiClient.post('/student/notifications/read-all')),
   profile: async () => getApiData(await apiClient.get('/student/profile')),
   updateProfile: async (data: Record<string, unknown>) =>
     getApiData(await apiClient.patch('/student/profile', data)),
@@ -160,8 +166,12 @@ export const teacherApi = {
     getApiData(await apiClient.delete(`/teacher/availability/${availabilityId}`)),
   calendar: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/calendar', { params })),
-  notifications: async (params?: Record<string, string>) =>
+notifications: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/notifications', { params })),
+  markNotificationRead: async (notificationId: string) =>
+    getApiData(await apiClient.post(`/teacher/notifications/${notificationId}/read`)),
+  markAllNotificationsRead: async () =>
+    getApiData(await apiClient.post('/teacher/notifications/read-all')),
   questionBanks: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/question-banks', { params })),
 };
@@ -173,6 +183,7 @@ export const teacherApi = {
 export const adminApi = {
   users: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/users', { params })),
+  user: async (id: string) => getApiData(await apiClient.get(`/users/${id}`)),
   userStats: async () => getApiData(await apiClient.get('/users/stats')),
   createUser: async (data: Record<string, unknown>) =>
     getApiData(await apiClient.post('/users', data)),
@@ -180,6 +191,10 @@ export const adminApi = {
     getApiData(await apiClient.patch(`/users/${id}`, data)),
   deleteUser: async (id: string) => getApiData(await apiClient.delete(`/users/${id}`)),
   restoreUser: async (id: string) => getApiData(await apiClient.post(`/users/${id}/restore`)),
+  changePassword: async (id: string, newPassword: string) =>
+    getApiData(await apiClient.post(`/users/${id}/change-password`, { newPassword })),
+  bulkAction: async (ids: string[], action: string, extra?: Record<string, unknown>) =>
+    getApiData(await apiClient.post('/users/bulk', { ids, action, ...(extra ? { extra } : {}) })),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -190,6 +205,7 @@ export const courseApi = {
   categories: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/categories', { params })),
   categoryTree: async () => getApiData(await apiClient.get('/categories/tree')),
+  category: async (id: string) => getApiData(await apiClient.get(`/categories/${id}`)),
   courses: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/courses', { params })),
   course: async (id: string) => getApiData(await apiClient.get(`/courses/${id}`)),
@@ -197,6 +213,8 @@ export const courseApi = {
     getApiData(await apiClient.post('/courses', data)),
   updateCourse: async (id: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.patch(`/courses/${id}`, data)),
+  updateCourseStatus: async (id: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.patch(`/courses/${id}/status`, data)),
   deleteCourse: async (id: string) => getApiData(await apiClient.delete(`/courses/${id}`)),
   courseStats: async () => getApiData(await apiClient.get('/courses/stats')),
   createCategory: async (data: Record<string, unknown>) =>
@@ -204,6 +222,35 @@ export const courseApi = {
   updateCategory: async (id: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.patch(`/categories/${id}`, data)),
   deleteCategory: async (id: string) => getApiData(await apiClient.delete(`/categories/${id}`)),
+};
+
+/**
+ * Moderator-safe platform stats built from public/shared course & category
+ * list endpoints (no admin-only /users/stats or /courses/stats dependency).
+ */
+export const moderatorApi = {
+  stats: async () => {
+    const [courseResult, categoryResult] = await Promise.all([
+      courseApi.courses({ limit: '100' } as Record<string, string>),
+      courseApi.categories({ limit: '100' } as Record<string, string>),
+    ]);
+
+    const courses: Record<string, unknown>[] = Array.isArray(courseResult)
+      ? (courseResult as Record<string, unknown>[])
+      : ((courseResult as { items?: Record<string, unknown>[] })?.items ?? []);
+    const categories: Record<string, unknown>[] = Array.isArray(categoryResult)
+      ? (categoryResult as Record<string, unknown>[])
+      : ((categoryResult as { items?: Record<string, unknown>[] })?.items ?? []);
+
+    const totalCourses = courses.length;
+    const publishedCourses = courses.filter(
+      (c) => c.isPublished === true || c.status === 'PUBLISHED',
+    ).length;
+    const pendingReview = courses.filter((c) => c.status === 'PENDING_REVIEW').length;
+    const totalCategories = categories.length;
+
+    return { totalCourses, publishedCourses, pendingReview, totalCategories };
+  },
 };
 
 export const formatApiError = (e: unknown): string => {

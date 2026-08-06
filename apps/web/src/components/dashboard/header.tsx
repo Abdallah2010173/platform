@@ -1,9 +1,10 @@
 'use client';
 
-import { Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MobileNav } from './mobile-nav';
+import { NotificationCenter } from './notification-center';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/components/auth/protected-route';
 import { useRouter } from 'next/navigation';
@@ -53,15 +54,8 @@ export function Header({ title, description, actions }: HeaderProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 md:gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hover:bg-secondary relative h-8 w-8 transition-all duration-300 hover:scale-110"
-            aria-label="Notifications"
-          >
-            <Bell className="h-4 w-4" />
-          </Button>
+<div className="flex items-center gap-1.5 md:gap-2">
+          <NotificationCenter />
           <Button
             variant="ghost"
             size="icon"

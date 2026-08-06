@@ -1,93 +1,39 @@
-# LMS Frontend Migration — TODO
+# LMS Production-Readiness Audit — Progress
 
-## Phase 1: Design System + Layout
+## Phase 1: Functional fixes & CRUD implementation — DONE
 
-- [x] Analyze existing platform & platform-frontend
-- [x] Port new globals.css (theme tokens, animations) into apps/web
-- [x] Add missing shadcn/ui primitives (Sheet, etc.)
-- [x] Create new role-aware Sidebar component
-- [x] Create new Header component
-- [x] Create MobileNav component
-- [x] Create new DashboardLayout using new design
-- [x] Update root layout (theme provider, fonts)
-- [x] API services + hooks layer
+### Dashboard stats (real data)
+- [x] **Admin dashboard stats** — Real API fields mapped (`total`, `students`, `teachers`, `published`, `total` courses) in `admin/page.tsx`.
+- [x] **Admin analytics** — Field mapping fixed in `admin/analytics/page.tsx`.
+- [x] **Moderator dashboard** — Replaced admin-only endpoints (403) with `useModeratorStats` in `moderator/page.tsx`.
+- [x] **Moderator analytics** — Replaced admin-only endpoints with `useModeratorStats` in `moderator/analytics/page.tsx`.
+- [x] **Teacher dashboard & analytics** — Real stats fields mapped in `teacher/page.tsx` & `teacher/analytics/page.tsx`.
 
-## Phase 2: Authentication Pages
+### CRUD
+- [x] **Admin Users CRUD** — Create/edit user modal, activate/deactivate, role change, reset password in `admin/users/page.tsx`.
+- [x] **Admin Categories CRUD** — Create/edit/delete in `admin/categories/page.tsx`.
+- [x] **Admin Courses CRUD** — Create/edit/delete/publish actions in `admin/courses/page.tsx`.
 
-- [x] Login page (new design + Suspense fix + forgot/register links)
-- [x] Register page
-- [x] Forgot Password page
-- [x] Reset Password page
-- [x] Email Verification page
-- [x] Logout page
-- [x] JWT + refresh token flow preserved (existing client)
+## Phase 2: Integrations
 
-## Phase 3: Student Dashboard + pages
+### Google OAuth — DONE
+- [x] **Google OAuth login/signup** — `GoogleSignInButton` on login & register pages; backend `@Post('auth/google')` route auto-creates user on first login.
 
-- [x] Dashboard
-- [x] My Courses
-- [x] Live Classes
-- [x] Assignments
-- [x] Exams
-- [x] Grades
-- [x] Schedule
-- [x] Messages
-- [x] Certificates
-- [x] Profile
-- [x] Settings (theme + color picker)
-- [x] Help
+### Theme system — DONE
+- [x] **Theme persistence** — Light/Dark/System + accent color saved in localStorage & applied on load (already present).
 
-## Phase 4: Teacher Dashboard + pages
+### Notification center — DONE
+- [x] **Notification bell wired** — Replaced broken placeholder bell in `header.tsx` with functional `NotificationCenter`.
+- [x] **Mark as read / mark all read** — Mutations call real backend endpoints for student & teacher roles.
+- [x] **Unread badge** — Shows real unread count from backend.
 
-- [x] Dashboard
-- [x] Courses
-- [x] Students
-- [x] Assignments
-- [x] Live Classes
-- [x] Exams
-- [x] Analytics
-- [x] Availability
-- [x] Profile
-- [x] Settings (theme + color picker)
-- [x] Help
+### Remaining (require real external credentials/services)
+- [ ] **Google Calendar integration** — Backend service + "Add to Google Calendar" one-click (needs OAuth creds).
+- [ ] **Zoom integration** — Backend service for create/start/end/record meetings (needs Zoom app creds).
+- [ ] **Email provider** — Verification, password reset, enrollment, booking, reminders, certificate emails (SMTP configured in env).
+- [ ] **Push notifications** — Future-ready channel (in-app + email already wired).
 
-## Phase 5: Admin Dashboard + pages
-
-- [x] Dashboard
-- [x] Users (CRUD)
-- [x] Courses management
-- [x] Categories
-- [x] Analytics
-- [x] Settings (theme + color picker)
-- [x] Help
-
-## Phase 6: Moderator pages
-
-- [x] Dashboard
-- [x] Courses
-- [x] Categories
-- [x] Analytics
-- [x] Settings
-- [x] Help
-
-## Phase 7: Remaining pages
-
-- [x] Landing page (homepage)
-- [x] Theme settings (light/dark/system + 8 color picker)
-- [x] Notifications (header bell)
-- [x] Messages (chat)
-- [x] Certificates
-- [x] Profile
-
-## Final
-
-- [x] Remove platform-frontend reference folder (design system ported into apps/web) — ONLY ONE app remains
-- [x] Backend, database, APIs, auth, RBAC preserved (untouched source of truth)
-- [x] Full verification: typecheck passes, lint clean, build succeeds (46 routes)
-- [x] Responsive layout (desktop/laptop/tablet/mobile via sidebar + mobile-nav sheet)
-- [x] Theme persistence (localStorage, survives logout/login)
-
-## Diagnostics cleanup
-
-- [x] Create `.vscode/settings.json` to suppress false-positive `unknownAtRules` warnings for Tailwind v4 at-rules (`@plugin`, `@custom-variant`, `@theme`, `@apply`) in `globals.css`
-- [x] Replace `min-h-[200px]` with canonical `min-h-50` in `data-states.tsx` (2 occurrences) as suggested by Tailwind IntelliSense
+## Verification
+- [x] `pnpm typecheck` passes (forced full run: 6/6 successful)
+- [ ] `pnpm lint` passes (resolve warnings)
+- [ ] `pnpm build` succeeds

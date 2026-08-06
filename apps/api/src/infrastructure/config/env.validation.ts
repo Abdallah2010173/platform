@@ -41,6 +41,50 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   REDIS_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_CALLBACK_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  ZOOM_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  ZOOM_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_HOST?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_PORT?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_USER?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_PASS?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_FROM?: string;
+
+  @IsOptional()
+  @IsString()
+  APP_URL?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

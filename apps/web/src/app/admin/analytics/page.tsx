@@ -1,56 +1,76 @@
 'use client';
 
-import { Users, BookOpen, FolderOpen, TrendingUp } from 'lucide-react';
+import { Users, BookOpen, FolderOpen, TrendingUp, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAdminUserStats, useCourseStats } from '@/lib/api/hooks';
+import { useAdminUserStats, useCourseStats, useCategories } from '@/lib/api/hooks';
 import { LoadingState } from '@/components/dashboard/data-states';
 
 interface UserStats {
-  totalUsers?: number;
-  totalStudents?: number;
-  totalTeachers?: number;
-  activeUsers?: number;
+  total?: number;
+  admins?: number;
+  teachers?: number;
+  students?: number;
+  active?: number;
+  inactive?: number;
   [key: string]: unknown;
 }
 
 interface CourseStat {
-  totalCourses?: number;
-  totalCategories?: number;
-  totalSubjects?: number;
-  publishedCourses?: number;
+  total?: number;
+  published?: number;
+  draft?: number;
+  pendingReview?: number;
+  archived?: number;
+  featured?: number;
   [key: string]: unknown;
 }
 
 export default function AdminAnalyticsPage() {
   const { data: userStats, isLoading: loadingUsers } = useAdminUserStats();
   const { data: courseStats, isLoading: loadingCourses } = useCourseStats();
+  const { data: categoriesData, isLoading: loadingCategories } = useCategories({ limit: '100' });
 
   const users = (userStats as UserStats | undefined) ?? {};
   const courses = (courseStats as CourseStat | undefined) ?? {};
 
-  if (loadingUsers || loadingCourses) {
+  const categoryList = Array.isArray(categoriesData)
+    ? (categoriesData as Record<string, unknown>[])
+    : ((categoriesData as { items?: Record<string, unknown>[] })?.items ?? []);
+  const totalCategories = categoryList.length;
+
+  if (loadingUsers || loadingCourses || loadingCategories) {
     return <LoadingState label="Loading analytics..." />;
   }
 
   const stats = [
     {
       label: 'Total Users',
-      value: users.totalUsers ?? 0,
+      value: users.total ?? 0,
       icon: Users,
     },
     {
       label: 'Active Users',
-      value: users.activeUsers ?? users.totalUsers ?? 0,
+      value: users.active ?? 0,
       icon: TrendingUp,
     },
     {
       label: 'Total Courses',
-      value: courses.totalCourses ?? 0,
+      value: courses.total ?? 0,
       icon: BookOpen,
     },
     {
+      label: 'Published Courses',
+      value: courses.published ?? 0,
+      icon: TrendingUp,
+    },
+    {
+      label: 'Pending Review',
+      value: courses.pendingReview ?? 0,
+      icon: Clock,
+    },
+    {
       label: 'Total Categories',
-      value: courses.totalCategories ?? 0,
+      value: totalCategories,
       icon: FolderOpen,
     },
   ];

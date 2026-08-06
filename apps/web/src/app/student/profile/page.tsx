@@ -15,7 +15,6 @@ import { LoadingState } from '@/components/dashboard/data-states';
 const profileSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email'),
   phone: z.string().optional(),
   bio: z.string().optional(),
 });
@@ -41,7 +40,6 @@ export default function StudentProfilePage() {
       : {
           firstName: String(user.firstName ?? ''),
           lastName: String(user.lastName ?? ''),
-          email: String(user.email ?? ''),
           phone: String(user.phone ?? ''),
           bio: String(user.bio ?? ''),
         },
@@ -99,11 +97,13 @@ export default function StudentProfilePage() {
                   <p className="text-destructive text-sm">{errors.lastName.message}</p>
                 )}
               </div>
-            </div>
+</div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} />
-              {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
+              <Input id="email" type="email" value={String(user.email ?? '')} readOnly disabled />
+              <p className="text-muted-foreground text-xs">
+                Email cannot be changed here.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>

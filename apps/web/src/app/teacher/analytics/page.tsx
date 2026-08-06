@@ -5,12 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTeacherAnalytics } from '@/lib/api/hooks';
 import { LoadingState, EmptyState } from '@/components/dashboard/data-states';
 
-interface AnalyticsData {
+interface CourseAnalytics {
+  id: string;
+  title?: string;
+  isPublished?: boolean;
+  status?: string;
   totalStudents?: number;
-  totalCourses?: number;
-  averageRating?: number | string;
-  totalEnrollments?: number;
-  completionRate?: number;
+  averageRating?: number;
+  ratingCount?: number;
+  revenue?: number;
+  views?: number;
+  completionRate?: number | null;
+  activeStudents?: number;
+  [key: string]: unknown;
+}
+
+interface AnalyticsData {
+  courses?: CourseAnalytics[];
   [key: string]: unknown;
 }
 
@@ -18,18 +29,35 @@ export default function TeacherAnalyticsPage() {
   const { data, isLoading } = useTeacherAnalytics();
 
   const analytics = (data as AnalyticsData | undefined) ?? {};
+  const courses = analytics.courses ?? [];
 
   if (isLoading) return <LoadingState label="Loading analytics..." />;
 
+  const totalStudents = courses.reduce((sum, c) => sum + (c.totalStudents ?? 0), 0);
+  const activeStudents = courses.reduce((sum, c) => sum + (c.activeStudents ?? 0), 0);
+  const avgRating =
+    courses.length > 0
+      ? courses.reduce((sum, c) => sum + (c.averageRating ?? 0), 0) / courses.length
+      : 0;
+  const avgCompletion =
+    courses.length > 0
+      ? courses.reduce((sum, c) => sum + (c.completionRate ?? 0), 0) / courses.length
+      : 0;
+  const totalRevenue = courses.reduce((sum, c) => sum + (c.revenue ?? 0), 0);
+  const publishedCount = courses.filter((c) => c.isPublished).length;
+
   const cards = [
-    { label: 'Total Students', value: String(analytics.totalStudents ?? 0), icon: Users },
-    { label: 'Total Courses', value: String(analytics.totalCourses ?? 0), icon: BookOpen },
-    { label: 'Avg Rating', value: String(analytics.averageRating ?? '0'), icon: Award },
+    { label: 'Total Courses', value: String(courses.length), icon: BookOpen },
+    { label: 'Published', value: String(publishedCount), icon: TrendingUp },
+    { label: 'Total Students', value: String(totalStudents), icon: Users },
+    { label: 'Active Students', value: String(activeStudents), icon: Users },
+    { label: 'Avg Rating', value: avgRating.toFixed(2), icon: Award },
     {
       label: 'Completion Rate',
-      value: `${String(analytics.completionRate ?? 0)}%`,
+      value: `${avgCompletion.toFixed(1)}%`,
       icon: TrendingUp,
     },
+    { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, icon: Award },
   ];
 
   return (
@@ -50,11 +78,39 @@ export default function TeacherAnalyticsPage() {
         ))}
       </div>
 
-      {Object.keys(analytics).length === 0 && (
+      {courses.length === 0 ? (
         <EmptyState
           title="No analytics"
           description="Analytics will appear once you have activity."
         />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Course Performance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {courses.map((course) => (
+              <div
+                key={course.id}
+                className="flex items-center justify-between border-b py-2 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{String(course.title ?? '')}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {course.totalStudents ?? 0} students • {course.views ?? 0} views •{' '}
+                    {course.isPublished ? 'Published' : String(course.status ?? 'Draft')}
+                  </p>
+                </div>
+                <div className="text-right text-sm">
+                  <p className="font-medium">{Number(course.averageRating ?? 0).toFixed(1)} ★</p>
+                  <p className="text-muted-foreground text-xs">
+                    {course.completionRate != null ? `${course.completionRate}%` : '—'} complete
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

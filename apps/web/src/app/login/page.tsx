@@ -16,6 +16,7 @@ import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/lib/store';
 import { setCredentials } from '@/lib/store/slices/auth.slice';
 import { AuthUser, roleToRoute } from '@/lib/auth';
+import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -91,10 +92,19 @@ function LoginFormInner() {
               <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
-          {error && <p className="text-destructive text-sm">{error}</p>}
+{error && <p className="text-destructive text-sm">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card text-muted-foreground px-2">or continue with</span>
+            </div>
+          </div>
+          <GoogleSignInButton />
           <div className="flex items-center justify-between text-sm">
             <Link
               href="/forgot-password"

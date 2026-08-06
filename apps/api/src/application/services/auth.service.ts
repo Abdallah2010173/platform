@@ -68,6 +68,72 @@ export class AuthService implements IAuthService {
     return this.generateTokens(user.id, user.email, user.role);
   }
 
+  /**
+   * Authenticate a user via a Google ID token (from Google Identity Services).
+   * Verifies the token with Google's tokeninfo endpoint, then either returns
+   * tokens for an existing account or provisions one on first login.
+   */
+  async googleLogin(
+    token: string,
+  ): Promise<ITokens & { user: { id: string; email: string; role: Role } }> {
+    if (!token) {
+      throw new BadRequestException('Google token is required');
+    }
+
+    let googleProfile: {
+      email: string;
+      email_verified: boolean;
+      given_name?: string;
+      family_name?: string;
+      name?: string;
+      picture?: string;
+    };
+
+    try {
+      const res = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`,
+      );
+      if (!res.ok) {
+        throw new Error(`Google verification failed with status ${res.status}`);
+      }
+      googleProfile = (await res.json()) as typeof googleProfile;
+    } catch {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    if (!googleProfile.email) {
+      throw new UnauthorizedException('Google account has no email address');
+    }
+
+    const email = googleProfile.email.toLowerCase();
+
+    let user = await this.userRepository.findByEmail(email);
+
+    if (!user) {
+      // First login — auto-provision a student account.
+      const displayName =
+        googleProfile.name ??
+        `${googleProfile.given_name ?? ''} ${googleProfile.family_name ?? ''}`.trim();
+      user = await this.userRepository.create({
+        email,
+        passwordHash: '', // No password — Google-authenticated account
+        firstName: googleProfile.given_name ?? '',
+        lastName: googleProfile.family_name ?? '',
+        displayName: displayName || undefined,
+        role: Role.STUDENT,
+      });
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is suspended');
+    }
+
+    await this.userRepository.updateLastLogin(user.id);
+
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    return { ...tokens, user: { id: user.id, email: user.email, role: user.role } };
+  }
+
   async generateTokens(userId: string, email: string, role: Role): Promise<ITokens> {
     const payload: ITokenPayload = { sub: userId, email, role };
 

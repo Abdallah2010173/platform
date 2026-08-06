@@ -6,12 +6,15 @@ import { useTeacherStats, useTeacherCalendar, useTeacherMeetings } from '@/lib/a
 import { LoadingState } from '@/components/dashboard/data-states';
 
 interface TeacherStats {
-  totalCourses?: number;
+  myCourses?: number;
+  publishedCourses?: number;
   totalStudents?: number;
-  totalExams?: number;
-  totalMeetings?: number;
-  totalAssignments?: number;
+  totalRevenue?: number;
+  pendingHomework?: number;
   upcomingMeetings?: number;
+  unreadNotifications?: number;
+  averageRating?: number;
+  ratingCount?: number;
   [key: string]: unknown;
 }
 
@@ -32,9 +35,14 @@ export default function TeacherDashboardPage() {
 
   const statCards = [
     {
-      label: 'Total Courses',
-      value: String(stats.totalCourses ?? 0),
+      label: 'My Courses',
+      value: String(stats.myCourses ?? 0),
       icon: BookOpen,
+    },
+    {
+      label: 'Published',
+      value: String(stats.publishedCourses ?? 0),
+      icon: GraduationCap,
     },
     {
       label: 'Students',
@@ -42,13 +50,8 @@ export default function TeacherDashboardPage() {
       icon: Users,
     },
     {
-      label: 'Exams',
-      value: String(stats.totalExams ?? 0),
-      icon: GraduationCap,
-    },
-    {
-      label: 'Assignments',
-      value: String(stats.totalAssignments ?? 0),
+      label: 'Pending Homework',
+      value: String(stats.pendingHomework ?? 0),
       icon: ClipboardList,
     },
     {

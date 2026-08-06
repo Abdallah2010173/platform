@@ -2,54 +2,63 @@
 
 import { Users, BookOpen, FolderOpen, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAdminUserStats, useCourseStats } from '@/lib/api/hooks';
+import { useAdminUserStats, useCourseStats, useCategories } from '@/lib/api/hooks';
 import { LoadingState } from '@/components/dashboard/data-states';
 
 interface UserStats {
-  totalUsers?: number;
-  totalStudents?: number;
-  totalTeachers?: number;
-  totalAdmins?: number;
-  activeUsers?: number;
+  total?: number;
+  admins?: number;
+  teachers?: number;
+  students?: number;
+  active?: number;
+  inactive?: number;
   [key: string]: unknown;
 }
 
 interface CourseStat {
-  totalCourses?: number;
-  totalCategories?: number;
-  totalSubjects?: number;
-  publishedCourses?: number;
+  total?: number;
+  published?: number;
+  draft?: number;
+  pendingReview?: number;
+  archived?: number;
+  featured?: number;
   [key: string]: unknown;
 }
 
 export default function AdminDashboardPage() {
   const { data: userStats, isLoading: loadingUsers } = useAdminUserStats();
   const { data: courseStats, isLoading: loadingCourses } = useCourseStats();
+  const { data: categoriesData, isLoading: loadingCategories } = useCategories({ limit: '100' });
 
   const users = (userStats as UserStats | undefined) ?? {};
   const courses = (courseStats as CourseStat | undefined) ?? {};
 
-  if (loadingUsers || loadingCourses) {
+  const categoryList = Array.isArray(categoriesData)
+    ? (categoriesData as Record<string, unknown>[])
+    : ((categoriesData as { items?: Record<string, unknown>[] })?.items ?? []);
+  const totalCategories = categoryList.length;
+
+  if (loadingUsers || loadingCourses || loadingCategories) {
     return <LoadingState label="Loading admin dashboard..." />;
   }
 
   const cards = [
-    { label: 'Total Users', value: String(users.totalUsers ?? 0), icon: Users },
-    { label: 'Students', value: String(users.totalStudents ?? 0), icon: Users },
-    { label: 'Teachers', value: String(users.totalTeachers ?? 0), icon: Users },
+    { label: 'Total Users', value: String(users.total ?? 0), icon: Users },
+    { label: 'Students', value: String(users.students ?? 0), icon: Users },
+    { label: 'Teachers', value: String(users.teachers ?? 0), icon: Users },
     {
       label: 'Total Courses',
-      value: String(courses.totalCourses ?? 0),
+      value: String(courses.total ?? 0),
       icon: BookOpen,
     },
     {
       label: 'Categories',
-      value: String(courses.totalCategories ?? 0),
+      value: String(totalCategories),
       icon: FolderOpen,
     },
     {
       label: 'Published Courses',
-      value: String(courses.publishedCourses ?? 0),
+      value: String(courses.published ?? 0),
       icon: TrendingUp,
     },
   ];

@@ -16,6 +16,7 @@ import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/lib/store';
 import { setCredentials } from '@/lib/store/slices/auth.slice';
 import { AuthUser, roleToRoute } from '@/lib/auth';
+import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 
 const registerSchema = z
   .object({
@@ -131,6 +132,15 @@ export default function RegisterPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating account...' : 'Create account'}
             </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-card text-muted-foreground px-2">or sign up with</span>
+              </div>
+            </div>
+            <GoogleSignInButton />
             <p className="text-muted-foreground text-center text-sm">
               Already have an account?{' '}
               <Link href="/login" className="text-primary hover:underline">
