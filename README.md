@@ -200,3 +200,4 @@ Dependency rule: outer layers depend on inner layers, never the reverse.
 Phase 2 will add: course management, categories, chapters, lessons, file uploads, and enrollment.
 
 **Awaiting approval before continuing.**
+// test
