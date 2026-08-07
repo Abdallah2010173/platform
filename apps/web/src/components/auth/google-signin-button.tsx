@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 
 const GOOGLE_REDIRECT_URL =
   process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URL ??
-  'http://localhost:4000/api/v1/auth/google';
+  'https://platformapi-production-c6d1.up.railway.app/api/v1/auth/google';
 
 export function GoogleSignInButton({
   variant = 'outline',
