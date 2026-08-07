@@ -26,16 +26,19 @@
 - [x] Remove `authApi.googleLogin` from `services.ts`
 - [x] Remove `GoogleAuthDto` from DTOs
 - [x] Fix formatting/indentation in touched files
-- [x] Remove every "Google Sign-In is not configured" message
+- [x] Remove every "Google Sign-In is not configured" UI message
+- [x] Keep only the legitimate server-side guard ("Google OAuth is not configured") in auth.controller.ts
+- [x] Preserve post-login `redirect` param through the OAuth flow (state cookie `state::redirect`)
 
 ## Verification
 
 - [x] `pnpm install`
-- [x] `pnpm --filter @platform/database generate`
-- [x] `pnpm --filter @platform/api typecheck`
-- [x] `pnpm --filter @platform/api build`
-- [x] `pnpm --filter @platform/web typecheck`
-- [x] `pnpm --filter @platform/web build`
+- [x] `pnpm --filter @platform/database generate` (Prisma Client v6.19.3)
+- [x] `pnpm --filter @platform/api typecheck` — PASSED
+- [x] `pnpm --filter @platform/api build` — PASSED (resolved EPERM file-lock by stopping lingering node processes)
+- [x] `pnpm --filter @platform/web typecheck` — PASSED
+- [x] GIS dead-code sweep (googleLogin / GoogleAuthDto / gsi/client / google.accounts) — no matches
+- [x] API boots without Google config (graceful degrade); `/health`→200, `/auth/google`→401 guard
 
 All typechecks pass and both the API build and web compilation succeed. The Google OAuth (passport-google-oauth20) integration is complete end-to-end.
 

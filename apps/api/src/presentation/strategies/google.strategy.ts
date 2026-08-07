@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 import { Request } from 'express';
-import { ConfigService } from '@nestjs/config';
 
 export interface GoogleProfileUser {
   googleId: string;
@@ -39,13 +38,19 @@ function parseCookies(header?: string): Record<string, string> {
  * handled by the AuthService so we can reuse the exact same JWT issuance flow
  * as normal login.
  */
+export interface GoogleStrategyOptions {
+  clientID: string;
+  clientSecret: string;
+  callbackURL: string;
+}
+
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor(configService: ConfigService) {
+  constructor(options: GoogleStrategyOptions) {
     super({
-      clientID: configService.get<string>('GOOGLE_CLIENT_ID'),
-      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET'),
-      callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL'),
+      clientID: options.clientID,
+      clientSecret: options.clientSecret,
+      callbackURL: options.callbackURL,
       scope: ['email', 'profile'],
       state: false,
       passReqToCallback: true,
