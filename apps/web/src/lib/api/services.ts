@@ -15,10 +15,10 @@ export const authApi = {
     getApiData(await apiClient.post('/auth/reset-password', { token, password })),
   verifyEmail: async (token: string) =>
     getApiData(await apiClient.post('/auth/verify-email', { token })),
-  changePassword: async (currentPassword: string, newPassword: string) =>
+changePassword: async (currentPassword: string, newPassword: string) =>
     getApiData(await apiClient.post('/auth/change-password', { currentPassword, newPassword })),
-  googleLogin: async (token: string) =>
-    getApiData(await apiClient.post('/auth/google', { token })),
+  googleExchange: async (code: string) =>
+    getApiData(await apiClient.post('/auth/google/exchange', { code })),
   me: async () => getApiData(await apiClient.get('/auth/me')),
 };
 

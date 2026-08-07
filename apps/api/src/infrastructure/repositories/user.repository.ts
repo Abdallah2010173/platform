@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Role } from '@platform/database';
+import { Role, AccountProvider } from '@platform/database';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
   IUserRepository,
@@ -31,14 +31,25 @@ export class UserRepository implements IUserRepository {
         email: data.email.toLowerCase(),
         passwordHash: data.passwordHash,
         role: data.role ?? Role.STUDENT,
+        emailVerified:
+          data.emailVerified ?? false ? new Date() : undefined,
         profile: {
           create: {
             firstName: data.firstName,
             lastName: data.lastName,
-            displayName: data.displayName ?? `${data.firstName} ${data.lastName}`,
+            displayName: data.displayName ?? `${data.firstName} ${data.lastName}`.trim(),
+            avatarUrl: data.avatarUrl,
           },
         },
         student: data.role === Role.STUDENT || data.role === undefined ? { create: {} } : undefined,
+        accounts: data.googleId
+          ? {
+              create: {
+                provider: AccountProvider.GOOGLE,
+                providerAccountId: data.googleId,
+              },
+            }
+          : undefined,
       },
       include: { profile: true },
     });
@@ -48,6 +59,69 @@ export class UserRepository implements IUserRepository {
     await this.prisma.user.update({
       where: { id },
       data: { lastLoginAt: new Date() },
+    });
+  }
+
+  async findByProviderAccountId(
+    provider: AccountProvider,
+    providerAccountId: string,
+  ): Promise<IUserWithProfile | null> {
+    const account = await this.prisma.account.findUnique({
+      where: { provider_providerAccountId: { provider, providerAccountId } },
+      include: { user: { include: { profile: true } } },
+    });
+    return account?.user ?? null;
+  }
+
+  async linkGoogleAccount(userId: string, googleId: string): Promise<{ id: string }> {
+    const account = await this.prisma.account.create({
+      data: {
+        userId,
+        provider: AccountProvider.GOOGLE,
+        providerAccountId: googleId,
+      },
+    });
+    return { id: account.id };
+  }
+
+  async updateGoogleProfile(
+    userId: string,
+    data: { firstName?: string; lastName?: string; displayName?: string; avatarUrl?: string },
+  ): Promise<void> {
+    await this.prisma.userProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
+        displayName: data.displayName ?? `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
+        avatarUrl: data.avatarUrl,
+      },
+      update: {
+        ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
+        ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
+        ...(data.displayName !== undefined ? { displayName: data.displayName } : {}),
+        ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+      },
+    });
+  }
+
+  async createOAuthState(data: {
+    userId: string;
+    code: string;
+    expiresAt: Date;
+  }): Promise<{ id: string; code: string; userId: string }> {
+    return this.prisma.oAuthState.create({ data });
+  }
+
+  async findOAuthStateByCode(code: string) {
+    return this.prisma.oAuthState.findUnique({ where: { code } });
+  }
+
+  async markOAuthStateUsed(id: string): Promise<void> {
+    await this.prisma.oAuthState.update({
+      where: { id },
+      data: { usedAt: new Date() },
     });
   }
 

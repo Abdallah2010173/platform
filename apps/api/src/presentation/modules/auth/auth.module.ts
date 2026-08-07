@@ -6,11 +6,12 @@ import { AuthService } from '../../../application/services/auth.service';
 import { UserRepository } from '../../../infrastructure/repositories/user.repository';
 import { RefreshTokenRepository } from '../../../infrastructure/repositories/refresh-token.repository';
 import { JwtStrategy } from '../../strategies/jwt.strategy';
+import { GoogleStrategy } from '../../strategies/google.strategy';
 
 @Module({
   imports: [PassportModule.register({ defaultStrategy: 'jwt' }), JwtModule.register({})],
   controllers: [AuthController],
-  providers: [AuthService, UserRepository, RefreshTokenRepository, JwtStrategy],
+  providers: [AuthService, UserRepository, RefreshTokenRepository, JwtStrategy, GoogleStrategy],
   exports: [AuthService, UserRepository],
 })
 export class AuthModule {}

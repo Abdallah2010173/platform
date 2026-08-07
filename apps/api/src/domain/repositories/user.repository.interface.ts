@@ -1,4 +1,4 @@
-import { Role } from '@platform/database';
+import { Role, AccountProvider } from '@platform/database';
 
 export interface IUser {
   id: string;
@@ -41,6 +41,9 @@ export interface CreateUserData {
   firstName: string;
   lastName: string;
   displayName?: string;
+  avatarUrl?: string;
+  googleId?: string;
+  emailVerified?: boolean;
 }
 
 export interface IUserRepository {
@@ -48,6 +51,33 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<IUserWithProfile | null>;
   create(data: CreateUserData): Promise<IUserWithProfile>;
   updateLastLogin(id: string): Promise<void>;
+
+  // OAuth / Google
+  findByProviderAccountId(
+    provider: AccountProvider,
+    providerAccountId: string,
+  ): Promise<IUserWithProfile | null>;
+  linkGoogleAccount(
+    userId: string,
+    googleId: string,
+  ): Promise<{ id: string }>;
+  updateGoogleProfile(
+    userId: string,
+    data: { firstName?: string; lastName?: string; displayName?: string; avatarUrl?: string },
+  ): Promise<void>;
+  createOAuthState(data: {
+    userId: string;
+    code: string;
+    expiresAt: Date;
+  }): Promise<{ id: string; code: string; userId: string }>;
+  findOAuthStateByCode(code: string): Promise<{
+    id: string;
+    code: string;
+    userId: string;
+    expiresAt: Date;
+    usedAt: Date | null;
+  } | null>;
+  markOAuthStateUsed(id: string): Promise<void>;
 }
 
 export interface IRefreshTokenRepository {

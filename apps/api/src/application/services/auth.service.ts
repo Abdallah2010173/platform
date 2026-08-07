@@ -9,7 +9,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { Role } from '@platform/database';
+import { Response } from 'express';
+import { Role, AccountProvider } from '@platform/database';
 import { UserRepository } from '../../infrastructure/repositories/user.repository';
 import { RefreshTokenRepository } from '../../infrastructure/repositories/refresh-token.repository';
 import { IAuthService, ITokenPayload, ITokens } from '../../domain/services/auth.service.interface';
@@ -68,67 +69,137 @@ export class AuthService implements IAuthService {
     return this.generateTokens(user.id, user.email, user.role);
   }
 
-  /**
-   * Authenticate a user via a Google ID token (from Google Identity Services).
-   * Verifies the token with Google's tokeninfo endpoint, then either returns
-   * tokens for an existing account or provisions one on first login.
+/**
+   * OAuth flow (passport-google-oauth20). Given a verified Google profile,
+   * log in an existing account, auto-provision a new one, or link the Google
+   * identity to an existing email/password account. Only performs the DB
+   * provisioning — token issuance is delegated to generateTokens().
    */
-  async googleLogin(
-    token: string,
-  ): Promise<ITokens & { user: { id: string; email: string; role: Role } }> {
-    if (!token) {
-      throw new BadRequestException('Google token is required');
+  async googleOAuthLogin(profile: {
+    googleId: string;
+    email: string;
+    emailVerified?: boolean;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    avatarUrl?: string;
+  }): Promise<{ id: string; email: string; role: Role }> {
+    if (!profile?.googleId || !profile?.email) {
+      throw new UnauthorizedException('Invalid Google profile');
     }
 
-    let googleProfile: {
-      email: string;
-      email_verified: boolean;
-      given_name?: string;
-      family_name?: string;
-      name?: string;
-      picture?: string;
-    };
+    const email = profile.email.toLowerCase();
 
-    try {
-      const res = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`,
-      );
-      if (!res.ok) {
-        throw new Error(`Google verification failed with status ${res.status}`);
-      }
-      googleProfile = (await res.json()) as typeof googleProfile;
-    } catch {
-      throw new UnauthorizedException('Invalid Google token');
-    }
+    // 1) Existing Google-linked account → sign in.
+    let user = await this.userRepository.findByProviderAccountId(
+      AccountProvider.GOOGLE,
+      profile.googleId,
+    );
 
-    if (!googleProfile.email) {
-      throw new UnauthorizedException('Google account has no email address');
-    }
-
-    const email = googleProfile.email.toLowerCase();
-
-    let user = await this.userRepository.findByEmail(email);
-
+    // 2) Otherwise look up by email for account linking.
+    let isNewUser = false;
     if (!user) {
-      // First login — auto-provision a student account.
-      const displayName =
-        googleProfile.name ??
-        `${googleProfile.given_name ?? ''} ${googleProfile.family_name ?? ''}`.trim();
+      user = await this.userRepository.findByEmail(email);
+      isNewUser = !user;
+    }
+
+    if (isNewUser) {
+      // 3) First login — auto-provision a student account.
       user = await this.userRepository.create({
         email,
-        passwordHash: '', // No password — Google-authenticated account
-        firstName: googleProfile.given_name ?? '',
-        lastName: googleProfile.family_name ?? '',
-        displayName: displayName || undefined,
+        passwordHash: '',
+        firstName: profile.firstName ?? '',
+        lastName: profile.lastName ?? '',
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        googleId: profile.googleId,
         role: Role.STUDENT,
+        emailVerified: profile.emailVerified,
+      });
+    } else {
+      if (!user) {
+        throw new UnauthorizedException('Account is suspended');
+      }
+      // 4) Existing user — link the Google identity if not already linked.
+      const alreadyLinked = await this.userRepository.findByProviderAccountId(
+        AccountProvider.GOOGLE,
+        profile.googleId,
+      );
+      if (!alreadyLinked) {
+        await this.userRepository.linkGoogleAccount(user.id, profile.googleId);
+      }
+      // Keep the Google avatar + name fresh on every login.
+      await this.userRepository.updateGoogleProfile(user.id, {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
       });
     }
 
-    if (!user.isActive) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('Account is suspended');
     }
 
     await this.userRepository.updateLastLogin(user.id);
+
+    return { id: user.id, email: user.email, role: user.role };
+  }
+
+  /**
+   * Generate a random CSRF state value used by the Google OAuth redirect.
+   */
+  createOAuthRedirectState(): string {
+    return uuidv4();
+  }
+
+  /**
+   * Set the OAuth state value in a short-lived, HttpOnly cookie so the
+   * callback handler can validate the `state` echo from Google (CSRF).
+   */
+  setOAuthStateCookie(res: Response, state: string): void {
+    const secure = this.configService.get<string>('NODE_ENV') === 'production';
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000, // 10 minutes
+      path: '/',
+    });
+  }
+
+  /**
+   * Generate a short-lived one-time code used to hand the OAuth JWT to the
+   * frontend without exposing tokens in the URL (cross-domain safe).
+   */
+  async createOAuthExchangeCode(userId: string): Promise<string> {
+    const code = uuidv4();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    await this.userRepository.createOAuthState({ userId, code, expiresAt });
+    return code;
+  }
+
+  /**
+   * Exchange a one-time OAuth code for fresh JWT access/refresh tokens.
+   */
+  async exchangeOAuthCode(
+    code: string,
+  ): Promise<ITokens & { user: { id: string; email: string; role: Role } }> {
+    if (!code) {
+      throw new BadRequestException('OAuth code is required');
+    }
+
+    const state = await this.userRepository.findOAuthStateByCode(code);
+    if (!state || state.usedAt || state.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired OAuth code');
+    }
+
+    await this.userRepository.markOAuthStateUsed(state.id);
+
+    const user = await this.userRepository.findById(state.userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     return { ...tokens, user: { id: user.id, email: user.email, role: user.role } };

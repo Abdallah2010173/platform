@@ -56,6 +56,14 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  FRONTEND_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  FRONTEND_CALLBACK_URL?: string;
+
+  @IsOptional()
+  @IsString()
   ZOOM_CLIENT_ID?: string;
 
   @IsOptional()

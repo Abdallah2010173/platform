@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -33,7 +33,7 @@ const registerSchema = z
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
-export default function RegisterPage() {
+function RegisterContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -82,74 +82,82 @@ export default function RegisterPage() {
   };
 
   return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
+          <GraduationCap className="text-primary h-8 w-8" />
+        </Link>
+        <CardTitle>Create an account</CardTitle>
+        <CardDescription>Register to start learning on the platform</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input id="firstName" {...register('firstName')} />
+              {errors.firstName && (
+                <p className="text-destructive text-sm">{errors.firstName.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input id="lastName" {...register('lastName')} />
+              {errors.lastName && (
+                <p className="text-destructive text-sm">{errors.lastName.message}</p>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...register('email')} />
+            {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" {...register('password')} />
+            {errors.password && (
+              <p className="text-destructive text-sm">{errors.password.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
+            {errors.confirmPassword && (
+              <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Creating account...' : 'Create account'}
+          </Button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card text-muted-foreground px-2">or sign up with</span>
+            </div>
+          </div>
+          <GoogleSignInButton />
+          <p className="text-muted-foreground text-center text-sm">
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function RegisterPage() {
+  return (
     <div className="bg-muted/40 flex min-h-screen items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
-            <GraduationCap className="text-primary h-8 w-8" />
-          </Link>
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>Register to start learning on the platform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" {...register('firstName')} />
-                {errors.firstName && (
-                  <p className="text-destructive text-sm">{errors.firstName.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" {...register('lastName')} />
-                {errors.lastName && (
-                  <p className="text-destructive text-sm">{errors.lastName.message}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} />
-              {errors.email && <p className="text-destructive text-sm">{errors.email.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register('password')} />
-              {errors.password && (
-                <p className="text-destructive text-sm">{errors.password.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
-              {errors.confirmPassword && (
-                <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create account'}
-            </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card text-muted-foreground px-2">or sign up with</span>
-              </div>
-            </div>
-            <GoogleSignInButton />
-            <p className="text-muted-foreground text-center text-sm">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+      <Suspense fallback={<div className="text-muted-foreground">Loading...</div>}>
+        <RegisterContent />
+      </Suspense>
     </div>
   );
 }

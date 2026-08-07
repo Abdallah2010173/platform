@@ -43,10 +43,10 @@ export class RefreshTokenDto {
   refreshToken!: string;
 }
 
-export class GoogleAuthDto {
-  @ApiProperty({ description: 'Google ID token from Google Identity Services' })
+export class GoogleOAuthExchangeDto {
+  @ApiProperty({ description: 'One-time OAuth exchange code from the Google callback' })
   @IsString()
-  token!: string;
+  code!: string;
 }
 
 export class ForgotPasswordDto {

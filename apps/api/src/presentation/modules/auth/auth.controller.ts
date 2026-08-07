@@ -4,21 +4,28 @@ import {
   Get,
   Delete,
   Body,
+  Req,
+  Res,
+  UseGuards,
   HttpCode,
   HttpStatus,
   UnauthorizedException,
   Param,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from '../../../application/services/auth.service';
 import { Public } from '../../decorators/public.decorator';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../strategies/jwt.strategy';
+import { GoogleProfileUser } from '../../strategies/google.strategy';
 import {
   LoginDto,
   RegisterDto,
   RefreshTokenDto,
-  GoogleAuthDto,
+  GoogleOAuthExchangeDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   VerifyEmailDto,
@@ -34,6 +41,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly userRepository: UserRepository,
+    private readonly configService: ConfigService,
   ) {}
 
   @Public()
@@ -60,7 +68,7 @@ export class AuthController {
     };
   }
 
-@Public()
+  @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new student account' })
@@ -84,25 +92,89 @@ export class AuthController {
     };
   }
 
+  /**
+   * Start the Google OAuth flow. Redirects the browser to Google's consent
+   * screen. The `state` query parameter carries a short-lived CSRF token that
+   * is validated when Google redirects back to the callback.
+   */
   @Public()
-  @Post('google')
+  @Get('google')
+  @ApiExcludeEndpoint()
+  async googleRedirect(@Res() res: Response): Promise<void> {
+    const state = this.authService.createOAuthRedirectState();
+    this.authService.setOAuthStateCookie(res, state);
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const redirectUri = this.configService.get<string>('GOOGLE_CALLBACK_URL');
+    if (!clientId || !redirectUri) {
+      throw new UnauthorizedException('Google OAuth is not configured');
+    }
+    const scope = encodeURIComponent('email profile');
+    const url =
+      `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
+      `&client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&scope=${scope}` +
+      `&state=${encodeURIComponent(state)}` +
+      `&access_type=offline&prompt=consent`;
+    res.redirect(url);
+  }
+
+  /**
+   * Google OAuth callback. Passport verifies the authorization code and the
+   * `state` parameter (CSRF). On success we create a one-time exchange code
+   * and redirect the browser to the frontend callback page, which exchanges
+   * the code for JWTs — keeping tokens out of the URL.
+   */
+  @Public()
+  @Get('google/callback')
+  @ApiExcludeEndpoint()
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(
+    @Req() req: Request & { user: GoogleProfileUser },
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      const user = await this.authService.googleOAuthLogin(req.user);
+      const code = await this.authService.createOAuthExchangeCode(user.id);
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_CALLBACK_URL',
+        'http://localhost:3000/auth/google/callback',
+      );
+      res.redirect(`${frontendUrl}?code=${encodeURIComponent(code)}`);
+    } catch {
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:3000/login',
+      );
+      res.redirect(`${frontendUrl}?oauth_error=1`);
+    }
+  }
+
+  /**
+   * Exchange a one-time OAuth code (delivered to the frontend callback page)
+   * for fresh JWT access/refresh tokens. This is called from the browser.
+   */
+  @Public()
+  @Post('google/exchange')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate or register via Google ID token' })
-  async google(@Body() dto: GoogleAuthDto): Promise<AuthTokensResponseDto> {
-    const result = await this.authService.googleLogin(dto.token);
-    const fullUser = await this.userRepository.findById(result.user.id);
+  @ApiOperation({ summary: 'Exchange Google OAuth code for JWT tokens' })
+  async googleExchange(
+    @Body() dto: GoogleOAuthExchangeDto,
+  ): Promise<AuthTokensResponseDto> {
+    const result = await this.authService.exchangeOAuthCode(dto.code);
+    const user = await this.userRepository.findById(result.user.id);
     return {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       expiresIn: result.expiresIn,
-      user: fullUser
+      user: user
         ? {
-            id: fullUser.id,
-            email: fullUser.email,
-            role: fullUser.role,
-            firstName: fullUser.profile?.firstName,
-            lastName: fullUser.profile?.lastName,
-            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            firstName: user.profile?.firstName,
+            lastName: user.profile?.lastName,
+            avatarUrl: user.profile?.avatarUrl ?? undefined,
           }
         : undefined,
     };

@@ -13,6 +13,21 @@ export interface IAuthService {
     expiresIn: number;
   }>;
   revokeRefreshToken(refreshToken: string): Promise<void>;
+  googleOAuthLogin(profile: {
+    googleId: string;
+    email: string;
+    emailVerified?: boolean;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    avatarUrl?: string;
+  }): Promise<{ id: string; email: string; role: Role }>;
+  createOAuthExchangeCode(userId: string): Promise<string>;
+  exchangeOAuthCode(code: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  }>;
 }
 
 export const AUTH_SERVICE = Symbol('AUTH_SERVICE');
