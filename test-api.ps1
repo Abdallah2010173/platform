@@ -12,5 +12,5 @@ $courses = Invoke-RestMethod -Uri "$base/courses?limit=3" -Headers $headers
 Write-Output "COURSES_TOTAL: $($courses.data.meta.total)"
 $cats = Invoke-RestMethod -Uri "$base/categories?limit=3" -Headers $headers
 Write-Output "CATEGORIES_TOTAL: $($cats.data.meta.total)"
-$health = Invoke-RestMethod -Uri "$base/health"
+$health = Invoke-RestMethod -Uri "http://localhost:4000/health"
 Write-Output "HEALTH: $($health | ConvertTo-Json -Compress)"

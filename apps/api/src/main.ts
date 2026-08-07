@@ -18,7 +18,9 @@ async function bootstrap() {
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
   const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');
 
-  app.setGlobalPrefix(apiPrefix);
+  app.setGlobalPrefix(apiPrefix, {
+    exclude: ['health'],
+  });
 
   app.use(helmet());
 
