@@ -16,7 +16,11 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
-  const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');
+  // CORS_ORIGIN is required in production. In development, fall back to
+  // localhost:3000 so the Next.js dev server can call the API.
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const defaultCorsOrigin = isProduction ? '' : 'http://localhost:3000';
+  const corsOrigin = configService.get<string>('CORS_ORIGIN', defaultCorsOrigin);
 
   app.setGlobalPrefix(apiPrefix, {
     exclude: ['health'],
@@ -25,7 +29,9 @@ async function bootstrap() {
   app.use(helmet());
 
   app.enableCors({
-    origin: corsOrigin.split(',').map((o) => o.trim()),
+    origin: corsOrigin
+      ? corsOrigin.split(',').map((o) => o.trim())
+      : (origin, callback) => callback(null, false),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

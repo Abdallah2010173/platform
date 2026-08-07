@@ -33,7 +33,8 @@ export class EnvironmentVariables {
   JWT_REFRESH_EXPIRES_IN: string = '7d';
 
   @IsString()
-  CORS_ORIGIN: string = 'http://localhost:3000';
+  @IsOptional()
+  CORS_ORIGIN?: string;
 
   @IsString()
   API_PREFIX: string = 'api/v1';

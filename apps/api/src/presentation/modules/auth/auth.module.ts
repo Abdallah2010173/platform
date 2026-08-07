@@ -10,11 +10,12 @@ import { JwtStrategy } from '../../strategies/jwt.strategy';
 import { GoogleStrategy } from '../../strategies/google.strategy';
 
 /**
- * Google OAuth is registered only when the required environment variables are
- * present. This keeps the API bootable (and email/password login usable) when
- * Google is not configured, while still wiring the strategy in production.
+ * Google OAuth strategy is registered ONLY when all required environment
+ * variables are present. When Google is not configured the AuthController
+ * responds with a clear, deliberate configuration error on the Google routes
+ * instead of a 404/500 — keeping email/password auth fully functional.
  */
-const GoogleStrategyProvider = {
+export const GoogleStrategyProvider = {
   provide: GoogleStrategy,
   inject: [ConfigService],
   useFactory: (configService: ConfigService) => {

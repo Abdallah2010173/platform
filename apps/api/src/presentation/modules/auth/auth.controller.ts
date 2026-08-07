@@ -93,51 +93,49 @@ export class AuthController {
   }
 
   /**
+   * Verify that the Google OAuth credentials are present in the environment.
+   * Throws a clear configuration error instead of allowing a 404/500.
+   */
+  private assertGoogleConfigured(): void {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
+    const callbackURL = this.configService.get<string>('GOOGLE_CALLBACK_URL');
+    if (!clientId || !clientSecret || !callbackURL) {
+      throw new UnauthorizedException(
+        'Google OAuth is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_CALLBACK_URL.',
+      );
+    }
+  }
+
+  /**
    * Start the Google OAuth flow. Redirects the browser to Google's consent
    * screen. The `state` query parameter carries a short-lived CSRF token that
    * is validated when Google redirects back to the callback.
    */
-@Public()
+  @Public()
   @Get('google')
   @ApiExcludeEndpoint()
   async googleRedirect(@Req() req: Request, @Res() res: Response): Promise<void> {
+    this.assertGoogleConfigured();
+
     const state = this.authService.createOAuthRedirectState();
 
     // Preserve an optional post-login redirect target through the OAuth flow.
     const redirectParam = (req.query?.redirect as string | undefined) ?? '';
-    if (redirectParam && redirectParam.startsWith('/')) {
-      const stateWithRedirect = `${state}::${redirectParam}`;
-      this.authService.setOAuthStateCookie(res, stateWithRedirect);
-      const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-      const redirectUri = this.configService.get<string>('GOOGLE_CALLBACK_URL');
-      if (!clientId || !redirectUri) {
-        throw new UnauthorizedException('Google OAuth is not configured');
-      }
-      const scope = encodeURIComponent('email profile');
-      const url =
-        `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
-        `&client_id=${encodeURIComponent(clientId)}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        `&scope=${scope}` +
-        `&state=${encodeURIComponent(stateWithRedirect)}` +
-        `&access_type=offline&prompt=consent`;
-      res.redirect(url);
-      return;
-    }
+    const stateWithRedirect =
+      redirectParam && redirectParam.startsWith('/') ? `${state}::${redirectParam}` : state;
 
-    this.authService.setOAuthStateCookie(res, state);
-    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const redirectUri = this.configService.get<string>('GOOGLE_CALLBACK_URL');
-    if (!clientId || !redirectUri) {
-      throw new UnauthorizedException('Google OAuth is not configured');
-    }
+    this.authService.setOAuthStateCookie(res, stateWithRedirect);
+
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID')!;
+    const redirectUri = this.configService.get<string>('GOOGLE_CALLBACK_URL')!;
     const scope = encodeURIComponent('email profile');
     const url =
       `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
       `&client_id=${encodeURIComponent(clientId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&scope=${scope}` +
-      `&state=${encodeURIComponent(state)}` +
+      `&state=${encodeURIComponent(stateWithRedirect)}` +
       `&access_type=offline&prompt=consent`;
     res.redirect(url);
   }
@@ -152,17 +150,19 @@ export class AuthController {
   @Get('google/callback')
   @ApiExcludeEndpoint()
   @UseGuards(AuthGuard('google'))
-async googleCallback(
+  async googleCallback(
     @Req() req: Request & { user: GoogleProfileUser },
     @Res() res: Response,
   ): Promise<void> {
     try {
       const user = await this.authService.googleOAuthLogin(req.user);
       const code = await this.authService.createOAuthExchangeCode(user.id);
-      const frontendUrl = this.configService.get<string>(
-        'FRONTEND_CALLBACK_URL',
-        'http://localhost:3000/auth/google/callback',
-      );
+      const frontendUrl = this.configService.get<string>('FRONTEND_CALLBACK_URL');
+      if (!frontendUrl) {
+        throw new UnauthorizedException(
+          'FRONTEND_CALLBACK_URL is not configured. Set FRONTEND_CALLBACK_URL to your frontend Google callback URL.',
+        );
+      }
 
       // Recover the post-login redirect target from the state cookie (if any)
       // and forward it to the frontend callback page.
@@ -174,10 +174,11 @@ async googleCallback(
 
       res.redirect(`${frontendUrl}${query}`);
     } catch {
-      const frontendUrl = this.configService.get<string>(
-        'FRONTEND_URL',
-        'http://localhost:3000/login',
-      );
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+      if (!frontendUrl) {
+        res.redirect('/login?oauth_error=1');
+        return;
+      }
       res.redirect(`${frontendUrl}?oauth_error=1`);
     }
   }
