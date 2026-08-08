@@ -5,6 +5,21 @@ import { Roles } from '../../decorators/roles.decorator';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { TeacherService } from './teacher.service';
 import { AuthenticatedUser } from './teacher.helper';
+import {
+  UpdateTeacherProfileDto,
+  ChangeTeacherPasswordDto,
+  CreateAssignmentDto,
+  UpdateAssignmentDto,
+  GradeSubmissionDto,
+  CreateExamDto,
+  UpdateExamDto,
+  CreateQuestionBankDto,
+  AddQuestionsDto,
+  CreateMeetingDto,
+  UpdateMeetingDto,
+  SetAvailabilityDto,
+  UpdateAvailabilityDto,
+} from './dto/teacher.dto';
 
 @ApiTags('Teacher')
 @ApiBearerAuth()
@@ -41,13 +56,13 @@ export class TeacherController {
 
   @Patch('profile')
   @ApiOperation({ summary: 'Update teacher profile' })
-  updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() dto: any) {
+  updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateTeacherProfileDto) {
     return this.teacherService.updateProfile(user, dto);
   }
 
   @Post('profile/change-password')
   @ApiOperation({ summary: 'Change teacher password' })
-  changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: any) {
+  changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangeTeacherPasswordDto) {
     return this.teacherService.changePassword(user, dto);
   }
 
@@ -80,7 +95,7 @@ export class TeacherController {
   createAssignment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('courseId') courseId: string,
-    @Body() dto: any,
+    @Body() dto: CreateAssignmentDto,
   ) {
     return this.teacherService.createAssignment(user, courseId, dto);
   }
@@ -90,7 +105,7 @@ export class TeacherController {
   updateAssignment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('assignmentId') assignmentId: string,
-    @Body() dto: any,
+    @Body() dto: UpdateAssignmentDto,
   ) {
     return this.teacherService.updateAssignment(user, assignmentId, dto);
   }
@@ -118,7 +133,7 @@ export class TeacherController {
   gradeSubmission(
     @CurrentUser() user: AuthenticatedUser,
     @Param('submissionId') submissionId: string,
-    @Body() dto: any,
+    @Body() dto: GradeSubmissionDto,
   ) {
     return this.teacherService.gradeSubmission(user, submissionId, dto);
   }
@@ -138,7 +153,7 @@ export class TeacherController {
   createExam(
     @CurrentUser() user: AuthenticatedUser,
     @Param('courseId') courseId: string,
-    @Body() dto: any,
+    @Body() dto: CreateExamDto,
   ) {
     return this.teacherService.createExam(user, courseId, dto);
   }
@@ -148,7 +163,7 @@ export class TeacherController {
   updateExam(
     @CurrentUser() user: AuthenticatedUser,
     @Param('examId') examId: string,
-    @Body() dto: any,
+    @Body() dto: UpdateExamDto,
   ) {
     return this.teacherService.updateExam(user, examId, dto);
   }
@@ -177,7 +192,7 @@ export class TeacherController {
 
   @Post('question-banks')
   @ApiOperation({ summary: 'Create a question bank' })
-  createQuestionBank(@CurrentUser() user: AuthenticatedUser, @Body() dto: any) {
+  createQuestionBank(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateQuestionBankDto) {
     return this.teacherService.createQuestionBank(user, dto);
   }
 
@@ -186,7 +201,7 @@ export class TeacherController {
   addQuestions(
     @CurrentUser() user: AuthenticatedUser,
     @Param('bankId') bankId: string,
-    @Body() dto: any,
+    @Body() dto: AddQuestionsDto,
   ) {
     return this.teacherService.addQuestions(user, bankId, dto);
   }
@@ -203,7 +218,7 @@ export class TeacherController {
 
   @Post('meetings')
   @ApiOperation({ summary: 'Create a meeting' })
-  createMeeting(@CurrentUser() user: AuthenticatedUser, @Body() dto: any) {
+  createMeeting(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateMeetingDto) {
     return this.teacherService.createMeeting(user, dto);
   }
 
@@ -212,7 +227,7 @@ export class TeacherController {
   updateMeeting(
     @CurrentUser() user: AuthenticatedUser,
     @Param('meetingId') meetingId: string,
-    @Body() dto: any,
+    @Body() dto: UpdateMeetingDto,
   ) {
     return this.teacherService.updateMeeting(user, meetingId, dto);
   }
@@ -235,7 +250,7 @@ export class TeacherController {
 
   @Post('availability')
   @ApiOperation({ summary: 'Set availability' })
-  setAvailability(@CurrentUser() user: AuthenticatedUser, @Body() dto: any) {
+  setAvailability(@CurrentUser() user: AuthenticatedUser, @Body() dto: SetAvailabilityDto) {
     return this.teacherService.setAvailability(user, dto);
   }
 
@@ -244,7 +259,7 @@ export class TeacherController {
   updateAvailability(
     @CurrentUser() user: AuthenticatedUser,
     @Param('availabilityId') availabilityId: string,
-    @Body() dto: any,
+    @Body() dto: UpdateAvailabilityDto,
   ) {
     return this.teacherService.updateAvailability(user, availabilityId, dto);
   }
