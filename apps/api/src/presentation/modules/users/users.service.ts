@@ -10,6 +10,46 @@ import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto/users.dto';
 import { PaginatedResult } from '../../common/dto/pagination.dto';
 
+const USER_INCLUDE = {
+  profile: true,
+  teacher: true,
+  student: true,
+  admin: true,
+} satisfies Prisma.UserInclude;
+
+type UserWithRelations = Prisma.UserGetPayload<{ include: typeof USER_INCLUDE }>;
+
+export interface MappedUser {
+  id: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  emailVerified: boolean;
+  twoFactorEnabled: boolean;
+  lastLoginAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  profile: {
+    firstName: string;
+    lastName: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    phone: string | null;
+    bio: string | null;
+    timezone: string;
+    locale: string;
+    gender: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+  } | null;
+  fullName: string;
+  student: { id: string; studentNumber: string | null; grade: string | null } | null;
+  teacher: { id: string; title: string | null; department: string | null } | null;
+  admin: { id: string } | null;
+}
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -25,7 +65,7 @@ export class UsersService {
       filterValue?: string;
       role?: Role;
     } = {},
-  ): Promise<PaginatedResult<any>> {
+  ): Promise<PaginatedResult<MappedUser>> {
     const {
       page = 1,
       limit = 20,
@@ -80,14 +120,9 @@ export class UsersService {
 
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([
-      this.prisma.user.findMany({
+this.prisma.user.findMany({
         where,
-        include: {
-          profile: true,
-          teacher: true,
-          student: true,
-          admin: true,
-        },
+        include: USER_INCLUDE,
         orderBy,
         skip,
         take: limit,
@@ -365,7 +400,11 @@ export class UsersService {
     return { success: true, count: result.count };
   }
 
-  async bulkAction(ids: string[], action: string, extra?: any) {
+async bulkAction(
+    ids: string[],
+    action: string,
+    extra?: { role?: string },
+  ) {
     switch (action) {
       case 'DELETE':
         return this.bulkDelete(ids);
@@ -389,9 +428,9 @@ export class UsersService {
         if (!extra?.role) {
           throw new BadRequestException('Role required for CHANGE_ROLE action');
         }
-        await this.prisma.user.updateMany({
+await this.prisma.user.updateMany({
           where: { id: { in: ids } },
-          data: { role: extra.role },
+          data: { role: extra.role as Role },
         });
         return { success: true, count: ids.length };
       default:
@@ -407,9 +446,9 @@ export class UsersService {
       this.prisma.user.count({ where: { role: Role.STUDENT, deletedAt: null } }),
       this.prisma.user.count({ where: { isActive: true, deletedAt: null } }),
       this.prisma.user.count({ where: { isActive: false, deletedAt: null } }),
-      this.prisma.user.findMany({
+this.prisma.user.findMany({
         where: { deletedAt: null },
-        include: { profile: true },
+        include: USER_INCLUDE,
         orderBy: { createdAt: 'desc' },
         take: 5,
       }),
@@ -426,7 +465,7 @@ export class UsersService {
     };
   }
 
-  private mapUser(u: any) {
+private mapUser(u: UserWithRelations) {
     return {
       id: u.id,
       email: u.email,
