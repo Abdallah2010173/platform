@@ -4,9 +4,15 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
+// The Google OAuth entry point lives on the API. Derive it from the public API
+// URL rather than hardcoding a deployment domain so the same build works across
+// local, Vercel and Railway. NEXT_PUBLIC_GOOGLE_REDIRECT_URL remains available
+// as an explicit override when the API is served from a separate host/path.
 const GOOGLE_REDIRECT_URL =
   process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URL ??
-  'https://platformapi-production-c6d1.up.railway.app/api/v1/auth/google';
+  (process.env.NEXT_PUBLIC_API_URL
+    ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '')}/auth/google`
+    : '');
 
 export function GoogleSignInButton({
   variant = 'outline',

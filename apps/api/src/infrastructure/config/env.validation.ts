@@ -43,25 +43,20 @@ export class EnvironmentVariables {
   @IsString()
   REDIS_URL?: string;
 
-  @IsOptional()
   @IsString()
-  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_ID!: string;
 
-  @IsOptional()
   @IsString()
-  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_CLIENT_SECRET!: string;
 
-  @IsOptional()
   @IsString()
-  GOOGLE_CALLBACK_URL?: string;
+  GOOGLE_CALLBACK_URL!: string;
 
-  @IsOptional()
   @IsString()
-  FRONTEND_URL?: string;
+  FRONTEND_URL!: string;
 
-  @IsOptional()
   @IsString()
-  FRONTEND_CALLBACK_URL?: string;
+  FRONTEND_CALLBACK_URL!: string;
 
   @IsOptional()
   @IsString()
@@ -106,6 +101,11 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     'DATABASE_URL',
     'JWT_ACCESS_SECRET',
     'JWT_REFRESH_SECRET',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_CALLBACK_URL',
+    'FRONTEND_URL',
+    'FRONTEND_CALLBACK_URL',
   ];
 
   for (const key of required) {

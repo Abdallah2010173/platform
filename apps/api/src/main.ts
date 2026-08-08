@@ -16,11 +16,23 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 4000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
-  // CORS_ORIGIN is required in production. In development, fall back to
-  // localhost:3000 so the Next.js dev server can call the API.
-  const isProduction = configService.get<string>('NODE_ENV') === 'production';
-  const defaultCorsOrigin = isProduction ? '' : 'http://localhost:3000';
-  const corsOrigin = configService.get<string>('CORS_ORIGIN', defaultCorsOrigin);
+
+  // CORS origins. In production this is derived from FRONTEND_URL (and the
+  // optional CORS_ORIGIN override). Using an explicit origin list keeps
+  // `credentials: true` working for the cross-origin `/auth/google/exchange`
+  // token POST — a wildcard `*` origin is not allowed together with
+  // credentials and would silently block the browser exchange.
+  const frontendUrl = configService.get<string>('FRONTEND_URL', '')?.replace(/\/+$/, '');
+  const corsOrigin = configService.get<string>('CORS_ORIGIN', '');
+
+  const origins = new Set<string>();
+  if (frontendUrl) origins.add(frontendUrl);
+  if (corsOrigin) {
+    for (const o of corsOrigin.split(',')) {
+      const trimmed = o.trim();
+      if (trimmed) origins.add(trimmed.replace(/\/+$/, ''));
+    }
+  }
 
   app.setGlobalPrefix(apiPrefix, {
     exclude: ['health'],
@@ -29,9 +41,7 @@ async function bootstrap() {
   app.use(helmet());
 
   app.enableCors({
-    origin: corsOrigin
-      ? corsOrigin.split(',').map((o) => o.trim())
-      : (origin, callback) => callback(null, false),
+    origin: origins.size > 0 ? [...origins] : false,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

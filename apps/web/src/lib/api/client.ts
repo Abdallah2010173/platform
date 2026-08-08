@@ -1,8 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { AuthUser } from '@/lib/auth';
 
+// API base URL for all axios calls. Always driven by NEXT_PUBLIC_API_URL so the
+// build is domain-agnostic. The localhost fallback only applies to local dev
+// when the variable is absent (never hardcoded to a Railway domain).
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'https://platformapi-production-c6d1.up.railway.app/api/v1';
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ?? 'http://localhost:4000/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_URL,

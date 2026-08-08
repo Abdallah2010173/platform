@@ -140,11 +140,39 @@ export class AuthController {
     res.redirect(url);
   }
 
+  /** @internal Resolve the frontend Google callback URL from configuration. */
+  private getFrontendCallbackUrl(): string {
+    const url = this.configService.get<string>('FRONTEND_CALLBACK_URL')?.replace(/\/+$/, '');
+    if (!url) {
+      throw new UnauthorizedException(
+        'FRONTEND_CALLBACK_URL is not configured. Set FRONTEND_CALLBACK_URL to your frontend Google callback URL.',
+      );
+    }
+    return url;
+  }
+
+  /** @internal Resolve the frontend base URL (used as an absolute fallback for errors). */
+  private getFrontendUrl(): string {
+    const url = this.configService.get<string>('FRONTEND_URL')?.replace(/\/+$/, '');
+    if (!url) {
+      throw new UnauthorizedException(
+        'FRONTEND_URL is not configured. Set FRONTEND_URL to your frontend URL.',
+      );
+    }
+    return url;
+  }
+
   /**
    * Google OAuth callback. Passport verifies the authorization code and the
    * `state` parameter (CSRF). On success we create a one-time exchange code
    * and redirect the browser to the frontend callback page, which exchanges
    * the code for JWTs — keeping tokens out of the URL.
+   *
+   * Every redirect emitted here is an ABSOLUTE URL on the frontend domain.
+   * The callback URL for Passport lives on the API, but the post-auth and
+   * error redirects always point at the deployed frontend. A relative
+   * redirect (e.g. `/login?...`) would incorrectly resolve against the API
+   * host and produce `Cannot GET /login?oauth_error=1`.
    */
   @Public()
   @Get('google/callback')
@@ -157,12 +185,7 @@ export class AuthController {
     try {
       const user = await this.authService.googleOAuthLogin(req.user);
       const code = await this.authService.createOAuthExchangeCode(user.id);
-      const frontendUrl = this.configService.get<string>('FRONTEND_CALLBACK_URL');
-      if (!frontendUrl) {
-        throw new UnauthorizedException(
-          'FRONTEND_CALLBACK_URL is not configured. Set FRONTEND_CALLBACK_URL to your frontend Google callback URL.',
-        );
-      }
+      const frontendCallback = this.getFrontendCallbackUrl();
 
       // Recover the post-login redirect target from the state cookie (if any)
       // and forward it to the frontend callback page.
@@ -172,14 +195,16 @@ export class AuthController {
         `?code=${encodeURIComponent(code)}` +
         (redirect && redirect.startsWith('/') ? `&redirect=${encodeURIComponent(redirect)}` : '');
 
-      res.redirect(`${frontendUrl}${query}`);
+      // SUCCESS → redirect to the frontend callback page (absolute URL).
+      res.redirect(`${frontendCallback}${query}`);
     } catch {
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-      if (!frontendUrl) {
-        res.redirect('/login?oauth_error=1');
-        return;
-      }
-      res.redirect(`${frontendUrl}?oauth_error=1`);
+      // FAILURE → always redirect to the frontend (absolute URL).
+      // Never fall back to a relative `/login` — that resolves to the API host.
+      const frontendCallback = this.configService.get<string>('FRONTEND_CALLBACK_URL');
+      const fallbackBase = frontendCallback
+        ? frontendCallback.replace(/\/+$/, '')
+        : this.getFrontendUrl();
+      res.redirect(`${fallbackBase}?oauth_error=1`);
     }
   }
 
