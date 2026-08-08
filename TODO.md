@@ -30,3 +30,10 @@
 - [x] Run prisma generate, migrate, typecheck, lint, build
 - [x] Create Git commits per phase
 - [x] Refactor users.service.ts: remove `isSuper` from mapped admin, type-safe includes + bulk action
+
+## Phase 2 — Fix Google OAuth frontend redirect (DONE)
+
+- [x] Root cause: deployed API's `FRONTEND_URL`/`FRONTEND_CALLBACK_URL` were missing/misconfigured, so OAuth redirects fell back to the API host (`/login?oauth_error=1`)
+- [x] auth.controller: capture frontend origin at flow start (from env or request Origin/Referer) and store it in the OAuth state cookie
+- [x] auth.controller: callback now redirects to the captured frontend origin on success (`/auth/google/callback`) and on error (`/login?oauth_error=1`) — never the API host
+- [x] API typecheck passes after the refactor

@@ -108,6 +108,37 @@ export class AuthController {
   }
 
   /**
+   * @internal Resolve the frontend origin from the initiating request.
+   * Prefers the FRONTEND_URL / FRONTEND_CALLBACK_URL env vars, then falls back
+   * to the request's Origin / Referer headers so the user is always returned to
+   * the frontend that started the OAuth flow (never the API host).
+   */
+  private resolveFrontendOrigin(req: Request): string {
+    const fromEnv =
+      this.configService.get<string>('FRONTEND_URL')?.replace(/\/+$/, '') ??
+      this.configService.get<string>('FRONTEND_CALLBACK_URL')?.replace(/\/+$/, '');
+
+    if (fromEnv) return fromEnv;
+
+    const origin = req.headers?.origin?.replace(/\/+$/, '');
+    if (origin) return origin;
+
+    const referer = req.headers?.referer;
+    if (referer) {
+      try {
+        const refererOrigin = new URL(referer).origin;
+        if (refererOrigin) return refererOrigin;
+      } catch {
+        // ignore malformed referer
+      }
+    }
+
+    throw new UnauthorizedException(
+      'FRONTEND_URL is not configured and the request origin could not be determined. Set FRONTEND_URL to your frontend URL.',
+    );
+  }
+
+  /**
    * Start the Google OAuth flow. Redirects the browser to Google's consent
    * screen. The `state` query parameter carries a short-lived CSRF token that
    * is validated when Google redirects back to the callback.
@@ -120,10 +151,31 @@ export class AuthController {
 
     const state = this.authService.createOAuthRedirectState();
 
+    // Capture the frontend origin so the callback can always return the user to
+    // the correct frontend, even if FRONTEND_URL / FRONTEND_CALLBACK_URL are not
+    // set on the deployed API. Prefer the explicit env var, then the request's
+    // Origin / Referer header (present because the browser navigates here from
+    // the frontend login page).
+    let frontendOrigin = '';
+    try {
+      frontendOrigin = this.resolveFrontendOrigin(req);
+    } catch {
+      frontendOrigin = '';
+    }
+
     // Preserve an optional post-login redirect target through the OAuth flow.
     const redirectParam = (req.query?.redirect as string | undefined) ?? '';
-    const stateWithRedirect =
-      redirectParam && redirectParam.startsWith('/') ? `${state}::${redirectParam}` : state;
+    const redirectTarget =
+      redirectParam && redirectParam.startsWith('/') ? redirectParam : '';
+
+    // State cookie format: <csrf>|<frontendOrigin>|<redirectPath>
+    // The strategy validates only the CSRF token (first segment), so the
+    // additional segments are safely carried through the OAuth round-trip.
+    const stateWithRedirect = [
+      state,
+      encodeURIComponent(frontendOrigin),
+      encodeURIComponent(redirectTarget),
+    ].join('|');
 
     this.authService.setOAuthStateCookie(res, stateWithRedirect);
 
@@ -140,26 +192,67 @@ export class AuthController {
     res.redirect(url);
   }
 
-  /** @internal Resolve the frontend Google callback URL from configuration. */
-  private getFrontendCallbackUrl(): string {
-    const url = this.configService.get<string>('FRONTEND_CALLBACK_URL')?.replace(/\/+$/, '');
-    if (!url) {
-      throw new UnauthorizedException(
-        'FRONTEND_CALLBACK_URL is not configured. Set FRONTEND_CALLBACK_URL to your frontend Google callback URL.',
-      );
+  /**
+   * @internal Parse the OAuth state cookie into { csrf, frontendOrigin, redirect }.
+   */
+  private parseStateCookie(req: Request): {
+    csrf: string;
+    frontendOrigin: string;
+    redirect: string;
+  } {
+    const raw = this.readStateCookie(req);
+    const fallback = { csrf: raw, frontendOrigin: '', redirect: '' };
+    if (!raw) return fallback;
+
+    const parts = raw.split('|');
+    if (parts.length < 3) return fallback;
+
+    let frontendOrigin = '';
+    try {
+      frontendOrigin = decodeURIComponent(parts[1] ?? '');
+    } catch {
+      frontendOrigin = '';
     }
-    return url;
+    let redirect = '';
+    try {
+      redirect = decodeURIComponent(parts[2] ?? '');
+    } catch {
+      redirect = '';
+    }
+
+    return { csrf: parts[0] ?? '', frontendOrigin, redirect };
   }
 
-  /** @internal Resolve the frontend base URL (used as an absolute fallback for errors). */
-  private getFrontendUrl(): string {
-    const url = this.configService.get<string>('FRONTEND_URL')?.replace(/\/+$/, '');
-    if (!url) {
-      throw new UnauthorizedException(
-        'FRONTEND_URL is not configured. Set FRONTEND_URL to your frontend URL.',
-      );
+  /**
+   * @internal Resolve the frontend Google callback page URL. Uses the frontend
+   * origin captured at flow start (highest priority), then FRONTEND_CALLBACK_URL,
+   * then the request origin.
+   */
+  private getFrontendCallbackUrl(req: Request, storedOrigin: string): string {
+    const configured = this.configService
+      .get<string>('FRONTEND_CALLBACK_URL')
+      ?.replace(/\/+$/, '');
+    if (storedOrigin) {
+      return `${storedOrigin}/auth/google/callback`;
     }
-    return url;
+    if (configured) {
+      if (configured.includes('/auth/google/callback')) {
+        return configured;
+      }
+      return `${configured}/auth/google/callback`;
+    }
+    return `${this.resolveFrontendOrigin(req)}/auth/google/callback`;
+  }
+
+  /**
+   * @internal Resolve the frontend login URL for the error fallback. Uses the
+   * frontend origin captured at flow start, then FRONTEND_URL, then the request
+   * origin — so the user is never sent to the API host.
+   */
+  private getFrontendLoginUrl(req: Request, storedOrigin: string): string {
+    const configured = this.configService.get<string>('FRONTEND_URL')?.replace(/\/+$/, '');
+    const base = storedOrigin || configured || this.resolveFrontendOrigin(req);
+    return `${base}/login?oauth_error=1`;
   }
 
   /**
@@ -182,29 +275,26 @@ export class AuthController {
     @Req() req: Request & { user: GoogleProfileUser },
     @Res() res: Response,
   ): Promise<void> {
+    // Read the frontend origin + redirect target carried through the state cookie.
+    const state = this.parseStateCookie(req);
+
     try {
       const user = await this.authService.googleOAuthLogin(req.user);
       const code = await this.authService.createOAuthExchangeCode(user.id);
-      const frontendCallback = this.getFrontendCallbackUrl();
+      const frontendCallback = this.getFrontendCallbackUrl(req, state.frontendOrigin);
 
-      // Recover the post-login redirect target from the state cookie (if any)
-      // and forward it to the frontend callback page.
-      const stateCookie = this.readStateCookie(req);
-      const redirect = stateCookie ? stateCookie.split('::')[1] : '';
       const query =
         `?code=${encodeURIComponent(code)}` +
-        (redirect && redirect.startsWith('/') ? `&redirect=${encodeURIComponent(redirect)}` : '');
+        (state.redirect && state.redirect.startsWith('/')
+          ? `&redirect=${encodeURIComponent(state.redirect)}`
+          : '');
 
       // SUCCESS → redirect to the frontend callback page (absolute URL).
       res.redirect(`${frontendCallback}${query}`);
     } catch {
       // FAILURE → always redirect to the frontend (absolute URL).
       // Never fall back to a relative `/login` — that resolves to the API host.
-      const frontendCallback = this.configService.get<string>('FRONTEND_CALLBACK_URL');
-      const fallbackBase = frontendCallback
-        ? frontendCallback.replace(/\/+$/, '')
-        : this.getFrontendUrl();
-      res.redirect(`${fallbackBase}?oauth_error=1`);
+      res.redirect(this.getFrontendLoginUrl(req, state.frontendOrigin));
     }
   }
 
