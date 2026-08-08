@@ -83,14 +83,14 @@ export class CoursesController {
   }
 
   @Post('categories')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Create a category' })
   createCategory(@Body() dto: CreateCategoryDto, @CurrentUser() user: AuthUser) {
     return this.categoryService.createCategory(dto, user.id);
   }
 
   @Patch('categories/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Update a category' })
   updateCategory(
     @Param('id') id: string,
@@ -101,14 +101,14 @@ export class CoursesController {
   }
 
   @Delete('categories/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Soft-delete a category' })
   deleteCategory(@Param('id') id: string) {
     return this.categoryService.deleteCategory(id);
   }
 
   @Post('categories/:id/restore')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Restore a soft-deleted category' })
   restoreCategory(@Param('id') id: string) {
     return this.categoryService.restoreCategory(id);
@@ -131,21 +131,21 @@ export class CoursesController {
   }
 
   @Post('sub-categories')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Create a sub-category' })
   createSubCategory(@Body() dto: CreateSubCategoryDto) {
     return this.categoryService.createSubCategory(dto);
   }
 
   @Patch('sub-categories/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Update a sub-category' })
   updateSubCategory(@Param('id') id: string, @Body() dto: UpdateSubCategoryDto) {
     return this.categoryService.updateSubCategory(id, dto);
   }
 
   @Delete('sub-categories/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Soft-delete a sub-category' })
   deleteSubCategory(@Param('id') id: string) {
     return this.categoryService.deleteSubCategory(id);
@@ -171,21 +171,21 @@ export class CoursesController {
   }
 
   @Post('subjects')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Create a subject' })
   createSubject(@Body() dto: CreateSubjectDto) {
     return this.categoryService.createSubject(dto);
   }
 
   @Patch('subjects/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Update a subject' })
   updateSubject(@Param('id') id: string, @Body() dto: UpdateSubjectDto) {
     return this.categoryService.updateSubject(id, dto);
   }
 
   @Delete('subjects/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Soft-delete a subject' })
   deleteSubject(@Param('id') id: string) {
     return this.categoryService.deleteSubject(id);
@@ -221,7 +221,7 @@ export class CoursesController {
   }
 
   @Get('courses/stats')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Get course statistics (admin)' })
   getCourseStats() {
     return this.courseService.getStats();
@@ -240,14 +240,14 @@ export class CoursesController {
   }
 
   @Post('courses')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Create a course' })
   createCourse(@Body() dto: CreateCourseDto, @CurrentUser() user: AuthUser) {
     return this.courseService.create(dto, user);
   }
 
   @Put('courses/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Replace a course (alias for update)' })
   replaceCourse(
     @Param('id') id: string,
@@ -258,7 +258,7 @@ export class CoursesController {
   }
 
   @Patch('courses/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a course' })
   updateCourse(
     @Param('id') id: string,
@@ -269,7 +269,7 @@ export class CoursesController {
   }
 
   @Patch('courses/:id/status')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.MODERATOR, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update course status (publish/approve/reject)' })
   updateCourseStatus(
     @Param('id') id: string,
@@ -280,21 +280,21 @@ export class CoursesController {
   }
 
   @Delete('courses/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Soft-delete a course' })
   deleteCourse(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.delete(id, user);
   }
 
   @Post('courses/:id/restore')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Restore a soft-deleted course' })
   restoreCourse(@Param('id') id: string) {
     return this.courseService.restore(id);
   }
 
   @Post('courses/:id/duplicate')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Duplicate a course' })
   duplicateCourse(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.duplicate(id, user);
@@ -331,7 +331,7 @@ export class CoursesController {
   }
 
   @Post('courses/:courseId/chapters')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add a chapter to a course' })
   addChapter(
     @Param('courseId') courseId: string,
@@ -342,7 +342,7 @@ export class CoursesController {
   }
 
   @Patch('chapters/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a chapter' })
   updateChapter(
     @Param('id') id: string,
@@ -353,14 +353,14 @@ export class CoursesController {
   }
 
   @Delete('chapters/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Soft-delete a chapter' })
   deleteChapter(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteChapter(id, user);
   }
 
   @Post('courses/:courseId/chapters/reorder')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Reorder chapters of a course' })
   reorderChapters(
     @Param('courseId') courseId: string,
@@ -381,7 +381,7 @@ export class CoursesController {
   }
 
   @Post('chapters/:chapterId/lessons')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add a lesson to a chapter' })
   addLesson(
     @Param('chapterId') chapterId: string,
@@ -392,7 +392,7 @@ export class CoursesController {
   }
 
   @Patch('lessons/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a lesson' })
   updateLesson(
     @Param('id') id: string,
@@ -403,7 +403,7 @@ export class CoursesController {
   }
 
   @Delete('lessons/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Soft-delete a lesson' })
   deleteLesson(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteLesson(id, user);
@@ -414,7 +414,7 @@ export class CoursesController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('lessons/:lessonId/videos')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add a video to a lesson' })
   addLessonVideo(
     @Param('lessonId') lessonId: string,
@@ -425,7 +425,7 @@ export class CoursesController {
   }
 
   @Patch('videos/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a lesson video' })
   updateLessonVideo(
     @Param('id') id: string,
@@ -436,7 +436,7 @@ export class CoursesController {
   }
 
   @Delete('videos/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Delete a lesson video' })
   deleteLessonVideo(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteLessonVideo(id, user);
@@ -447,7 +447,7 @@ export class CoursesController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('lessons/:lessonId/pdfs')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add a PDF to a lesson' })
   addLessonPdf(
     @Param('lessonId') lessonId: string,
@@ -458,7 +458,7 @@ export class CoursesController {
   }
 
   @Patch('pdfs/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a lesson PDF' })
   updateLessonPdf(
     @Param('id') id: string,
@@ -469,7 +469,7 @@ export class CoursesController {
   }
 
   @Delete('pdfs/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Delete a lesson PDF' })
   deleteLessonPdf(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteLessonPdf(id, user);
@@ -480,7 +480,7 @@ export class CoursesController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('lessons/:lessonId/attachments')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add an attachment to a lesson' })
   addLessonAttachment(
     @Param('lessonId') lessonId: string,
@@ -491,7 +491,7 @@ export class CoursesController {
   }
 
   @Delete('attachments/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Delete a lesson attachment' })
   deleteLessonAttachment(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteAttachment(id, user);
@@ -502,7 +502,7 @@ export class CoursesController {
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post('lessons/:lessonId/resources')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add a resource to a lesson' })
   addLessonResource(
     @Param('lessonId') lessonId: string,
@@ -513,7 +513,7 @@ export class CoursesController {
   }
 
   @Delete('resources/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Delete a lesson resource' })
   deleteLessonResource(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteLessonResource(id, user);
@@ -530,7 +530,7 @@ export class CoursesController {
   }
 
   @Post('courses/:courseId/resources')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Add a resource to a course' })
   addCourseResource(
     @Param('courseId') courseId: string,
@@ -541,7 +541,7 @@ export class CoursesController {
   }
 
   @Patch('resources/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER, Role.MODERATOR)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a course resource' })
   updateCourseResource(
     @Param('id') id: string,
@@ -552,7 +552,7 @@ export class CoursesController {
   }
 
   @Delete('resources/:id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.TEACHER)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Delete a course resource' })
   deleteCourseResource(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteCourseResource(id, user);
@@ -560,7 +560,7 @@ export class CoursesController {
 
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('test')
-  @Roles(Role.SUPER_ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'No-op test route' })
   noop() {
     return;

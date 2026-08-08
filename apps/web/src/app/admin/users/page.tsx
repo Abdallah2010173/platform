@@ -74,7 +74,7 @@ interface UserItem {
   [key: string]: unknown;
 }
 
-const ROLE_OPTIONS = ['STUDENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR'];
+const ROLE_OPTIONS = ['STUDENT', 'TEACHER', 'ADMIN'];
 
 interface UserFormState {
   firstName: string;

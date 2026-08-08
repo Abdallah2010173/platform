@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RoleGuard allowedRoles={[UserRole.SUPER_ADMIN, UserRole.ADMIN]}>
+    <RoleGuard allowedRoles={[UserRole.ADMIN]}>
       <DashboardLayout
         title="Admin Dashboard"
         description="Manage the platform, users, courses, and analytics."

@@ -1,25 +1,19 @@
 export enum UserRole {
-  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT',
-  MODERATOR = 'MODERATOR',
 }
 
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
-  [UserRole.SUPER_ADMIN]: 100,
-  [UserRole.ADMIN]: 80,
-  [UserRole.MODERATOR]: 60,
-  [UserRole.TEACHER]: 40,
-  [UserRole.STUDENT]: 20,
+  [UserRole.ADMIN]: 90,
+  [UserRole.TEACHER]: 60,
+  [UserRole.STUDENT]: 30,
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  [UserRole.SUPER_ADMIN]: 'Super Admin',
   [UserRole.ADMIN]: 'Admin',
   [UserRole.TEACHER]: 'Teacher',
   [UserRole.STUDENT]: 'Student',
-  [UserRole.MODERATOR]: 'Moderator',
 };
 
 export interface JwtPayload {

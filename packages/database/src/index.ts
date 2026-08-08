@@ -1,6 +1,5 @@
 export { PrismaClient } from '@prisma/client';
 export {
-  // Enums
   Role,
   PermissionAction,
   AccountProvider,
@@ -70,7 +69,6 @@ export type {
   Teacher,
   Student,
   Admin,
-  Moderator,
   Account,
   Session,
   RefreshToken,

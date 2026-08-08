@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { studentApi, teacherApi, adminApi, courseApi, authApi, moderatorApi } from './services';
+import { studentApi, teacherApi, adminApi, courseApi, authApi } from './services';
 import { toast } from 'sonner';
 import { formatApiError } from './services';
 
@@ -320,13 +320,6 @@ export const useDeleteUser = () => {
     onError: (e) => toast.error(formatApiError(e)),
   });
 };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MODERATOR HOOKS
-// ═══════════════════════════════════════════════════════════════════════════
-
-export const useModeratorStats = () =>
-  useQuery({ queryKey: ['moderator', 'stats'], queryFn: () => moderatorApi.stats() });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COURSE HOOKS

@@ -224,35 +224,6 @@ export const courseApi = {
   deleteCategory: async (id: string) => getApiData(await apiClient.delete(`/categories/${id}`)),
 };
 
-/**
- * Moderator-safe platform stats built from public/shared course & category
- * list endpoints (no admin-only /users/stats or /courses/stats dependency).
- */
-export const moderatorApi = {
-  stats: async () => {
-    const [courseResult, categoryResult] = await Promise.all([
-      courseApi.courses({ limit: '100' } as Record<string, string>),
-      courseApi.categories({ limit: '100' } as Record<string, string>),
-    ]);
-
-    const courses: Record<string, unknown>[] = Array.isArray(courseResult)
-      ? (courseResult as Record<string, unknown>[])
-      : ((courseResult as { items?: Record<string, unknown>[] })?.items ?? []);
-    const categories: Record<string, unknown>[] = Array.isArray(categoryResult)
-      ? (categoryResult as Record<string, unknown>[])
-      : ((categoryResult as { items?: Record<string, unknown>[] })?.items ?? []);
-
-    const totalCourses = courses.length;
-    const publishedCourses = courses.filter(
-      (c) => c.isPublished === true || c.status === 'PUBLISHED',
-    ).length;
-    const pendingReview = courses.filter((c) => c.status === 'PENDING_REVIEW').length;
-    const totalCategories = categories.length;
-
-    return { totalCourses, publishedCourses, pendingReview, totalCategories };
-  },
-};
-
 export const formatApiError = (e: unknown): string => {
   if (e && typeof e === 'object' && 'response' in e) {
     const err = e as {

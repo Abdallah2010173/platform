@@ -1,24 +1,30 @@
-# Production Google OAuth Fix — Implementation Steps
+# TODO — Role Cleanup & Completion
 
-## Goal
-Fix the Google OAuth flow so the API authenticates the user, generates JWTs, and
-redirects **only** to the frontend domain. Never redirect to `/login` on the API host
-(which produced `Cannot GET /login?oauth_error=1`).
+## Phase 1 — Remove MODERATOR & SUPER_ADMIN (DONE)
+- [x] Schema: Role enum now only ADMIN/TEACHER/STUDENT
+- [x] Schema: removed `isSuper` from Admin model
+- [x] Migration: `20260203000000_remove_moderator_superadmin`
+- [x] Seed: removed moderator/super admin references
+- [x] API: users.service updated (no isSuper/mod, no moderator include)
+- [x] API: courses.controller cleaned (`Role.ADMIN, Role.ADMIN` → `Role.ADMIN`)
+- [x] API: course.service cleaned
+- [x] API: teacher.controller cleaned
+- [x] shared: UserRole only ADMIN/TEACHER/STUDENT
+- [x] database/src: cleaned
+- [x] web auth.ts: roleToRoute cleaned
+- [x] web navigation.ts: ROLE_NAV cleaned
+- [x] web admin/layout: only UserRole.ADMIN
+- [x] web admin/users: ROLE_OPTIONS cleaned
+- [x] web login: no hardcoded demo creds
+- [x] web services.ts: moderatorApi removed
+- [x] web hooks.ts: moderator hooks removed
+- [x] web home page: RBAC text updated
 
-## Root cause
-The API's `googleCallback` error path fell back to a **relative** redirect
-`res.redirect('/login?oauth_error=1')`. Relative redirects resolve against the
-current host — the API — producing `https://<api-domain>/login?oauth_error=1`.
-The API has no `/login` page (it's a frontend route), so Express returned
-`Cannot GET /login?oauth_error=1`.
+## Remaining steps
+- [x] Delete `apps/web/src/app/moderator/` directory
+- [x] Remove temporary `_*.ps1` helper scripts (keep startup/test/maintenance scripts)
+- [x] Fix formatting issues (login/page.tsx, page.tsx)
+- [x] Final scan: zero SUPER_ADMIN / MODERATOR / isSuper references in source
+- [ ] Run prisma generate, migrate, typecheck, lint, build
+- [ ] Create Git commits per phase
 
-## Steps
-- [x] 1. env.validation.ts: make FRONTEND_URL, FRONTEND_CALLBACK_URL, API_URL, GOOGLE_CALLBACK_URL required.
-- [x] 2. auth.controller.ts: googleCallback redirects only to frontend (success + failure), never relative `/login`.
-- [x] 3. main.ts: fix CORS for production cross-origin token exchange (credentials + explicit origin).
-- [x] 4. web google-signin-button.tsx: derive Google redirect URL from NEXT_PUBLIC_API_URL (no hardcoded Railway URL).
-- [x] 5. web client.ts: remove hardcoded Railway fallback; use NEXT_PUBLIC_API_URL.
-- [x] 6. Check root/workspace .env files and remove any hardcoded localhost/Railway URLs in source.
-- [x] 7. Update web `.env.example` with required NEXT_PUBLIC_* vars.
-- [ ] 8. Run API typecheck/build and web typecheck/lint/build.
-- [ ] 9. Document Railway env vars + Google Cloud Console redirect URI checklist.

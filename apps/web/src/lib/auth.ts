@@ -62,15 +62,12 @@ export function clearSession(): void {
  */
 export function roleToRoute(role: UserRole): string {
   switch (role) {
-    case UserRole.SUPER_ADMIN:
     case UserRole.ADMIN:
       return '/admin';
     case UserRole.TEACHER:
       return '/teacher';
     case UserRole.STUDENT:
       return '/student';
-    case UserRole.MODERATOR:
-      return '/moderator';
     default:
       return '/';
   }

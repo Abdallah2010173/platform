@@ -101,45 +101,6 @@ export const ROLE_NAV: Record<string, NavSection[]> = {
       ],
     },
   ],
-  [UserRole.SUPER_ADMIN]: [
-    {
-      label: 'Menu',
-      items: [
-        { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-        { label: 'Users', href: '/admin/users', icon: Users },
-        { label: 'Courses', href: '/admin/courses', icon: BookOpen },
-        { label: 'Categories', href: '/admin/categories', icon: FolderOpen },
-        { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-      ],
-    },
-    {
-      label: 'General',
-      items: [
-        { label: 'Settings', href: '/admin/settings', icon: Settings },
-        { label: 'Help', href: '/admin/help', icon: HelpCircle },
-        { label: 'Logout', href: '/logout', icon: LogOut },
-      ],
-    },
-  ],
-  [UserRole.MODERATOR]: [
-    {
-      label: 'Menu',
-      items: [
-        { label: 'Dashboard', href: '/moderator', icon: LayoutDashboard },
-        { label: 'Categories', href: '/moderator/categories', icon: FolderOpen },
-        { label: 'Courses Review', href: '/moderator/courses', icon: BookOpen },
-        { label: 'Analytics', href: '/moderator/analytics', icon: BarChart3 },
-      ],
-    },
-    {
-      label: 'General',
-      items: [
-        { label: 'Settings', href: '/moderator/settings', icon: Settings },
-        { label: 'Help', href: '/moderator/help', icon: HelpCircle },
-        { label: 'Logout', href: '/logout', icon: LogOut },
-      ],
-    },
-  ],
 };
 
 export function getNavForRole(role: UserRole | string | undefined): NavSection[] {

@@ -70,11 +70,13 @@ const PERMISSIONS = [
 ] as const;
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
-  [Role.SUPER_ADMIN]: PERMISSIONS.map((p) => `${p.resource}:${p.action}`),
   [Role.ADMIN]: [
     'users:READ',
     'users:CREATE',
     'users:UPDATE',
+    'users:DELETE',
+    'users:MANAGE',
+    'roles:MANAGE',
     'courses:MANAGE',
     'courses:READ',
     'courses:CREATE',
@@ -89,11 +91,13 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'notifications:MANAGE',
     'audit-logs:READ',
     'reports:READ',
+    'system-settings:MANAGE',
   ],
   [Role.TEACHER]: [
     'courses:READ',
     'courses:CREATE',
     'courses:UPDATE',
+    'courses:DELETE',
     'exams:MANAGE',
     'exams:READ',
     'bookings:MANAGE',
@@ -101,21 +105,9 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'users:READ',
   ],
   [Role.STUDENT]: ['courses:READ', 'exams:READ'],
-  [Role.MODERATOR]: [
-    'users:READ',
-    'users:UPDATE',
-    'courses:READ',
-    'audit-logs:READ',
-    'reports:READ',
-  ],
 };
 
 const ROLE_CATALOG = [
-  {
-    name: Role.SUPER_ADMIN,
-    description: 'Super administrator with full platform control',
-    isSystem: true,
-  },
   {
     name: Role.ADMIN,
     description: 'Administrator with platform-wide management access',
@@ -127,11 +119,6 @@ const ROLE_CATALOG = [
     isSystem: true,
   },
   { name: Role.STUDENT, description: 'Student who enrolls in courses', isSystem: true },
-  {
-    name: Role.MODERATOR,
-    description: 'Moderator who reviews content and resolves disputes',
-    isSystem: true,
-  },
 ];
 
 const BOOKING_STATUSES = [
@@ -548,34 +535,37 @@ async function seedCertificateTemplates() {
 }
 
 async function seedUsers() {
-  const passwordHash = await bcrypt.hash('SuperAdmin@123', 12);
-  const passwordHashUser = await bcrypt.hash('Password@123', 12);
+  const passwordHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123', 12);
+  const passwordHashUser = await bcrypt.hash(
+    process.env.SEED_USER_PASSWORD ?? 'Password@123',
+    12,
+  );
 
-  // Super Admin
-  const superAdmin = await prisma.user.upsert({
+  // Development Admin (seeded for local/dev only).
+  const admin = await prisma.user.upsert({
     where: { email: 'admin@platform.local' },
     update: {},
     create: {
       email: 'admin@platform.local',
       passwordHash,
-      role: Role.SUPER_ADMIN,
+      role: Role.ADMIN,
       emailVerified: new Date(),
       emailVerifiedAt: new Date(),
       profile: {
         create: {
-          firstName: 'Super',
+          firstName: 'Platform',
           lastName: 'Admin',
-          displayName: 'Super Admin',
+          displayName: 'Platform Admin',
           headline: 'Platform Administrator',
         },
       },
       admin: {
-        create: { department: 'Platform Operations', isSuper: true },
+        create: { department: 'Platform Operations' },
       },
     },
   });
 
-  // Demo Teacher
+  // Development Teacher (seeded for local/dev only).
   const teacher = await prisma.user.upsert({
     where: { email: 'teacher@platform.local' },
     update: {},
@@ -607,7 +597,7 @@ async function seedUsers() {
     },
   });
 
-  // Demo Student
+  // Development Student (seeded for local/dev only).
   const student = await prisma.user.upsert({
     where: { email: 'student@platform.local' },
     update: {},
@@ -638,45 +628,26 @@ async function seedUsers() {
     },
   });
 
-  // Demo Moderator
-  const moderator = await prisma.user.upsert({
-    where: { email: 'moderator@platform.local' },
-    update: {},
-    create: {
-      email: 'moderator@platform.local',
-      passwordHash: passwordHashUser,
-      role: Role.MODERATOR,
-      emailVerified: new Date(),
-      emailVerifiedAt: new Date(),
-      profile: {
-        create: { firstName: 'Sam', lastName: 'Wilson', displayName: 'Sam Wilson' },
-      },
-      moderator: { create: { section: 'Content Review' } },
-    },
-  });
-
-  // Create linked OAuth account sample (Google) for super admin
+  // Create linked OAuth account sample (Google) for the admin.
   await prisma.account.upsert({
     where: {
       provider_providerAccountId: {
         provider: AccountProvider.GOOGLE,
-        providerAccountId: 'google-oauth-superadmin',
+        providerAccountId: 'google-oauth-admin',
       },
     },
     update: {},
     create: {
-      userId: superAdmin.id,
+      userId: admin.id,
       provider: AccountProvider.GOOGLE,
-      providerAccountId: 'google-oauth-superadmin',
-      providerUserId: superAdmin.id,
+      providerAccountId: 'google-oauth-admin',
+      providerUserId: admin.id,
       tokenType: 'Bearer',
       scope: 'openid profile email',
     },
   });
 
-  console.log(
-    `✓ Seeded users: ${superAdmin.email}, ${teacher.email}, ${student.email}, ${moderator.email}`,
-  );
+  console.log(`✓ Seeded users: ${admin.email}, ${teacher.email}, ${student.email}`);
 }
 
 async function seedCourseContent() {

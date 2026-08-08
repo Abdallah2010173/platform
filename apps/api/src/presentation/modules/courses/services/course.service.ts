@@ -72,7 +72,7 @@ export class CourseService {
     } = query;
 
     // Non-admin/non-teacher users only see published courses
-    const isStaff = user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN');
+    const isStaff = user && (user.role === 'ADMIN');
 
     const where: Prisma.CourseWhereInput = { deletedAt: null };
 
@@ -347,7 +347,7 @@ export class CourseService {
     const slug = dto.slug ? dto.slug : await this.uniqueSlugify(dto.title);
 
     // Determine if admin/teacher creates directly published draft vs published
-    const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
+    const isAdmin = user.role === 'ADMIN';
 
     const course = await this.prisma.course.create({
       data: {
@@ -1267,7 +1267,7 @@ export class CourseService {
     if (!course) throw new NotFoundException('Course not found');
 
     if (!user) return;
-    if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'MODERATOR') return;
+    if (user.role === 'ADMIN') return;
 
     if (user.role === 'TEACHER') {
       const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });

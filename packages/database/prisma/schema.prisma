@@ -24,11 +24,9 @@ datasource db {
 // ═════════════════════════════════════════════════════════════════════════════
 
 enum Role {
-  SUPER_ADMIN
   ADMIN
   TEACHER
   STUDENT
-  MODERATOR
 }
 
 enum PermissionAction {
@@ -487,12 +485,12 @@ model User {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
-  // Relations
+// Relations
   profile                 UserProfile?
   teacher                 Teacher?
   student                 Student?
   admin                   Admin?
-  moderator               Moderator?
+  announcements           Announcement[]
   accounts                Account[]
   sessions                Session[]
   refreshTokens           RefreshToken[]
@@ -690,7 +688,6 @@ model Admin {
   userId      String    @unique
   department  String?
   permissions String[]
-  isSuper     Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -700,18 +697,30 @@ model Admin {
   @@map("admins")
 }
 
-model Moderator {
-  id          String    @id @default(uuid())
-  userId      String    @unique
-  section     String?
-  permissions String[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+// ═════════════════════════════════════════════════════════════════════════════
+// ANNOUNCEMENTS — Announcement
+// ═════════════════════════════════════════════════════════════════════════════
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Announcement {
+  id           String    @id @default(uuid())
+  courseId     String?
+  authorId     String
+  title        String
+  content      String
+  audience     String    @default("ALL") // ALL | STUDENTS | TEACHERS | COURSE
+  pinned       Boolean   @default(false)
+  publishedAt  DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
-  @@map("moderators")
+author User? @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([courseId])
+  @@index([authorId])
+  @@index([audience, publishedAt])
+  @@map("announcements")
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1075,10 +1084,11 @@ model Course {
   certificates         Certificate[]
   attendanceReports    AttendanceReport[]
   courseRatings        CourseRating[]
-  media                CourseMedia[]
+media                CourseMedia[]
   reviews              CourseReview[]
   analytics            CourseAnalytics?
   lessons              Lesson[]
+  announcements        Announcement[]
 
   @@index([categoryId, isPublished])
   @@index([subCategoryId])

@@ -8,7 +8,7 @@ import { AuthenticatedUser } from './teacher.helper';
 
 @ApiTags('Teacher')
 @ApiBearerAuth()
-@Roles(Role.TEACHER, Role.SUPER_ADMIN, Role.ADMIN)
+@Roles(Role.TEACHER, Role.ADMIN)
 @Controller('teacher')
 export class TeacherController {
   constructor(private readonly teacherService: TeacherService) {}

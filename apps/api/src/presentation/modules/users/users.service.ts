@@ -116,7 +116,6 @@ export class UsersService {
         teacher: true,
         student: true,
         admin: true,
-        moderator: true,
       },
     });
     if (!user) {
@@ -177,21 +176,11 @@ export class UsersService {
               },
             }
           : {}),
-        ...(dto.role === Role.ADMIN || dto.role === Role.SUPER_ADMIN
+        ...(dto.role === Role.ADMIN
           ? {
               admin: {
                 create: {
                   department: dto.department,
-                  isSuper: dto.role === Role.SUPER_ADMIN,
-                },
-              },
-            }
-          : {}),
-        ...(dto.role === Role.MODERATOR
-          ? {
-              moderator: {
-                create: {
-                  section: dto.department,
                 },
               },
             }
@@ -202,7 +191,6 @@ export class UsersService {
         student: true,
         teacher: true,
         admin: true,
-        moderator: true,
       },
     });
 
@@ -268,7 +256,6 @@ export class UsersService {
         student: true,
         teacher: true,
         admin: true,
-        moderator: true,
       },
     });
 
@@ -289,14 +276,9 @@ export class UsersService {
           },
         });
       }
-      if ((dto.role === Role.ADMIN || dto.role === Role.SUPER_ADMIN) && !user.admin) {
+      if (dto.role === Role.ADMIN && !user.admin) {
         await this.prisma.admin.create({
-          data: { userId: id, department: dto.department, isSuper: dto.role === Role.SUPER_ADMIN },
-        });
-      }
-      if (dto.role === Role.MODERATOR && !user.moderator) {
-        await this.prisma.moderator.create({
-          data: { userId: id, section: dto.department },
+          data: { userId: id, department: dto.department },
         });
       }
     }
@@ -479,7 +461,8 @@ export class UsersService {
       teacher: u.teacher
         ? { id: u.teacher.id, title: u.teacher.title, department: u.teacher.department }
         : null,
-      admin: u.admin ? { id: u.admin.id, isSuper: u.admin.isSuper } : null,
+      admin: u.admin ? { id: u.admin.id } : null,
     };
   }
 }
+

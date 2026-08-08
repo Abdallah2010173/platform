@@ -44,7 +44,7 @@ const features = [
   {
     icon: Users,
     title: 'User Roles',
-    desc: 'Admin, Teacher, Student, and Moderator with full RBAC.',
+    desc: 'Admin, Teacher, and Student with full RBAC.',
   },
   {
     icon: BarChart3,
@@ -113,14 +113,11 @@ export default function HomePage() {
                 </Link>
               </Button>
             )}
-           <Button asChild variant="outline" size="lg">
-  <Link
-    href={`${process.env.NEXT_PUBLIC_API_URL}/docs`}
-    target="_blank"
-  >
-    API Docs
-  </Link>
-</Button>
+            <Button asChild variant="outline" size="lg">
+              <Link href={`${process.env.NEXT_PUBLIC_API_URL}/docs`} target="_blank">
+                API Docs
+              </Link>
+            </Button>
           </div>
         </section>
 

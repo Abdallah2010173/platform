@@ -32,13 +32,9 @@ function LoginFormInner() {
   const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>({
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: 'admin@platform.local', password: 'SuperAdmin@123' },
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = async (data: LoginForm) => {
@@ -92,7 +88,7 @@ function LoginFormInner() {
               <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
-{error && <p className="text-destructive text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>
