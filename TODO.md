@@ -1,6 +1,7 @@
 # TODO — Role Cleanup & Completion
 
 ## Phase 1 — Remove MODERATOR & SUPER_ADMIN (DONE)
+
 - [x] Schema: Role enum now only ADMIN/TEACHER/STUDENT
 - [x] Schema: removed `isSuper` from Admin model
 - [x] Migration: `20260203000000_remove_moderator_superadmin`
@@ -21,10 +22,10 @@
 - [x] web home page: RBAC text updated
 
 ## Remaining steps
+
 - [x] Delete `apps/web/src/app/moderator/` directory
 - [x] Remove temporary `_*.ps1` helper scripts (keep startup/test/maintenance scripts)
 - [x] Fix formatting issues (login/page.tsx, page.tsx)
 - [x] Final scan: zero SUPER_ADMIN / MODERATOR / isSuper references in source
-- [ ] Run prisma generate, migrate, typecheck, lint, build
-- [ ] Create Git commits per phase
-
+- [x] Run prisma generate, migrate, typecheck, lint, build
+- [x] Create Git commits per phase
