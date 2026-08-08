@@ -29,3 +29,4 @@
 - [x] Final scan: zero SUPER_ADMIN / MODERATOR / isSuper references in source
 - [x] Run prisma generate, migrate, typecheck, lint, build
 - [x] Create Git commits per phase
+- [x] Refactor users.service.ts: remove `isSuper` from mapped admin, type-safe includes + bulk action
