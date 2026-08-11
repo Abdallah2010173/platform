@@ -101,6 +101,28 @@ export async function loginRequest(email: string, password: string): Promise<Log
   return payload as LoginApiResponse;
 }
 
+export async function logoutRequest(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  const accessToken = localStorage.getItem('accessToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+
+  if (!refreshToken) return;
+
+  try {
+    await axios.post(
+      `${API_URL}/auth/logout`,
+      { refreshToken },
+      {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+        withCredentials: true,
+      },
+    );
+  } catch {
+    // Ignore logout failures and still clear the client session.
+  }
+}
+
 export function getApiData<T>(response: { data: unknown }): T {
   const body = response.data as { data?: T };
   return body?.data ?? (response.data as T);

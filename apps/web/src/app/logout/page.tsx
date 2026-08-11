@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { LogOut } from 'lucide-react';
+import { logoutRequest } from '@/lib/api/client';
 import { clearCredentials } from '@/lib/store/slices/auth.slice';
 import { AppDispatch } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,20 @@ export default function LogoutPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    dispatch(clearCredentials());
+    let cancelled = false;
+
+    const finalizeLogout = async () => {
+      await logoutRequest();
+      if (!cancelled) {
+        dispatch(clearCredentials());
+      }
+    };
+
+    void finalizeLogout();
+
+    return () => {
+      cancelled = true;
+    };
   }, [dispatch]);
 
   return (

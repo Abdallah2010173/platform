@@ -8,9 +8,6 @@ import { NotificationCenter } from './notification-center';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/components/auth/protected-route';
 import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/lib/store';
-import { clearCredentials } from '@/lib/store/slices/auth.slice';
 import { useTheme } from '@/components/providers/theme-provider';
 import { ROLE_LABELS } from '@platform/shared';
 
@@ -23,12 +20,10 @@ interface HeaderProps {
 export function Header({ title, description, actions }: HeaderProps) {
   const { user } = useAuth();
   const router = useRouter();
-  const dispatch = useDispatch<AppDispatch>();
   const { resolvedTheme, setTheme } = useTheme();
 
   const handleLogout = async () => {
-    dispatch(clearCredentials());
-    router.replace('/');
+    router.replace('/logout');
   };
 
   const initials =
