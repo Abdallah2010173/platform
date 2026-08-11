@@ -120,6 +120,13 @@ export class AuthController {
 
     if (fromEnv) return fromEnv;
 
+    const forwardedProto = req.headers['x-forwarded-proto']?.toString().split(',')[0]?.trim();
+    const forwardedHost = req.headers['x-forwarded-host']?.toString().split(',')[0]?.trim();
+    if (forwardedHost) {
+      const proto = forwardedProto || (req.secure ? 'https' : 'http');
+      return `${proto}://${forwardedHost}`.replace(/\/+$/, '');
+    }
+
     const origin = req.headers?.origin?.replace(/\/+$/, '');
     if (origin) return origin;
 
