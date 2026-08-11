@@ -190,12 +190,12 @@ export class AuthController {
     const redirectUri = this.configService.get<string>('GOOGLE_CALLBACK_URL')!;
     const scope = encodeURIComponent('email profile');
     const url =
-      `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
-      `&client_id=${encodeURIComponent(clientId)}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&scope=${scope}` +
-      `&state=${encodeURIComponent(stateWithRedirect)}` +
-      `&access_type=offline&prompt=consent`;
+  `https://accounts.google.com/o/oauth2/v2/auth?response_type=code` +
+  `&client_id=${encodeURIComponent(clientId)}` +
+  `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+  `&scope=${scope}` +
+  `&state=${encodeURIComponent(stateWithRedirect)}` +
+  `&access_type=offline&prompt=consent`;
     res.redirect(url);
   }
 
