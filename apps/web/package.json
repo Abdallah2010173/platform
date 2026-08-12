@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
+    "dev": "pnpm --filter @platform/shared build && next dev --port 3000",
+    "build": "pnpm --filter @platform/shared build && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
