@@ -25,7 +25,6 @@ import {
   LoginDto,
   RegisterDto,
   RefreshTokenDto,
-  GoogleAuthDto,
   GoogleOAuthExchangeDto,
   ForgotPasswordDto,
   ResetPasswordDto,
@@ -44,30 +43,6 @@ export class AuthController {
     private readonly userRepository: UserRepository,
     private readonly configService: ConfigService,
   ) {}
-
-  @Public()
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate user and receive JWT tokens' })
-  async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
-    const user = await this.authService.validateUser(dto.email, dto.password);
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-    const tokens = await this.authService.generateTokens(user.id, user.email, user.role);
-    const fullUser = await this.userRepository.findById(user.id);
-    return {
-      ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: fullUser?.profile?.firstName,
-        lastName: fullUser?.profile?.lastName,
-        avatarUrl: fullUser?.profile?.avatarUrl ?? undefined,
-      },
-    };
-  }
 
   @Public()
   @Post('register')
