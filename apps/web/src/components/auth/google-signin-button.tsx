@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-// The Google OAuth entry point lives on the API. Derive it from the public API
-// URL rather than hardcoding a deployment domain so the same build works across
-// local, Vercel and Railway. NEXT_PUBLIC_GOOGLE_REDIRECT_URL remains available
-// as an explicit override when the API is served from a separate host/path.
+// The Google OAuth entry point lives on the API.
 const GOOGLE_REDIRECT_URL = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URL?.trim() ?? '';
+const DEFAULT_API_URL = 'https://platformapi-production-c6d1.up.railway.app/api/v1';
 
 export function resolveGoogleAuthUrl({
   googleRedirectUrl,
@@ -20,17 +18,18 @@ export function resolveGoogleAuthUrl({
   redirect?: string | null;
 }): string {
   const configuredUrl = googleRedirectUrl?.trim();
-  const fallbackBase = apiUrl?.trim();
-  const fallbackUrl = fallbackBase
-    ? `${fallbackBase.replace(/\/+$/, '')}/auth/google`
-    : '';
-  const baseUrl = configuredUrl || fallbackUrl || '/api/v1/auth/google';
+  const fallbackBase = apiUrl?.trim() || DEFAULT_API_URL;
+  
+  // بناء رابط الـ Backend المباشر لتفادي التوجيه الداخلي الخاطئ
+  const fallbackUrl = `${fallbackBase.replace(/\/+$/, '')}/auth/google`;
+  const baseUrl = configuredUrl || fallbackUrl;
 
   if (!baseUrl) {
     throw new Error('Google sign-in is not configured.');
   }
 
-  const url = new URL(baseUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+  // إنشاء رابط مطلق بدون الاعتماد على origin الفرونت إند
+  const url = new URL(baseUrl);
   if (redirect && redirect.startsWith('/')) {
     url.searchParams.set('redirect', redirect);
   }
@@ -86,4 +85,3 @@ export function GoogleSignInButton({
     </div>
   );
 }
-
