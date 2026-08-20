@@ -32,7 +32,11 @@ function LoginFormInner() {
   const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
@@ -50,11 +54,8 @@ function LoginFormInner() {
         throw new Error('Invalid login response');
       }
 
-      // Persist session + update Redux auth state.
       dispatch(setCredentials({ user, accessToken, refreshToken }));
 
-      // Respect a requested redirect if it is safe and belongs to the user's role,
-      // otherwise fall back to the role-based dashboard.
       const requested = searchParams.get('redirect');
       const target = requested && requested.startsWith('/') ? requested : roleToRoute(user.role);
       router.replace(target);
@@ -74,7 +75,7 @@ function LoginFormInner() {
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Enter your credentials to access the platform</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -92,27 +93,30 @@ function LoginFormInner() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card text-muted-foreground px-2">or continue with</span>
-            </div>
-          </div>
-          <GoogleSignInButton />
-          <div className="flex items-center justify-between text-sm">
-            <Link
-              href="/forgot-password"
-              className="text-muted-foreground hover:text-foreground hover:underline"
-            >
-              Forgot password?
-            </Link>
-            <Link href="/register" className="text-primary hover:underline">
-              Create account
-            </Link>
-          </div>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card text-muted-foreground px-2">or continue with</span>
+          </div>
+        </div>
+
+        <GoogleSignInButton />
+
+        <div className="flex items-center justify-between text-sm pt-2">
+          <Link
+            href="/forgot-password"
+            className="text-muted-foreground hover:text-foreground hover:underline"
+          >
+            Forgot password?
+          </Link>
+          <Link href="/register" className="text-primary hover:underline">
+            Create account
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );
