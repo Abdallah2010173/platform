@@ -69,30 +69,6 @@ export class AuthController {
   }
 
   @Public()
-  @Post('google')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate or register via Google ID token' })
-  async google(@Body() dto: GoogleAuthDto): Promise<AuthTokensResponseDto> {
-    const result = await this.authService.googleLogin(dto.token);
-    const fullUser = await this.userRepository.findById(result.user.id);
-    return {
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      expiresIn: result.expiresIn,
-      user: fullUser
-        ? {
-            id: fullUser.id,
-            email: fullUser.email,
-            role: fullUser.role,
-            firstName: fullUser.profile?.firstName,
-            lastName: fullUser.profile?.lastName,
-            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
-          }
-        : undefined,
-    };
-  }
-
-  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
