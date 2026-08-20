@@ -2,13 +2,13 @@
   "name": "@platform/api",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
+"scripts": {
     "prebuild": "pnpm --filter @platform/database build",
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "nest start",
     "prestart:prod": "pnpm --filter @platform/database generate",
-    "start:prod": "node dist/apps/api/src/main.js",
+    "start:prod": "nest start --path tsconfig.build.json",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
