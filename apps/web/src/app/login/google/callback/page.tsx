@@ -1,27 +1,72 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '@/lib/store/slices/auth.slice';
+import { AuthUser, roleToRoute } from '@/lib/auth';
 
 function CallbackContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const code = searchParams.get('code');
-    if (code) {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_URL?.trim() ||
-        'https://platformapi-production-c6d1.up.railway.app/api/v1';
-      const cleanUrl = baseUrl.replace(/\/+$/, '');
-      
-      // تحويل الكود المباشر لسيرفر NestJS على Railway
-      window.location.href = `${cleanUrl}/auth/google/callback?code=${code}`;
-    }
-  }, [searchParams]);
+    if (!code) return;
+
+    const authenticateGoogle = async () => {
+      try {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_URL?.trim() ||
+          'https://platformapi-production-c6d1.up.railway.app/api/v1';
+
+        // طلب الـ Token والمستخدم من سيرفر NestJS بواسطة الـ Code
+        const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/auth/google/callback?code=${code}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.accessToken) {
+          throw new Error(data.message || 'Google Authentication failed');
+        }
+
+        // حفظ بيانات الجلسة في Redux
+        dispatch(
+          setCredentials({
+            user: data.user as AuthUser,
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          })
+        );
+
+        // التوجيه المباشر للوحة التحكم حسب نوع الحساب
+        const targetRoute = roleToRoute((data.user as AuthUser).role);
+        router.replace(targetRoute);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Login failed');
+      }
+    };
+
+    authenticateGoogle();
+  }, [searchParams, dispatch, router]);
+
+  if (error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <p className="text-destructive font-medium">{error}</p>
+        <button
+          onClick={() => router.push('/login')}
+          className="text-sm underline text-primary"
+        >
+          العودة لصفحة الدخول
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen items-center justify-center">
-      <p className="text-sm font-medium">جاري إتمام تسجيل الدخول عبر Google...</p>
+      <p className="text-sm font-medium animate-pulse">جاري تسجيل الدخول والدخول للمنصة...</p>
     </div>
   );
 }
