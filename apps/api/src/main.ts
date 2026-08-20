@@ -64,7 +64,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  const swaggerConfig = new DocumentBuilder()
+const swaggerConfig = new DocumentBuilder()
     .setTitle('Platform LMS API')
     .setDescription('Enterprise Learning Management System API')
     .setVersion('1.0')
@@ -73,13 +73,8 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-  // إعداد Swagger المباشر
-  SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
-    useGlobalPrefix: false,
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+  // استدعاء واحد فقط ونظيف
+  SwaggerModule.setup('api/v1/docs', app, document);
 
   await app.listen(port, '0.0.0.0');
   logger.log(`API running on http://localhost:${port}/${apiPrefix}`);
