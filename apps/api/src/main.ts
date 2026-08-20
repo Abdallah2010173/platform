@@ -17,11 +17,6 @@ async function bootstrap() {
   const port = configService.get<number>('PORT', 4000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
 
-  // CORS origins. In production this is derived from FRONTEND_URL (and the
-  // optional CORS_ORIGIN override). Using an explicit origin list keeps
-  // `credentials: true` working for the cross-origin `/auth/google/exchange`
-  // token POST — a wildcard `*` origin is not allowed together with
-  // credentials and would silently block the browser exchange.
   const frontendUrl = configService.get<string>('FRONTEND_URL', '')?.replace(/\/+$/, '');
   const corsOrigin = configService.get<string>('CORS_ORIGIN', '');
 
@@ -34,6 +29,7 @@ async function bootstrap() {
     }
   }
 
+  // تبسيط الاستثناء لمنع تضارب الـ Regex المسبب للـ Crash
   app.setGlobalPrefix(apiPrefix, {
     exclude: ['health'],
   });
@@ -68,7 +64,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
 
- const swaggerConfig = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Platform LMS API')
     .setDescription('Enterprise Learning Management System API')
     .setVersion('1.0')
@@ -77,13 +73,14 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-  // التعديل هنا: إضافة خيارات لتجنب مشاكل الـ Relative Paths والـ Prefix
-  SwaggerModule.setup('api/v1/docs', app, document, {
-    useGlobalPrefix: false, // يمنع تكرار api/v1 مرتين
+  // إعداد Swagger المباشر
+  SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
+    useGlobalPrefix: false,
     swaggerOptions: {
       persistAuthorization: true,
     },
   });
+
   await app.listen(port, '0.0.0.0');
   logger.log(`API running on http://localhost:${port}/${apiPrefix}`);
   logger.log(`Swagger docs at http://localhost:${port}/${apiPrefix}/docs`);
