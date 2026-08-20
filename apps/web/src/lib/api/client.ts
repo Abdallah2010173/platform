@@ -1,10 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { AuthUser } from '@/lib/auth';
 
-// API base URL for all axios calls. Always driven by NEXT_PUBLIC_API_URL so the
-// build is domain-agnostic. The localhost fallback only applies to local dev
-// when the variable is absent (never hardcoded to a Railway domain).
-const rawUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '') ?? 'http://localhost:4000/api/v1';
+// ضمان إضافة /api/v1 دائماً لتفادي خطأ 404
+const rawUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '') || 'http://localhost:4000';
 const API_URL = rawUrl.endsWith('/api/v1') ? rawUrl : `${rawUrl}/api/v1`;
 
 export const apiClient = axios.create({
@@ -37,11 +35,12 @@ async function refreshAccessToken(): Promise<string | null> {
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) return null;
       const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-      // The global TransformInterceptor wraps responses: { success, data, timestamp }
+      
       const body = res.data;
       const tokens = body?.data ?? body;
       const newAccessToken = tokens?.accessToken ?? null;
       const newRefreshToken = tokens?.refreshToken ?? null;
+      
       if (newAccessToken) {
         localStorage.setItem('accessToken', newAccessToken);
       }
@@ -70,7 +69,7 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(original);
       }
-      // Refresh failed — clear session and redirect to login.
+      
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -86,7 +85,6 @@ apiClient.interceptors.response.use(
 
 export default apiClient;
 
-// Re-export usage-friendly helpers
 export interface LoginApiResponse {
   accessToken: string;
   refreshToken: string;
@@ -96,7 +94,6 @@ export interface LoginApiResponse {
 
 export async function loginRequest(email: string, password: string): Promise<LoginApiResponse> {
   const res = await apiClient.post('/auth/login', { email, password });
-  // TransformInterceptor envelope: { success, data, timestamp }
   const payload = res.data?.data ?? res.data;
   return payload as LoginApiResponse;
 }
@@ -119,7 +116,7 @@ export async function logoutRequest(): Promise<void> {
       },
     );
   } catch {
-    // Ignore logout failures and still clear the client session.
+    // Ignore logout failures
   }
 }
 
