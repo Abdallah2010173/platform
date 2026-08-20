@@ -8,7 +8,7 @@
     "dev": "nest start --watch",
     "start": "nest start",
     "prestart:prod": "pnpm --filter @platform/database generate",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/apps/api/src/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
