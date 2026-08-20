@@ -68,7 +68,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  const swaggerConfig = new DocumentBuilder()
+ const swaggerConfig = new DocumentBuilder()
     .setTitle('Platform LMS API')
     .setDescription('Enterprise Learning Management System API')
     .setVersion('1.0')
@@ -76,8 +76,14 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
 
+  // التعديل هنا: إضافة خيارات لتجنب مشاكل الـ Relative Paths والـ Prefix
+  SwaggerModule.setup('api/v1/docs', app, document, {
+    useGlobalPrefix: false, // يمنع تكرار api/v1 مرتين
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
   await app.listen(port, '0.0.0.0');
   logger.log(`API running on http://localhost:${port}/${apiPrefix}`);
   logger.log(`Swagger docs at http://localhost:${port}/${apiPrefix}/docs`);
