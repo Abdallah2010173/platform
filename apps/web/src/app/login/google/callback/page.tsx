@@ -22,8 +22,15 @@ function CallbackContent() {
           process.env.NEXT_PUBLIC_API_URL?.trim() ||
           'https://platformapi-production-c6d1.up.railway.app/api/v1';
 
-        // طلب الـ Token والمستخدم من سيرفر NestJS بواسطة الـ Code
-        const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/auth/google/callback?code=${code}`);
+        const redirectUri = 'https://platform-web-five.vercel.app/login/google/callback';
+
+        // إرسال الكود مع الـ redirect_uri إلى سيرفر NestJS
+        const res = await fetch(
+          `${baseUrl.replace(/\/+$/, '')}/auth/google/callback?code=${encodeURIComponent(
+            code
+          )}&redirect_uri=${encodeURIComponent(redirectUri)}`
+        );
+
         const data = await res.json();
 
         if (!res.ok || !data.accessToken) {
@@ -39,7 +46,7 @@ function CallbackContent() {
           })
         );
 
-        // التوجيه المباشر للوحة التحكم حسب نوع الحساب
+        // التوجيه للوحة التحكم حسب نوع الحساب
         const targetRoute = roleToRoute((data.user as AuthUser).role);
         router.replace(targetRoute);
       } catch (err) {
