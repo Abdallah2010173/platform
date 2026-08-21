@@ -14,6 +14,13 @@ function CallbackContent() {
 
   useEffect(() => {
     const code = searchParams.get('code');
+    const authError = searchParams.get('error');
+
+    if (authError) {
+      setError('تم إلغاء عملية تسجيل الدخول من جوجل.');
+      return;
+    }
+
     if (!code) return;
 
     const authenticateGoogle = async () => {
@@ -22,16 +29,20 @@ function CallbackContent() {
           process.env.NEXT_PUBLIC_API_URL?.trim() ||
           'https://platformapi-production-c6d1.up.railway.app/api/v1';
 
-        const redirectUri = 'https://platform-web-five.vercel.app/login/google/callback';
-
-        // إرسال الكود مع الـ redirect_uri إلى سيرفر NestJS
+        // إرسال طلب POST إلى مسار exchange للتحقق من الكود
         const res = await fetch(
-          `${baseUrl.replace(/\/+$/, '')}/auth/google/callback?code=${encodeURIComponent(
-            code
-          )}&redirect_uri=${encodeURIComponent(redirectUri)}`
+          `${baseUrl.replace(/\/+$/, '')}/auth/google/exchange`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ code }),
+          }
         );
 
-        const data = await res.json();
+        const responseData = await res.json();
+        const data = responseData?.data ?? responseData;
 
         if (!res.ok || !data.accessToken) {
           throw new Error(data.message || 'Google Authentication failed');
@@ -50,6 +61,7 @@ function CallbackContent() {
         const targetRoute = roleToRoute((data.user as AuthUser).role);
         router.replace(targetRoute);
       } catch (err) {
+        console.error('Google Auth Error:', err);
         setError(err instanceof Error ? err.message : 'Login failed');
       }
     };
