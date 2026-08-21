@@ -68,29 +68,38 @@ export class AuthController {
     };
   }
 
-  @Public()
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login with email and password' })
-  async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
-    const tokens = await this.authService.login(dto);
-    const fullUser = await this.userRepository.findByEmail(dto.email);
-    return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresIn: tokens.expiresIn,
-      user: fullUser
-        ? {
-            id: fullUser.id,
-            email: fullUser.email,
-            role: fullUser.role,
-            firstName: fullUser.profile?.firstName,
-            lastName: fullUser.profile?.lastName,
-            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
-          }
-        : undefined,
-    };
-  }
+// src/presentation/modules/auth/auth.controller.ts
+
+// src/presentation/modules/auth/auth.controller.ts
+
+@Public()
+@Post('login')
+@HttpCode(HttpStatus.OK)
+@ApiOperation({ summary: 'Login with email and password' })
+async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
+  const authServiceAny = this.authService as any;
+  const loginMethod = authServiceAny.loginWithCredentials 
+    ? authServiceAny.loginWithCredentials.bind(this.authService)
+    : authServiceAny.login.bind(this.authService);
+
+  const tokens = await loginMethod(dto); 
+  const fullUser = await this.userRepository.findByEmail(dto.email);
+  return {
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresIn: tokens.expiresIn,
+    user: fullUser
+      ? {
+          id: fullUser.id,
+          email: fullUser.email,
+          role: fullUser.role,
+          firstName: fullUser.profile?.firstName,
+          lastName: fullUser.profile?.lastName,
+          avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
+        }
+      : undefined,
+  };
+}
 
   @Public()
   @Post('google/exchange')
