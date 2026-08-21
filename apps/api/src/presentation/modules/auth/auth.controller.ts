@@ -369,6 +369,7 @@ export class AuthController {
         const loginUrl = this.getFrontendLoginUrl(req, state.frontendOrigin);
         res.redirect(loginUrl);
       } catch (innerErr) {
+        console.error('Inner error:', innerErr);
         res.redirect('/login?oauth_error=1');
       }
     }
