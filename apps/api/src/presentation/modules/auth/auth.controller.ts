@@ -69,6 +69,30 @@ export class AuthController {
   }
 
   @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with email and password' })
+  async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
+    const tokens = await this.authService.login(dto);
+    const fullUser = await this.userRepository.findByEmail(dto.email);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      user: fullUser
+        ? {
+            id: fullUser.id,
+            email: fullUser.email,
+            role: fullUser.role,
+            firstName: fullUser.profile?.firstName,
+            lastName: fullUser.profile?.lastName,
+            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
+          }
+        : undefined,
+    };
+  }
+
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
@@ -101,18 +125,22 @@ export class AuthController {
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Revoke refresh token and logout' })
-  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
-    await this.authService.revokeRefreshToken(dto.refreshToken);
+  async logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RefreshTokenDto,
+  ): Promise<{ message: string }> {
+    await this.authService.logout(user.sub, dto.refreshToken);
+    return { message: 'Logged out successfully' };
   }
 
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user' })
-  async me(@CurrentUser() user: AuthenticatedUser): Promise<UserResponseDto> {
-    const fullUser = await this.userRepository.findById(user.id);
+  async getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserResponseDto> {
+    const fullUser = await this.userRepository.findById(user.sub || user.id);
     return {
       id: user.id,
       email: user.email,
@@ -171,10 +199,6 @@ export class AuthController {
     return this.authService.revokeDevice(user.id, deviceId);
   }
 
-  /**
-   * Verify that the Google OAuth credentials are present in the environment.
-   * Throws a clear configuration error instead of allowing a 404/500.
-   */
   private assertGoogleConfigured(): void {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
     const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
@@ -186,12 +210,6 @@ export class AuthController {
     }
   }
 
-  /**
-   * @internal Resolve the frontend origin from the initiating request.
-   * Prefers the FRONTEND_URL / FRONTEND_CALLBACK_URL env vars, then falls back
-   * to the request's Origin / Referer headers so the user is always returned to
-   * the frontend that started the OAuth flow (never the API host).
-   */
   private resolveFrontendOrigin(req: Request): string {
     const fromEnv =
       this.configService.get<string>('FRONTEND_URL')?.replace(/\/+$/, '') ??
@@ -224,11 +242,6 @@ export class AuthController {
     );
   }
 
-  /**
-   * Start the Google OAuth flow. Redirects the browser to Google's consent
-   * screen. The `state` query parameter carries a short-lived CSRF token that
-   * is validated when Google redirects back to the callback.
-   */
   @Public()
   @Get('google')
   @ApiExcludeEndpoint()
@@ -237,11 +250,6 @@ export class AuthController {
 
     const state = this.authService.createOAuthRedirectState();
 
-    // Capture the frontend origin so the callback can always return the user to
-    // the correct frontend, even if FRONTEND_URL / FRONTEND_CALLBACK_URL are not
-    // set on the deployed API. Prefer the explicit env var, then the request's
-    // Origin / Referer header (present because the browser navigates here from
-    // the frontend login page).
     let frontendOrigin = '';
     try {
       frontendOrigin = this.resolveFrontendOrigin(req);
@@ -249,14 +257,10 @@ export class AuthController {
       frontendOrigin = '';
     }
 
-    // Preserve an optional post-login redirect target through the OAuth flow.
     const redirectParam = (req.query?.redirect as string | undefined) ?? '';
     const redirectTarget =
       redirectParam && redirectParam.startsWith('/') ? redirectParam : '';
 
-    // State cookie format: <csrf>|<frontendOrigin>|<redirectPath>
-    // The strategy validates only the CSRF token (first segment), so the
-    // additional segments are safely carried through the OAuth round-trip.
     const stateWithRedirect = [
       state,
       encodeURIComponent(frontendOrigin),
@@ -278,9 +282,6 @@ export class AuthController {
     res.redirect(url);
   }
 
-  /**
-   * @internal Parse the OAuth state cookie into { csrf, frontendOrigin, redirect }.
-   */
   private parseStateCookie(req: Request): {
     csrf: string;
     frontendOrigin: string;
@@ -309,31 +310,15 @@ export class AuthController {
     return { csrf: parts[0] ?? '', frontendOrigin, redirect };
   }
 
-  /**
-   * @internal Resolve the frontend Google callback page URL. Uses the frontend
-   * origin captured at flow start (highest priority), then FRONTEND_CALLBACK_URL,
-   * then the request origin.
-   *
-   * NOTE: This implementation always returns a frontend URL that ends with
-   * `/login/google/callback` (never `/auth/google/callback`). It respects the
-   * configured FRONTEND_CALLBACK_URL if provided but will rewrite an
-   * `/auth/google/callback` value to the frontend `/login/google/callback` path.
-   */
   private getFrontendCallbackUrl(req: Request, storedOrigin: string): string {
     const configured = this.configService
       .get<string>('FRONTEND_CALLBACK_URL')
       ?.replace(/\/+$/, '');
 
-    // 1) If the frontend origin was captured at flow start, prefer it and
-    //    resolve the standard frontend callback path (never `/auth/google/callback`).
     if (storedOrigin) {
       return `${storedOrigin.replace(/\/+$/, '')}/login/google/callback`;
     }
 
-    // 2) If a configured frontend callback URL exists, respect it but ensure we
-    //    never return a frontend path using `/auth/google/callback`. If the
-    //    configured URL contains `/auth/google/callback`, rewrite to the
-    //    frontend's `/login/google/callback` path.
     if (configured) {
       try {
         const url = new URL(configured);
@@ -341,12 +326,8 @@ export class AuthController {
           url.pathname = url.pathname.replace(/\/auth\/google\/callback$/, '/login/google/callback');
           return url.toString().replace(/\/+$/, '');
         }
-        // Already points to the frontend callback path (for example /login/google/callback)
-        // or some other explicit path — return as provided.
         return configured;
       } catch {
-        // If configured isn't a full URL, fall back to the raw configured value.
-        // (This keeps behaviour predictable if deploy used a partial value.)
         if (configured.includes('/auth/google/callback')) {
           return configured.replace(/\/auth\/google\/callback$/, '/login/google/callback');
         }
@@ -354,33 +335,15 @@ export class AuthController {
       }
     }
 
-    // 3) Fallback: derive origin from request and use the frontend callback path.
     return `${this.resolveFrontendOrigin(req)}/login/google/callback`;
   }
 
-  /**
-   * @internal Resolve the frontend login URL for the error fallback. Uses the
-   * frontend origin captured at flow start, then FRONTEND_URL, then the request
-   * origin — so the user is never sent to the API host.
-   */
   private getFrontendLoginUrl(req: Request, storedOrigin: string): string {
     const configured = this.configService.get<string>('FRONTEND_URL')?.replace(/\/+$/, '');
     const base = storedOrigin || configured || this.resolveFrontendOrigin(req);
     return `${base}/login?oauth_error=1`;
   }
 
-  /**
-   * Google OAuth callback. Passport verifies the authorization code and the
-   * `state` parameter (CSRF). On success we create a one-time exchange code
-   * and redirect the browser to the frontend callback page, which exchanges
-   * the code for JWTs — keeping tokens out of the URL.
-   *
-   * Every redirect emitted here is an ABSOLUTE URL on the frontend domain.
-   * The callback URL for Passport lives on the API, but the post-auth and
-   * error redirects always point at the deployed frontend. A relative
-   * redirect (e.g. `/login?...`) would incorrectly resolve against the API
-   * host and produce `Cannot GET /login?oauth_error=1`.
-   */
   @Public()
   @Get('google/callback')
   @ApiExcludeEndpoint()
@@ -389,24 +352,12 @@ export class AuthController {
     @Req() req: Request & { user: GoogleProfileUser },
     @Res() res: Response,
   ): Promise<void> {
-    console.log('GOOGLE CALLBACK START');
-    console.log('Passport user payload:', req.user);
-
-    // Read the frontend origin + redirect target carried through the state cookie.
     const state = this.parseStateCookie(req);
-    console.log('Parsed OAuth state from cookie:', state);
 
     try {
-      console.log('Calling authService.googleOAuthLogin(...)');
       const user = await this.authService.googleOAuthLogin(req.user);
-      console.log('authService.googleOAuthLogin returned:', user);
-
-      console.log('Calling authService.createOAuthExchangeCode(...) for userId:', user.id);
       const code = await this.authService.createOAuthExchangeCode(user.id);
-      console.log('authService.createOAuthExchangeCode returned code:', code);
-
       const frontendCallback = this.getFrontendCallbackUrl(req, state.frontendOrigin);
-      console.log('Resolved frontend callback URL:', frontendCallback);
 
       const query =
         `?code=${encodeURIComponent(code)}` +
@@ -415,26 +366,13 @@ export class AuthController {
           : '');
 
       const redirectUrl = `${frontendCallback}${query}`;
-      console.log('Redirecting to frontend callback (SUCCESS):', redirectUrl);
-
-      // SUCCESS → redirect to the frontend callback page (absolute URL).
       res.redirect(redirectUrl);
     } catch (error) {
-      // Log the full error and stack trace so the exact failing line is visible.
       console.error('Error during googleCallback flow:', error);
-      if (error && (error as Error).stack) {
-        console.error('Stack trace:', (error as Error).stack);
-      }
-
-      // Try to compute a safe, absolute frontend login URL and redirect there.
       try {
         const loginUrl = this.getFrontendLoginUrl(req, state.frontendOrigin);
-        console.log('Redirecting to frontend login URL (error fallback):', loginUrl);
         res.redirect(loginUrl);
       } catch (innerErr) {
-        // If even fallback resolution fails, log and send a last-resort redirect
-        // (this will resolve relative to the API host).
-        console.error('Failed to resolve frontend login URL, falling back to relative redirect. Error:', innerErr);
         res.redirect('/login?oauth_error=1');
       }
     }
@@ -459,10 +397,6 @@ export class AuthController {
     return '';
   }
 
-  /**
-   * Exchange a one-time OAuth code (delivered to the frontend callback page)
-   * for fresh JWT access/refresh tokens. This is called from the browser.
-   */
   @Public()
   @Post('google/exchange')
   @HttpCode(HttpStatus.OK)
