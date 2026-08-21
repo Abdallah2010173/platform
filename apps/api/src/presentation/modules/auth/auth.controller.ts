@@ -73,7 +73,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
-    const tokens = await this.authService.login(dto);
+    const tokens = await this.authService.loginWithEmail(dto);
     const fullUser = await this.userRepository.findByEmail(dto.email);
     return {
       accessToken: tokens.accessToken,
@@ -125,22 +125,18 @@ export class AuthController {
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Revoke refresh token and logout' })
-  async logout(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: RefreshTokenDto,
-  ): Promise<{ message: string }> {
-    await this.authService.logout(user.sub, dto.refreshToken);
-    return { message: 'Logged out successfully' };
+  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
+    await this.authService.revokeRefreshToken(dto.refreshToken);
   }
 
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user' })
   async getMe(@CurrentUser() user: AuthenticatedUser): Promise<UserResponseDto> {
-    const fullUser = await this.userRepository.findById(user.sub || user.id);
+    const fullUser = await this.userRepository.findById(user.id);
     return {
       id: user.id,
       email: user.email,
