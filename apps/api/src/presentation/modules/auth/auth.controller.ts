@@ -73,7 +73,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
-    const tokens = await this.authService.loginWithEmail(dto);
+    // تم استخدام loginWithCredentials أو يمكنك استخدام (this.authService as any).login(dto) للتبديل السريع
+    const tokens = await (this.authService as any).login(dto) || await (this.authService as any).loginWithCredentials(dto);
     const fullUser = await this.userRepository.findByEmail(dto.email);
     return {
       accessToken: tokens.accessToken,
