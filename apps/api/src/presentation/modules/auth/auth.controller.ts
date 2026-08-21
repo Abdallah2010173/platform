@@ -73,8 +73,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
-    // تم استخدام loginWithCredentials أو يمكنك استخدام (this.authService as any).login(dto) للتبديل السريع
-    const tokens = await (this.authService as any).login(dto) || await (this.authService as any).loginWithCredentials(dto);
+    const tokens = await this.authService.login(dto);
     const fullUser = await this.userRepository.findByEmail(dto.email);
     return {
       accessToken: tokens.accessToken,
@@ -88,6 +87,40 @@ export class AuthController {
             firstName: fullUser.profile?.firstName,
             lastName: fullUser.profile?.lastName,
             avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
+          }
+        : undefined,
+    };
+  }
+
+  @Public()
+  @Post('google/exchange')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Exchange Google OAuth code for JWT tokens' })
+  async googleExchange(
+    @Body() dto: GoogleOAuthExchangeDto,
+  ): Promise<AuthTokensResponseDto> {
+    let result: any;
+    try {
+      result = await this.authService.exchangeOAuthCode(dto.code);
+    } catch {
+      result = await this.authService.googleOAuthLogin({ code: dto.code } as any);
+    }
+
+    const userId = result?.user?.id || result?.id;
+    const user = userId ? await this.userRepository.findById(userId) : null;
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: result.expiresIn,
+      user: user
+        ? {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            firstName: user.profile?.firstName,
+            lastName: user.profile?.lastName,
+            avatarUrl: user.profile?.avatarUrl ?? undefined,
           }
         : undefined,
     };
@@ -393,32 +426,6 @@ export class AuthController {
       }
     }
     return '';
-  }
-
-  @Public()
-  @Post('google/exchange')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Exchange Google OAuth code for JWT tokens' })
-  async googleExchange(
-    @Body() dto: GoogleOAuthExchangeDto,
-  ): Promise<AuthTokensResponseDto> {
-    const result = await this.authService.exchangeOAuthCode(dto.code);
-    const user = await this.userRepository.findById(result.user.id);
-    return {
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      expiresIn: result.expiresIn,
-      user: user
-        ? {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            firstName: user.profile?.firstName,
-            lastName: user.profile?.lastName,
-            avatarUrl: user.profile?.avatarUrl ?? undefined,
-          }
-        : undefined,
-    };
   }
 
   @Get('logout-all')
