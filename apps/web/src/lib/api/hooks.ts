@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { studentApi, teacherApi, adminApi, courseApi, authApi } from './services';
+import { studentApi, teacherApi, adminApi, courseApi, authApi, messagingApi } from './services';
 import { toast } from 'sonner';
 import { formatApiError } from './services';
 
@@ -62,6 +62,37 @@ export const useStudentToday = () =>
 
 export const useStudentChats = () =>
   useQuery({ queryKey: ['student', 'chats'], queryFn: () => studentApi.chats() });
+
+export const useMessageContacts = (search?: string) =>
+  useQuery({ queryKey: ['messages', 'contacts', search], queryFn: () => messagingApi.contacts(search) });
+
+export const useMessageConversations = () =>
+  useQuery({ queryKey: ['messages', 'conversations'], queryFn: messagingApi.conversations });
+
+export const useMessageHistory = (chatId: string | null) =>
+  useQuery({
+    queryKey: ['messages', 'history', chatId],
+    queryFn: () => messagingApi.messages(chatId as string),
+    enabled: Boolean(chatId),
+  });
+
+export const useStartDirectChat = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (otherUserId: string) => messagingApi.directChat(otherUserId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['messages', 'conversations'] }),
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useSendMessage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ chatId, content }: { chatId: string; content: string }) => messagingApi.send(chatId, content),
+    onSuccess: (_data, variables) => qc.invalidateQueries({ queryKey: ['messages', 'history', variables.chatId] }),
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
 
 export const useStudentNotifications = () =>
   useQuery({
@@ -316,6 +347,33 @@ export const useDeleteUser = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
       toast.success('User deleted');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useAdminMeetings = () =>
+  useQuery({ queryKey: ['admin', 'meetings'], queryFn: adminApi.meetings });
+
+export const useCreateAdminMeeting = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => adminApi.createMeeting(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'meetings'] });
+      toast.success('Meeting created');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteAdminMeeting = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteMeeting(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'meetings'] });
+      toast.success('Meeting deleted');
     },
     onError: (e) => toast.error(formatApiError(e)),
   });

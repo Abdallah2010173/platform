@@ -6,6 +6,7 @@ import {
   IsArray,
   IsDateString,
   IsIn,
+  IsUrl,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
@@ -120,8 +121,8 @@ export class CreateMeetingDto {
   @ApiProperty() @IsDateString() startTime!: string;
   @ApiPropertyOptional() @IsOptional() @IsNumber() durationMinutes?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() timezone?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() joinUrl?: string;
-  @ApiPropertyOptional() @IsOptional() @IsString() startUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) joinUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) startUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() password?: string;
   @ApiPropertyOptional() @IsOptional() @IsIn(MEETING_STATUSES) status?: string;
   @ApiPropertyOptional() @IsOptional() settings?: unknown;

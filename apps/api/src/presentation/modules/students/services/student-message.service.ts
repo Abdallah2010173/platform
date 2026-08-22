@@ -21,6 +21,7 @@ export class StudentMessageService {
               },
             },
             messages: {
+              where: { deletedAt: null },
               orderBy: { createdAt: 'desc' },
               take: 1,
             },
@@ -30,10 +31,19 @@ export class StudentMessageService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return memberships.map((m) => {
+    return Promise.all(memberships.map(async (m) => {
       const chat = m.chat;
       const otherMembers = chat.members.filter((mm) => mm.userId !== user.id);
       const lastMessage = chat.messages[0];
+
+      const unreadCount = await this.prisma.message.count({
+        where: {
+          chatId: chat.id,
+          senderId: { not: user.id },
+          deletedAt: null,
+          ...(m.lastReadAt ? { createdAt: { gt: m.lastReadAt } } : {}),
+        },
+      });
 
       return {
         id: chat.id,
@@ -46,13 +56,27 @@ export class StudentMessageService {
         lastMessage: lastMessage?.content ?? null,
         lastMessageAt: chat.lastMessageAt,
         lastReadAt: m.lastReadAt,
-        unreadCount: 0,
+        unreadCount,
         memberCount: chat.members.length,
       };
-    });
+    }));
   }
 
   async getOrCreateDirectChat(user: AuthenticatedUser, otherUserId: string) {
+    const studentId = await this.studentHelper.getStudentId(user);
+    const allowedTeacher = await this.prisma.teacher.findFirst({
+      where: {
+        userId: otherUserId,
+        courses: {
+          some: {
+            course: { students: { some: { studentId, deletedAt: null } } },
+            deletedAt: null,
+          },
+        },
+      },
+    });
+    if (!allowedTeacher) throw new ForbiddenException('You are not allowed to message this user');
+
     const existing = await this.prisma.chat.findFirst({
       where: {
         type: 'DIRECT',
@@ -90,13 +114,14 @@ export class StudentMessageService {
     const membership = await this.prisma.conversationMember.findUnique({
       where: { chatId_userId: { chatId, userId: user.id } },
     });
-    if (!membership) {
+    if (!membership || membership.leftAt) {
       throw new ForbiddenException('You are not a member of this chat');
     }
 
     const messages = await this.prisma.message.findMany({
       where: {
         chatId,
+        deletedAt: null,
         ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
       },
       include: {
@@ -136,7 +161,7 @@ export class StudentMessageService {
     const membership = await this.prisma.conversationMember.findUnique({
       where: { chatId_userId: { chatId, userId: user.id } },
     });
-    if (!membership) {
+    if (!membership || membership.leftAt) {
       throw new ForbiddenException('You are not a member of this chat');
     }
 

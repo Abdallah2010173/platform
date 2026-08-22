@@ -176,6 +176,20 @@ notifications: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/question-banks', { params })),
 };
 
+export const messagingApi = {
+  contacts: async (search?: string) =>
+    getApiData(await apiClient.get('/messages/contacts', { params: search ? { search } : undefined })),
+  conversations: async () => getApiData(await apiClient.get('/messages/conversations')),
+  directChat: async (otherUserId: string) =>
+    getApiData(await apiClient.post(`/messages/conversations/direct/${otherUserId}`)),
+  messages: async (chatId: string) =>
+    getApiData(await apiClient.get(`/messages/conversations/${chatId}/messages`)),
+  send: async (chatId: string, content: string) =>
+    getApiData(await apiClient.post(`/messages/conversations/${chatId}/messages`, { content })),
+  markRead: async (chatId: string) =>
+    getApiData(await apiClient.post(`/messages/conversations/${chatId}/read`)),
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ADMIN / USERS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -195,6 +209,10 @@ export const adminApi = {
     getApiData(await apiClient.post(`/users/${id}/change-password`, { newPassword })),
   bulkAction: async (ids: string[], action: string, extra?: Record<string, unknown>) =>
     getApiData(await apiClient.post('/users/bulk', { ids, action, ...(extra ? { extra } : {}) })),
+  meetings: async () => getApiData(await apiClient.get('/admin/meetings')),
+  createMeeting: async (data: Record<string, unknown>) =>
+    getApiData(await apiClient.post('/admin/meetings', data)),
+  deleteMeeting: async (id: string) => getApiData(await apiClient.delete(`/admin/meetings/${id}`)),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

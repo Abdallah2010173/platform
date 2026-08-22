@@ -10,6 +10,8 @@ import { StudentsModule } from './presentation/modules/students/students.module'
 import { UsersModule } from './presentation/modules/users/users.module';
 import { CoursesModule } from './presentation/modules/courses/courses.module';
 import { TeacherModule } from './presentation/modules/teacher/teacher.module';
+import { MessagingModule } from './presentation/modules/messaging/messaging.module';
+import { AdminModule } from './presentation/modules/admin/admin.module';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 import { RolesGuard } from './presentation/guards/roles.guard';
 
@@ -39,6 +41,8 @@ import { RolesGuard } from './presentation/guards/roles.guard';
     UsersModule,
     CoursesModule,
     TeacherModule,
+    MessagingModule,
+    AdminModule,
   ],
   providers: [
     {

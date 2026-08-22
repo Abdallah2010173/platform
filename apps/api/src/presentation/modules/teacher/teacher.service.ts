@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
@@ -711,6 +711,15 @@ export class TeacherService {
 
   async createMeeting(user: AuthenticatedUser, dto: any) {
     const teacherId = await this.teacherHelper.getTeacherId(user);
+
+    if (dto.courseId) {
+      const courseAssignment = await this.prisma.courseTeacher.findFirst({
+        where: { courseId: dto.courseId, teacherId, deletedAt: null },
+      });
+      if (!courseAssignment) {
+        throw new ForbiddenException('You can only create meetings for your courses');
+      }
+    }
 
     const meeting = await this.prisma.zoomMeeting.create({
       data: {
