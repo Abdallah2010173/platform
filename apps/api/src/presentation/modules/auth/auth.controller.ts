@@ -77,12 +77,7 @@ export class AuthController {
 @HttpCode(HttpStatus.OK)
 @ApiOperation({ summary: 'Login with email and password' })
 async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
-  const authServiceAny = this.authService as any;
-  const loginMethod = authServiceAny.loginWithCredentials 
-    ? authServiceAny.loginWithCredentials.bind(this.authService)
-    : authServiceAny.login.bind(this.authService);
-
-  const tokens = await loginMethod(dto); 
+  const tokens = await this.authService.login(dto.email, dto.password);
   const fullUser = await this.userRepository.findByEmail(dto.email);
   return {
     accessToken: tokens.accessToken,
@@ -355,26 +350,25 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
       ?.replace(/\/+$/, '');
 
     if (storedOrigin) {
-      return `${storedOrigin.replace(/\/+$/, '')}/login/google/callback`;
+      return `${storedOrigin.replace(/\/+$/, '')}/auth/google/callback`;
     }
 
     if (configured) {
       try {
         const url = new URL(configured);
-        if (url.pathname.endsWith('/auth/google/callback')) {
-          url.pathname = url.pathname.replace(/\/auth\/google\/callback$/, '/login/google/callback');
-          return url.toString().replace(/\/+$/, '');
+        if (!url.pathname || url.pathname === '/') {
+          url.pathname = '/auth/google/callback';
         }
-        return configured;
+        return url.toString().replace(/\/+$/, '');
       } catch {
-        if (configured.includes('/auth/google/callback')) {
-          return configured.replace(/\/auth\/google\/callback$/, '/login/google/callback');
+        if (!configured.includes('/auth/google/callback')) {
+          return `${configured}/auth/google/callback`;
         }
         return configured;
       }
     }
 
-    return `${this.resolveFrontendOrigin(req)}/login/google/callback`;
+    return `${this.resolveFrontendOrigin(req)}/auth/google/callback`;
   }
 
   private getFrontendLoginUrl(req: Request, storedOrigin: string): string {

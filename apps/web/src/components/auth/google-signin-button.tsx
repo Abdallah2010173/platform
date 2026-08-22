@@ -1,18 +1,12 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { API_URL } from '@/lib/api/client';
 
 export function GoogleSignInButton() {
   const handleGoogleLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    const redirectUri = 'https://platform-web-five.vercel.app/login/google/callback';
-    
-    // توجيه المستخدم لموافقة جوجل مباشرة مع طلب صلاحيات البروفايل
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&response_type=code&scope=openid%20profile%20email&access_type=offline`;
-
-    window.location.href = googleAuthUrl;
+    const redirect = `${window.location.pathname}${window.location.search}`;
+    window.location.href = `${API_URL}/auth/google?redirect=${encodeURIComponent(redirect)}`;
   };
 
   return (

@@ -43,6 +43,15 @@ export class AuthService implements IAuthService {
     return { id: user.id, email: user.email, role: user.role };
   }
 
+  async login(email: string, password: string): Promise<ITokens> {
+    const user = await this.validateUser(email, password);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return this.generateTokens(user.id, user.email, user.role);
+  }
+
   async register(dto: {
     email: string;
     password: string;

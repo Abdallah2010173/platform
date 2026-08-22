@@ -2,6 +2,11 @@ import { Role } from '@platform/database';
 
 export interface IAuthService {
   validateUser(email: string, password: string): Promise<{ id: string; email: string; role: Role } | null>;
+  login(email: string, password: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  }>;
   generateTokens(userId: string, email: string, role: Role): Promise<{
     accessToken: string;
     refreshToken: string;

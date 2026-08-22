@@ -3,7 +3,7 @@ import { AuthUser } from '@/lib/auth';
 
 // ضمان إضافة /api/v1 دائماً لتفادي خطأ 404
 const rawUrl = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, '') || 'http://localhost:4000';
-const API_URL = rawUrl.endsWith('/api/v1') ? rawUrl : `${rawUrl}/api/v1`;
+export const API_URL = rawUrl.endsWith('/api/v1') ? rawUrl : `${rawUrl}/api/v1`;
 
 export const apiClient = axios.create({
   baseURL: API_URL,
