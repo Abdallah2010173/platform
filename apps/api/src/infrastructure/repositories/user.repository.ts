@@ -145,9 +145,32 @@ export class UserRepository implements IUserRepository {
     return this.prisma.passwordResetToken.findUnique({ where: { token } });
   }
 
+  async resetPasswordWithToken(token: string, passwordHash: string): Promise<string | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const resetToken = await tx.passwordResetToken.findFirst({
+        where: { token, usedAt: null, deletedAt: null, expiresAt: { gt: new Date() } },
+      });
+      if (!resetToken?.userId) return null;
+
+      await tx.user.update({ where: { id: resetToken.userId }, data: { passwordHash } });
+      await tx.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      });
+      return resetToken.userId;
+    });
+  }
+
   async markPasswordResetTokenUsed(id: string): Promise<void> {
     await this.prisma.passwordResetToken.update({
       where: { id },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async invalidatePasswordResetToken(token: string): Promise<void> {
+    await this.prisma.passwordResetToken.updateMany({
+      where: { token, usedAt: null },
       data: { usedAt: new Date() },
     });
   }

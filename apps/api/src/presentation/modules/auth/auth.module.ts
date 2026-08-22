@@ -8,6 +8,7 @@ import { UserRepository } from '../../../infrastructure/repositories/user.reposi
 import { RefreshTokenRepository } from '../../../infrastructure/repositories/refresh-token.repository';
 import { JwtStrategy } from '../../strategies/jwt.strategy';
 import { GoogleStrategy } from '../../strategies/google.strategy';
+import { EmailService } from '../../../infrastructure/email/email.service';
 
 /**
  * Google OAuth strategy is registered ONLY when all required environment
@@ -40,6 +41,7 @@ export const GoogleStrategyProvider = {
     RefreshTokenRepository,
     JwtStrategy,
     GoogleStrategyProvider,
+    EmailService,
   ],
   exports: [AuthService, UserRepository],
 })

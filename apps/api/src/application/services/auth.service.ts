@@ -9,10 +9,12 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { createHash, randomBytes } from 'crypto';
 import { Response } from 'express';
 import { Role, AccountProvider } from '@platform/database';
 import { UserRepository } from '../../infrastructure/repositories/user.repository';
 import { RefreshTokenRepository } from '../../infrastructure/repositories/refresh-token.repository';
+import { EmailService } from '../../infrastructure/email/email.service';
 import { IAuthService, ITokenPayload, ITokens } from '../../domain/services/auth.service.interface';
 
 @Injectable()
@@ -22,6 +24,7 @@ export class AuthService implements IAuthService {
     private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async validateUser(
@@ -297,32 +300,33 @@ export class AuthService implements IAuthService {
       return { message: 'If that email exists, a password reset link has been sent.' };
     }
 
-    const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 3600_000); // 1 hour
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 60_000);
 
     await this.userRepository.createPasswordResetToken({
       userId: user.id,
       email,
-      token,
+      token: tokenHash,
       expiresAt,
     });
+
+    try {
+      await this.emailService.sendPasswordResetEmail(email, token);
+    } catch {
+      await this.userRepository.invalidatePasswordResetToken(tokenHash);
+    }
 
     return { message: 'If that email exists, a password reset link has been sent.' };
   }
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
-    const resetToken = await this.userRepository.findPasswordResetToken(token);
-    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
-    if (!resetToken.userId) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
     const passwordHash = await bcrypt.hash(password, 12);
-    await this.userRepository.updatePassword(resetToken.userId, passwordHash);
-    await this.userRepository.markPasswordResetTokenUsed(resetToken.id);
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const userId = await this.userRepository.resetPasswordWithToken(tokenHash, passwordHash);
+    if (!userId) throw new BadRequestException('Invalid or expired reset token');
+
+    await this.refreshTokenRepository.revokeByUserId(userId);
 
     return { message: 'Password has been reset successfully' };
   }
