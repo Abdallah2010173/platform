@@ -21,6 +21,12 @@ export const useStudentCourses = (params?: Record<string, string>) =>
     queryFn: () => studentApi.courses(params),
   });
 
+export const useStudentTeachers = (search?: string) =>
+  useQuery({
+    queryKey: ['student', 'teachers', search],
+    queryFn: () => studentApi.teachers(search),
+  });
+
 export const useStudentExams = () =>
   useQuery({ queryKey: ['student', 'exams'], queryFn: () => studentApi.exams() });
 
@@ -176,6 +182,12 @@ export const useTeacherStudents = (courseId?: string, search?: string) =>
     queryKey: ['teacher', 'students', courseId, search],
     queryFn: () =>
       teacherApi.students({ ...(courseId ? { courseId } : {}), ...(search ? { search } : {}) }),
+  });
+
+export const useAllTeacherStudents = (search?: string) =>
+  useQuery({
+    queryKey: ['teacher', 'all-students', search],
+    queryFn: () => teacherApi.allStudents(search),
   });
 
 export const useTeacherAssignments = (courseId?: string) =>

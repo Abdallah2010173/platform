@@ -64,6 +64,8 @@ export const studentApi = {
     }>(getApiData(await apiClient.get('/student/stats/progress'))),
   courses: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/student/courses', { params })),
+  teachers: async (search?: string) =>
+    getApiData(await apiClient.get('/student/search/teachers', { params: search ? { q: search } : undefined })),
   courseDetail: async (courseId: string) =>
     getApiData(await apiClient.get(`/student/courses/${courseId}`)),
   lesson: async (courseId: string, lessonId: string) =>
@@ -128,6 +130,8 @@ export const teacherApi = {
     getApiData(await apiClient.patch('/teacher/profile', data)),
   students: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/students', { params })),
+  allStudents: async (search?: string) =>
+    getApiData(await apiClient.get('/teacher/students/all', { params: search ? { search } : undefined })),
   assignments: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/assignments', { params })),
   createAssignment: async (courseId: string, data: Record<string, unknown>) =>

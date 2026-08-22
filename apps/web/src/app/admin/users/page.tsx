@@ -103,12 +103,14 @@ type ModalState =
 export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
   const [modal, setModal] = useState<ModalState>(null);
   const [form, setForm] = useState<UserFormState>(EMPTY_FORM);
   const [newPassword, setNewPassword] = useState('');
 
   const { data, isLoading } = useAdminUsers({
     ...(search ? { search } : {}),
+    ...(roleFilter !== 'ALL' ? { role: roleFilter } : {}),
     page: String(page),
     limit: '10',
   });
@@ -179,6 +181,7 @@ export default function AdminUsersPage() {
   };
 
   const handleToggleActive = (user: UserItem) => {
+    if (user.isActive && !window.confirm('Are you sure you want to deactivate this account?')) return;
     updateUser.mutate({
       id: user.id,
       data: { isActive: !user.isActive },
@@ -220,6 +223,15 @@ export default function AdminUsersPage() {
             className="pl-9"
           />
         </div>
+        <Select value={roleFilter} onValueChange={(value) => { setRoleFilter(value); setPage(1); }}>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="All roles" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All roles</SelectItem>
+            <SelectItem value="STUDENT">Students</SelectItem>
+            <SelectItem value="TEACHER">Instructors</SelectItem>
+            <SelectItem value="ADMIN">Admins</SelectItem>
+          </SelectContent>
+        </Select>
         <Button onClick={openCreate}>
           <UserPlus className="mr-2 h-4 w-4" />
           New User
@@ -249,7 +261,9 @@ export default function AdminUsersPage() {
                     <TableCell className="font-medium">{userName(user)}</TableCell>
                     <TableCell>{String(user.email ?? '—')}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{String(user.role ?? '—')}</Badge>
+                      <Badge variant="secondary">
+                        {user.role === 'TEACHER' ? 'Instructor' : user.role === 'ADMIN' ? 'Admin' : 'Student'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button
@@ -412,7 +426,7 @@ export default function AdminUsersPage() {
                 <SelectContent>
                   {ROLE_OPTIONS.map((r) => (
                     <SelectItem key={r} value={r}>
-                      {r.replace('_', ' ')}
+                      {r === 'TEACHER' ? 'Instructor' : r === 'ADMIN' ? 'Admin' : 'Student'}
                     </SelectItem>
                   ))}
                 </SelectContent>

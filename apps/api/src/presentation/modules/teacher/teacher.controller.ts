@@ -80,6 +80,12 @@ export class TeacherController {
     return this.teacherService.getStudents(user, courseId, search);
   }
 
+  @Get('students/all')
+  @ApiOperation({ summary: 'Get all active platform students' })
+  getAllStudents(@CurrentUser() user: AuthenticatedUser, @Query('search') search?: string) {
+    return this.teacherService.getAllStudents(user, search);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ASSIGNMENTS / HOMEWORK
   // ═══════════════════════════════════════════════════════════════════════════

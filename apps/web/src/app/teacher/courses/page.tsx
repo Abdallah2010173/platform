@@ -1,9 +1,12 @@
 'use client';
 
-import { BookOpen, Users, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, Users, Clock, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useTeacherCourses } from '@/lib/api/hooks';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useTeacherCourses, useCreateCourse } from '@/lib/api/hooks';
 import { LoadingState, EmptyState } from '@/components/dashboard/data-states';
 
 interface CourseItem {
@@ -19,7 +22,10 @@ interface CourseItem {
 }
 
 export default function TeacherCoursesPage() {
+  const [title, setTitle] = useState('');
+  const [introVideoUrl, setIntroVideoUrl] = useState('');
   const { data, isLoading } = useTeacherCourses();
+  const createCourse = useCreateCourse();
 
   const courses = Array.isArray(data)
     ? (data as CourseItem[])
@@ -27,14 +33,19 @@ export default function TeacherCoursesPage() {
 
   if (isLoading) return <LoadingState label="Loading your courses..." />;
 
-  if (courses.length === 0) {
-    return (
-      <EmptyState title="No courses yet" description="Your created courses will appear here." />
-    );
-  }
-
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-4">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Create a course</CardTitle></CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row">
+          <Input placeholder="Course title" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <Input type="url" placeholder="Intro video URL (optional)" value={introVideoUrl} onChange={(event) => setIntroVideoUrl(event.target.value)} />
+          <Button disabled={title.trim().length < 3 || createCourse.isPending} onClick={() => createCourse.mutate({ title: title.trim(), introVideoUrl: introVideoUrl.trim() || undefined }, { onSuccess: () => { setTitle(''); setIntroVideoUrl(''); } })}>
+            <Plus className="mr-2 h-4 w-4" />Create
+          </Button>
+        </CardContent>
+      </Card>
+      {courses.length === 0 ? <EmptyState title="No courses yet" description="Create your first course above." /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {courses.map((course) => (
         <Card key={course.id}>
           <CardHeader className="flex flex-row items-start justify-between">
@@ -63,6 +74,7 @@ export default function TeacherCoursesPage() {
           </CardContent>
         </Card>
       ))}
+      </div>}
     </div>
   );
 }

@@ -35,4 +35,10 @@ export class StudentSearchController {
       limit ? Number(limit) : 12,
     );
   }
+
+  @Get('teachers')
+  @ApiOperation({ summary: 'List instructors available to students' })
+  listTeachers(@CurrentUser() user: AuthenticatedUser, @Query('q') q?: string) {
+    return this.searchService.listTeachers(user, q);
+  }
 }

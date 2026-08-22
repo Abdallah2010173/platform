@@ -283,26 +283,21 @@ this.prisma.user.findMany({
       };
     }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data,
-      include: {
-        profile: true,
-        student: true,
-        teacher: true,
-        admin: true,
-      },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id }, data });
 
-    // Update role-specific record if role changed
-    if (dto.role) {
-      if (dto.role === Role.STUDENT && !user.student) {
-        await this.prisma.student.create({
+      if (!dto.role || dto.role === existing.role) return;
+
+      if (dto.role === Role.STUDENT) {
+        const student = await tx.student.findUnique({ where: { userId: id } });
+        if (student) return;
+        await tx.student.create({
           data: { userId: id, grade: dto.grade, school: dto.school, major: dto.major },
         });
-      }
-      if (dto.role === Role.TEACHER && !user.teacher) {
-        await this.prisma.teacher.create({
+      } else if (dto.role === Role.TEACHER) {
+        const teacher = await tx.teacher.findUnique({ where: { userId: id } });
+        if (teacher) return;
+        await tx.teacher.create({
           data: {
             userId: id,
             title: dto.title,
@@ -310,13 +305,12 @@ this.prisma.user.findMany({
             expertise: dto.expertise ?? [],
           },
         });
+      } else if (dto.role === Role.ADMIN) {
+        const admin = await tx.admin.findUnique({ where: { userId: id } });
+        if (admin) return;
+        await tx.admin.create({ data: { userId: id, department: dto.department } });
       }
-      if (dto.role === Role.ADMIN && !user.admin) {
-        await this.prisma.admin.create({
-          data: { userId: id, department: dto.department },
-        });
-      }
-    }
+    });
 
     return this.findById(id);
   }
@@ -428,9 +422,21 @@ async bulkAction(
         if (!extra?.role) {
           throw new BadRequestException('Role required for CHANGE_ROLE action');
         }
-await this.prisma.user.updateMany({
-          where: { id: { in: ids } },
-          data: { role: extra.role as Role },
+        const role = extra.role as Role;
+        await this.prisma.$transaction(async (tx) => {
+          const users = await tx.user.findMany({ where: { id: { in: ids }, deletedAt: null } });
+          for (const user of users) {
+            await tx.user.update({ where: { id: user.id }, data: { role } });
+            if (role === Role.STUDENT && !(await tx.student.findUnique({ where: { userId: user.id } }))) {
+              await tx.student.create({ data: { userId: user.id } });
+            }
+            if (role === Role.TEACHER && !(await tx.teacher.findUnique({ where: { userId: user.id } }))) {
+              await tx.teacher.create({ data: { userId: user.id, expertise: [] } });
+            }
+            if (role === Role.ADMIN && !(await tx.admin.findUnique({ where: { userId: user.id } }))) {
+              await tx.admin.create({ data: { userId: user.id } });
+            }
+          }
         });
         return { success: true, count: ids.length };
       default:

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useTeacherStudents } from '@/lib/api/hooks';
+import { useAllTeacherStudents } from '@/lib/api/hooks';
 import { LoadingState, EmptyState } from '@/components/dashboard/data-states';
 
 interface StudentItem {
@@ -18,7 +18,7 @@ interface StudentItem {
 
 export default function TeacherStudentsPage() {
   const [search, setSearch] = useState('');
-  const { data, isLoading } = useTeacherStudents(undefined, search || undefined);
+  const { data, isLoading } = useAllTeacherStudents(search || undefined);
 
   const students = Array.isArray(data)
     ? (data as StudentItem[])
@@ -41,7 +41,7 @@ export default function TeacherStudentsPage() {
       ) : students.length === 0 ? (
         <EmptyState
           title="No students found"
-          description="Students enrolled in your courses will appear here."
+          description="Active students on the platform will appear here."
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -49,7 +49,7 @@ export default function TeacherStudentsPage() {
             <Card key={student.id}>
               <CardHeader>
                 <CardTitle className="text-base">
-                  {student.firstName} {student.lastName}
+                  {String(student.name ?? `${student.firstName ?? ''} ${student.lastName ?? ''}`)}
                 </CardTitle>
               </CardHeader>
               <CardContent>

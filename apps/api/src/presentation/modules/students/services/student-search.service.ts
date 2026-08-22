@@ -121,6 +121,27 @@ export class StudentSearchService {
     return results;
   }
 
+  async listTeachers(user: AuthenticatedUser, search?: string) {
+    await this.studentHelper.getStudentId(user);
+    return this.prisma.teacher.findMany({
+      where: {
+        deletedAt: null,
+        user: search
+          ? {
+              OR: [
+                { email: { contains: search, mode: 'insensitive' } },
+                { profile: { firstName: { contains: search, mode: 'insensitive' } } },
+                { profile: { lastName: { contains: search, mode: 'insensitive' } } },
+              ],
+            }
+          : undefined,
+      },
+      select: { id: true, user: { select: { id: true, email: true, profile: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+  }
+
   async searchCourses(
     user: AuthenticatedUser,
     query: string,

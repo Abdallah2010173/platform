@@ -275,6 +275,39 @@ export class TeacherService {
     }));
   }
 
+  async getAllStudents(user: AuthenticatedUser, search?: string) {
+    await this.teacherHelper.getTeacherId(user);
+    const students = await this.prisma.student.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        ...(search
+          ? {
+              user: {
+                OR: [
+                  { email: { contains: search, mode: 'insensitive' } },
+                  { profile: { firstName: { contains: search, mode: 'insensitive' } } },
+                  { profile: { lastName: { contains: search, mode: 'insensitive' } } },
+                ],
+              },
+            }
+          : {}),
+      },
+      include: { user: { include: { profile: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return students.map((student) => ({
+      id: student.id,
+      userId: student.userId,
+      name: student.user.profile
+        ? `${student.user.profile.firstName} ${student.user.profile.lastName}`.trim()
+        : student.user.email,
+      email: student.user.email,
+      avatarUrl: student.user.profile?.avatarUrl,
+    }));
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ASSIGNMENTS / HOMEWORK
   // ═══════════════════════════════════════════════════════════════════════════
