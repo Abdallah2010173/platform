@@ -5,8 +5,7 @@ import { API_URL } from '@/lib/api/client';
 
 export function GoogleSignInButton() {
   const handleGoogleLogin = () => {
-    const redirect = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `${API_URL}/auth/google?redirect=${encodeURIComponent(redirect)}`;
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   return (
