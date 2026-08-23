@@ -50,6 +50,8 @@ export class StudentExamService {
       })),
       maxAttempts: e.maxAttempts,
       attemptCount: e.attempts.length,
+      resourceType: e.resourceType,
+      resourceUrl: e.resourceUrl,
     }));
   }
 

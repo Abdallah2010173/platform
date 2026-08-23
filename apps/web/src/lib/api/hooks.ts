@@ -30,6 +30,9 @@ export const useStudentTeachers = (search?: string) =>
 export const useStudentExams = () =>
   useQuery({ queryKey: ['student', 'exams'], queryFn: () => studentApi.exams() });
 
+export const useStudentSurveys = () =>
+  useQuery({ queryKey: ['student', 'surveys'], queryFn: () => studentApi.surveys() });
+
 export const useStudentExamResults = () =>
   useQuery({
     queryKey: ['student', 'exam-results'],
@@ -204,6 +207,19 @@ export const useTeacherExams = (courseId?: string) =>
 
 export const useTeacherMeetings = () =>
   useQuery({ queryKey: ['teacher', 'meetings'], queryFn: () => teacherApi.meetings() });
+
+export const useTeacherSurveys = (courseId?: string) =>
+  useQuery({ queryKey: ['teacher', 'surveys', courseId], queryFn: () => teacherApi.surveys(courseId) });
+
+export const useCreateSurvey = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: ({ courseId, data }: { courseId: string; data: Record<string, unknown> }) => teacherApi.createSurvey(courseId, data), onSuccess: () => { qc.invalidateQueries({ queryKey: ['teacher', 'surveys'] }); toast.success('Survey created'); }, onError: (e) => toast.error(formatApiError(e)) });
+};
+
+export const useDeleteSurvey = () => {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => teacherApi.deleteSurvey(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ['teacher', 'surveys'] }); toast.success('Survey deleted'); }, onError: (e) => toast.error(formatApiError(e)) });
+};
 
 export const useTeacherAvailability = () =>
   useQuery({

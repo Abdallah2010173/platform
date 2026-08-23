@@ -250,14 +250,17 @@ export class StudentCourseService {
       throw new NotFoundException('Lesson not found');
     }
 
-    // Recalculate progress: count published lessons completed vs total
-    const totalLessons = await this.prisma.lesson.count({
-      where: { chapter: { courseId }, isPublished: true },
+    await this.prisma.lessonProgress.upsert({
+      where: { enrollmentId_lessonId: { enrollmentId: enrollment.id, lessonId } },
+      create: { enrollmentId: enrollment.id, lessonId, studentId, courseId, status: 'COMPLETED', isCompleted: true, completedAt: new Date(), attemptsCount: 1 },
+      update: { status: 'COMPLETED', isCompleted: true, completedAt: new Date(), attemptsCount: { increment: 1 } },
     });
-    const progress =
-      totalLessons > 0
-        ? Math.min(Math.round((1 / totalLessons) * 10000) / 100 + Number(enrollment.progress), 100)
-        : 0;
+    // Recalculate from persisted completion records so repeat requests cannot inflate progress.
+    const [totalLessons, completedLessons] = await Promise.all([
+      this.prisma.lesson.count({ where: { courseId, isPublished: true, deletedAt: null } }),
+      this.prisma.lessonProgress.count({ where: { enrollmentId: enrollment.id, isCompleted: true, deletedAt: null, lesson: { isPublished: true, deletedAt: null } } }),
+    ]);
+    const progress = totalLessons ? Math.round((completedLessons / totalLessons) * 10000) / 100 : 0;
 
     await this.prisma.courseStudent.update({
       where: { courseId_studentId: { courseId, studentId } },

@@ -12,6 +12,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 const ASSIGNMENT_TYPES = ['HOMEWORK', 'PROJECT', 'QUIZ', 'WORKSHEET'] as const;
 const EXAM_TYPES = ['MCQ', 'ESSAY', 'MIXED', 'PRACTICAL'] as const;
+const EXAM_RESOURCE_TYPES = ['PDF', 'GOOGLE_FORM', 'INTERNAL'] as const;
 const MEETING_STATUSES = ['SCHEDULED', 'LIVE', 'ENDED', 'CANCELED', 'RECORDING'] as const;
 const RECURRENCE_TYPES = ['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'] as const;
 const QUESTION_TYPES = [
@@ -81,6 +82,8 @@ export class CreateExamDto {
   @ApiPropertyOptional() @IsOptional() @IsString() instructions?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() shuffleQuestions?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsNumber() maxAttempts?: number;
+  @ApiPropertyOptional() @IsOptional() @IsIn(EXAM_RESOURCE_TYPES) resourceType?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUrl({ protocols: ['https'], require_protocol: true }) resourceUrl?: string;
 }
 
 export class UpdateExamDto extends PartialType(CreateExamDto) {}

@@ -276,36 +276,8 @@ export class TeacherService {
   }
 
   async getAllStudents(user: AuthenticatedUser, search?: string) {
-    await this.teacherHelper.getTeacherId(user);
-    const students = await this.prisma.student.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        ...(search
-          ? {
-              user: {
-                OR: [
-                  { email: { contains: search, mode: 'insensitive' } },
-                  { profile: { firstName: { contains: search, mode: 'insensitive' } } },
-                  { profile: { lastName: { contains: search, mode: 'insensitive' } } },
-                ],
-              },
-            }
-          : {}),
-      },
-      include: { user: { include: { profile: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
-    return students.map((student) => ({
-      id: student.id,
-      userId: student.userId,
-      name: student.user.profile
-        ? `${student.user.profile.firstName} ${student.user.profile.lastName}`.trim()
-        : student.user.email,
-      email: student.user.email,
-      avatarUrl: student.user.profile?.avatarUrl,
-    }));
+    // Teachers must only see students enrolled in a course they manage.
+    return this.getStudents(user, undefined, search);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -543,6 +515,8 @@ export class TeacherService {
         instructions: dto.instructions,
         shuffleQuestions: dto.shuffleQuestions ?? false,
         maxAttempts: dto.maxAttempts ?? 1,
+        resourceType: dto.resourceType,
+        resourceUrl: dto.resourceUrl,
       },
     });
     return exam;
@@ -570,6 +544,8 @@ export class TeacherService {
         instructions: dto.instructions,
         shuffleQuestions: dto.shuffleQuestions,
         maxAttempts: dto.maxAttempts,
+        resourceType: dto.resourceType,
+        resourceUrl: dto.resourceUrl,
       },
     });
     return updated;
@@ -754,6 +730,7 @@ export class TeacherService {
       }
     }
 
+    this.assertZoomUrls(dto.joinUrl, dto.startUrl);
     const meeting = await this.prisma.zoomMeeting.create({
       data: {
         courseId: dto.courseId,
@@ -797,6 +774,7 @@ export class TeacherService {
     });
     if (!meeting) throw new NotFoundException('Meeting not found');
 
+    this.assertZoomUrls(dto.joinUrl, dto.startUrl);
     const updated = await this.prisma.zoomMeeting.update({
       where: { id: meetingId },
       data: {
@@ -814,6 +792,18 @@ export class TeacherService {
       },
     });
     return updated;
+  }
+
+  private assertZoomUrls(...urls: Array<string | undefined>) {
+    for (const value of urls) {
+      if (!value) continue;
+      let url: URL;
+      try { url = new URL(value); } catch { throw new ForbiddenException('Invalid Zoom meeting URL'); }
+      const host = url.hostname.toLowerCase();
+      if (url.protocol !== 'https:' || !(host === 'zoom.us' || host.endsWith('.zoom.us') || host === 'zoomgov.com' || host.endsWith('.zoomgov.com'))) {
+        throw new ForbiddenException('Meeting links must be secure Zoom URLs');
+      }
+    }
   }
 
   async deleteMeeting(user: AuthenticatedUser, meetingId: string) {

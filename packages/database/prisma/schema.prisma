@@ -1079,6 +1079,7 @@ model Course {
   zoomMeetings         ZoomMeeting[]
   meetingSchedules     MeetingSchedule[]
   exams                Exam[]
+  surveys              Survey[]
   assignments          Assignment[]
   questionBanks        QuestionBank[]
   certificates         Certificate[]
@@ -1865,6 +1866,8 @@ model Exam {
   instructions     String?
   shuffleQuestions Boolean   @default(false)
   maxAttempts      Int       @default(1)
+  resourceType     String?   // PDF | GOOGLE_FORM | INTERNAL
+  resourceUrl      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
@@ -1877,6 +1880,29 @@ model Exam {
 
   @@index([courseId, isPublished])
   @@map("exams")
+}
+
+/// Instructor-authored course survey. Responses are intentionally collected by
+/// the linked provider; the LMS only stores the secure, authorised entry point.
+model Survey {
+  id          String    @id @default(uuid())
+  courseId    String
+  createdBy   String
+  title       String
+  description String?
+  externalUrl String
+  isPublished Boolean   @default(false)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, isPublished])
+  @@index([createdBy])
+  @@map("surveys")
 }
 
 model ExamSection {

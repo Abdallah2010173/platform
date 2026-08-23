@@ -72,6 +72,7 @@ export const studentApi = {
     getApiData(await apiClient.get(`/student/courses/${courseId}/lessons/${lessonId}`)),
   completeLesson: async (courseId: string, lessonId: string) =>
     getApiData(await apiClient.post(`/student/courses/${courseId}/lessons/${lessonId}/complete`)),
+  surveys: async () => getApiData(await apiClient.get('/surveys/available')),
   enroll: async (courseId: string) =>
     getApiData(await apiClient.post(`/student/courses/${courseId}/enroll`)),
   exams: async () => getApiData(await apiClient.get('/student/exams')),
@@ -178,6 +179,13 @@ notifications: async (params?: Record<string, string>) =>
     getApiData(await apiClient.post('/teacher/notifications/read-all')),
   questionBanks: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/question-banks', { params })),
+  surveys: async (courseId?: string) =>
+    getApiData(await apiClient.get('/surveys/mine', { params: courseId ? { courseId } : undefined })),
+  createSurvey: async (courseId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/surveys/courses/${courseId}`, data)),
+  updateSurvey: async (id: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.patch(`/surveys/${id}`, data)),
+  deleteSurvey: async (id: string) => getApiData(await apiClient.delete(`/surveys/${id}`)),
 };
 
 export const messagingApi = {
