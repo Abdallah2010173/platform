@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Search, Pencil, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,7 +90,7 @@ const EMPTY_FORM: CourseFormState = {
   level: 'ALL_LEVELS',
   price: '',
   isFree: false,
-  isPublished: false,
+  isPublished: true,
   isFeatured: false,
 };
 
@@ -97,6 +99,8 @@ const LEVEL_OPTIONS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS'];
 type ModalState = { type: 'create' } | { type: 'edit'; course: CourseItem } | null;
 
 export default function AdminCoursesPage() {
+  const pathname = usePathname();
+  const contentBasePath = pathname.startsWith('/teacher') ? '/teacher/courses' : '/admin/courses';
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<ModalState>(null);
@@ -263,6 +267,11 @@ export default function AdminCoursesPage() {
                           onClick={() => openEdit(course)}
                         >
                           <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" aria-label="Manage course content" asChild>
+                          <Link href={`${contentBasePath}/${course.id}`}>
+                            <Plus className="h-4 w-4" />
+                          </Link>
                         </Button>
                         <Button
                           variant="ghost"

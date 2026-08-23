@@ -21,6 +21,26 @@ export const useStudentCourses = (params?: Record<string, string>) =>
     queryFn: () => studentApi.courses(params),
   });
 
+export const usePublishedCourses = () =>
+  useQuery({
+    queryKey: ['courses', 'published'],
+    queryFn: () => courseApi.courses({ status: 'PUBLISHED', isPublished: 'true', limit: '100' }),
+  });
+
+export const useEnrollCourse = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => studentApi.enroll(courseId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student', 'courses'] });
+      qc.invalidateQueries({ queryKey: ['courses', 'published'] });
+      qc.invalidateQueries({ queryKey: ['messages', 'contacts'] });
+      toast.success('You are enrolled in the course');
+    },
+    onError: (error) => toast.error(formatApiError(error)),
+  });
+};
+
 export const useStudentTeachers = (search?: string) =>
   useQuery({
     queryKey: ['student', 'teachers', search],

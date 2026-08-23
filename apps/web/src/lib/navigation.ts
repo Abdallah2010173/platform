@@ -65,6 +65,7 @@ export const ROLE_NAV: Record<string, NavSection[]> = {
       items: [
         { label: 'Dashboard', href: '/teacher', icon: LayoutDashboard },
         { label: 'Courses', href: '/teacher/courses', icon: BookOpen },
+        { label: 'Categories', href: '/teacher/categories', icon: FolderOpen },
         { label: 'Students', href: '/teacher/students', icon: Users },
         { label: 'Messages', href: '/teacher/messages', icon: MessageSquare },
         { label: 'Assignments', href: '/teacher/assignments', icon: ClipboardList },

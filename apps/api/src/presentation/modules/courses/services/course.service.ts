@@ -105,11 +105,8 @@ export class CourseService {
       where.teachers = { some: { teacherId, isPrimary: true } };
     }
 
-    const isTeacher = user && user.role === 'TEACHER';
-    if (isTeacher) {
-      // Teachers see only courses they own
-      where.teachers = { some: { teacher: { userId: user.id } } };
-    }
+    // Admins and teachers share the content-management catalogue. User and
+    // enrollment administration remain protected by their own admin-only APIs.
 
     if (search) {
       where.OR = [
@@ -346,9 +343,6 @@ export class CourseService {
   async create(dto: CreateCourseDto, user: AuthUser) {
     const slug = dto.slug ? dto.slug : await this.uniqueSlugify(dto.title);
 
-    // Determine if admin/teacher creates directly published draft vs published
-    const isAdmin = user.role === 'ADMIN';
-
     const course = await this.prisma.course.create({
       data: {
         categoryId: dto.categoryId,
@@ -371,9 +365,9 @@ export class CourseService {
         discountPrice: dto.discountPrice,
         currency: dto.currency ?? 'USD',
         isFree: dto.isFree ?? false,
-        status: isAdmin ? (dto.status ?? 'DRAFT') : 'PENDING_REVIEW',
+        status: dto.status ?? 'PUBLISHED',
         visibility: dto.visibility ?? 'PUBLIC',
-        isPublished: isAdmin ? (dto.isPublished ?? false) : false,
+        isPublished: dto.isPublished ?? true,
         isFeatured: dto.isFeatured ?? false,
         requirements: dto.requirements as Prisma.InputJsonValue | undefined,
         learningOutcomes: dto.learningOutcomes as Prisma.InputJsonValue | undefined,
@@ -672,9 +666,10 @@ export class CourseService {
         chapterNumber: dto.chapterNumber ?? sortOrder + 1,
         sortOrder: dto.sortOrder ?? sortOrder,
         estimatedDuration: dto.estimatedDuration,
-        status: dto.status ?? 'DRAFT',
+        status: dto.status ?? 'PUBLISHED',
         isPreview: dto.isPreview ?? false,
         isLocked: dto.isLocked ?? false,
+        publishedAt: dto.status === 'DRAFT' ? undefined : new Date(),
       },
     });
     return this.findChapterById(chapter.id);
@@ -792,11 +787,12 @@ export class CourseService {
         lessonNumber: dto.lessonNumber ?? orderIndex + 1,
         orderIndex: dto.orderIndex ?? orderIndex,
         durationMinutes: dto.durationMinutes,
-        status: dto.status ?? 'DRAFT',
+        status: dto.status ?? 'PUBLISHED',
         isFree: dto.isFree ?? false,
         isPreview: dto.isPreview ?? false,
         isLocked: dto.isLocked ?? false,
-        isPublished: dto.isPublished ?? false,
+        isPublished: dto.isPublished ?? true,
+        publishedAt: dto.isPublished === false ? undefined : new Date(),
       },
     });
     return this.findLessonById(lesson.id);
@@ -1267,18 +1263,7 @@ export class CourseService {
     if (!course) throw new NotFoundException('Course not found');
 
     if (!user) return;
-    if (user.role === 'ADMIN') return;
-
-    if (user.role === 'TEACHER') {
-      const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-      const isTeacher = await this.prisma.courseTeacher.findFirst({
-        where: { courseId, teacherId: teacher?.id },
-      });
-      if (!isTeacher && course.createdBy !== user.id) {
-        throw new ForbiddenException('You do not have access to this course');
-      }
-      return;
-    }
+    if (user.role === 'ADMIN' || user.role === 'TEACHER') return;
 
     throw new ForbiddenException('You do not have access to this course');
   }

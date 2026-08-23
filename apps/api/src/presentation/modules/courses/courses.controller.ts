@@ -83,14 +83,14 @@ export class CoursesController {
   }
 
   @Post('categories')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Create a category' })
   createCategory(@Body() dto: CreateCategoryDto, @CurrentUser() user: AuthUser) {
     return this.categoryService.createCategory(dto, user.id);
   }
 
   @Patch('categories/:id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a category' })
   updateCategory(
     @Param('id') id: string,
@@ -101,14 +101,14 @@ export class CoursesController {
   }
 
   @Delete('categories/:id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Soft-delete a category' })
   deleteCategory(@Param('id') id: string) {
     return this.categoryService.deleteCategory(id);
   }
 
   @Post('categories/:id/restore')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Restore a soft-deleted category' })
   restoreCategory(@Param('id') id: string) {
     return this.categoryService.restoreCategory(id);
@@ -131,21 +131,21 @@ export class CoursesController {
   }
 
   @Post('sub-categories')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Create a sub-category' })
   createSubCategory(@Body() dto: CreateSubCategoryDto) {
     return this.categoryService.createSubCategory(dto);
   }
 
   @Patch('sub-categories/:id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a sub-category' })
   updateSubCategory(@Param('id') id: string, @Body() dto: UpdateSubCategoryDto) {
     return this.categoryService.updateSubCategory(id, dto);
   }
 
   @Delete('sub-categories/:id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Soft-delete a sub-category' })
   deleteSubCategory(@Param('id') id: string) {
     return this.categoryService.deleteSubCategory(id);
@@ -171,21 +171,21 @@ export class CoursesController {
   }
 
   @Post('subjects')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Create a subject' })
   createSubject(@Body() dto: CreateSubjectDto) {
     return this.categoryService.createSubject(dto);
   }
 
   @Patch('subjects/:id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a subject' })
   updateSubject(@Param('id') id: string, @Body() dto: UpdateSubjectDto) {
     return this.categoryService.updateSubject(id, dto);
   }
 
   @Delete('subjects/:id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Soft-delete a subject' })
   deleteSubject(@Param('id') id: string) {
     return this.categoryService.deleteSubject(id);
@@ -221,7 +221,7 @@ export class CoursesController {
   }
 
   @Get('courses/stats')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Get course statistics (admin)' })
   getCourseStats() {
     return this.courseService.getStats();
@@ -287,7 +287,7 @@ export class CoursesController {
   }
 
   @Post('courses/:id/restore')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Restore a soft-deleted course' })
   restoreCourse(@Param('id') id: string) {
     return this.courseService.restore(id);
@@ -560,7 +560,7 @@ export class CoursesController {
 
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('test')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'No-op test route' })
   noop() {
     return;
