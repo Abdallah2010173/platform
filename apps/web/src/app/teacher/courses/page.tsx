@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { BookOpen, Users, Clock, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +72,9 @@ export default function TeacherCoursesPage() {
                 {String(course.durationMinutes)} min
               </span>
             ) : null}
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/teacher/courses/${course.id}`}>Manage content</Link>
+            </Button>
           </CardContent>
         </Card>
       ))}

@@ -441,6 +441,45 @@ export const useAllCourses = (params?: Record<string, string>) =>
 export const useCourseStats = () =>
   useQuery({ queryKey: ['courses', 'stats'], queryFn: () => courseApi.courseStats() });
 
+export const useCourseDetail = (courseId: string) =>
+  useQuery({ queryKey: ['course', courseId], queryFn: () => courseApi.course(courseId), enabled: Boolean(courseId) });
+
+export const useAddChapter = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => courseApi.addChapter(courseId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Chapter added'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useAddLesson = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ chapterId, data }: { chapterId: string; data: Record<string, unknown> }) => courseApi.addLesson(chapterId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Lesson added'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useAddLessonVideo = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lessonId, data }: { lessonId: string; data: Record<string, unknown> }) => courseApi.addLessonVideo(lessonId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Video attached'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteLessonVideo = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (videoId: string) => courseApi.deleteLessonVideo(videoId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Video deleted'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useCreateCourse = () => {
   const qc = useQueryClient();
   return useMutation({

@@ -71,8 +71,8 @@ export class CourseService {
       teacherId,
     } = query;
 
-    // Non-admin/non-teacher users only see published courses
-    const isStaff = user && (user.role === 'ADMIN');
+    // Admins and instructors can manage their own unpublished courses.
+    const isStaff = user && (user.role === 'ADMIN' || user.role === 'TEACHER');
 
     const where: Prisma.CourseWhereInput = { deletedAt: null };
 

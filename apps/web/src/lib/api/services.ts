@@ -231,6 +231,14 @@ export const courseApi = {
   courses: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/courses', { params })),
   course: async (id: string) => getApiData(await apiClient.get(`/courses/${id}`)),
+  addChapter: async (courseId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/courses/${courseId}/chapters`, data)),
+  addLesson: async (chapterId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/chapters/${chapterId}/lessons`, data)),
+  addLessonVideo: async (lessonId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/lessons/${lessonId}/videos`, data)),
+  deleteLessonVideo: async (videoId: string) =>
+    getApiData(await apiClient.delete(`/videos/${videoId}`)),
   createCourse: async (data: Record<string, unknown>) =>
     getApiData(await apiClient.post('/courses', data)),
   updateCourse: async (id: string, data: Record<string, unknown>) =>
