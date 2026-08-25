@@ -5,7 +5,7 @@ export default function TeacherMessagesPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Messages</h2>
-        <p className="text-muted-foreground text-sm">Message students enrolled in your courses.</p>
+        <p className="text-muted-foreground text-sm">Message any active student on Global Math.</p>
       </div>
       <MessagesWorkspace />
     </div>

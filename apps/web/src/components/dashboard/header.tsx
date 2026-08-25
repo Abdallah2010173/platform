@@ -1,6 +1,7 @@
 'use client';
 
 import { LogOut, Moon, Sun } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MobileNav } from './mobile-nav';
@@ -10,6 +11,14 @@ import { useAuth } from '@/components/auth/protected-route';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/components/providers/theme-provider';
 import { ROLE_LABELS } from '@platform/shared';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface HeaderProps {
   title: string;
@@ -21,10 +30,14 @@ export function Header({ title, description, actions }: HeaderProps) {
   const { user } = useAuth();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure you want to log out?');
-    if (!confirmed) return;
+  const handleLogout = () => {
+    setLogoutOpen(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutOpen(false);
     router.replace('/logout');
   };
 
@@ -81,6 +94,25 @@ export function Header({ title, description, actions }: HeaderProps) {
           </Button>
         </div>
       </div>
+
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log out of Global Math?</DialogTitle>
+            <DialogDescription>
+              Your current session will be closed on this device.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setLogoutOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmLogout}>
+              Log out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div>
         <h1 className="text-foreground mb-1 text-xl font-bold md:text-2xl lg:text-3xl">{title}</h1>

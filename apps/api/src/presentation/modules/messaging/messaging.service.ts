@@ -34,7 +34,6 @@ export class MessagingService {
         },
         include: { user: { select: { id: true, email: true, profile: true } } },
         orderBy: { user: { email: 'asc' } },
-        take: 50,
       });
       return students.map(({ user: contact }) => this.mapContact(contact));
     }
@@ -70,11 +69,12 @@ export class MessagingService {
         type: 'DIRECT',
         members: { some: { userId: user.id, leftAt: null } },
       },
-      include: { members: { select: { userId: true } } },
+      include: { members: { where: { leftAt: null }, select: { userId: true } } },
     });
     const existing = chats.find(
       (chat) =>
         chat.members.length === 2 &&
+        chat.members.some((member) => member.userId === user.id) &&
         chat.members.some((member) => member.userId === otherUserId),
     );
     if (existing) return { id: existing.id };
@@ -177,8 +177,11 @@ export class MessagingService {
   private async requireMembership(userId: string, chatId: string) {
     const membership = await this.prisma.conversationMember.findUnique({
       where: { chatId_userId: { chatId, userId } },
+      include: { chat: { select: { deletedAt: true } } },
     });
-    if (!membership || membership.leftAt) throw new ForbiddenException('You are not a member of this chat');
+    if (!membership || membership.leftAt || membership.chat.deletedAt) {
+      throw new ForbiddenException('You are not a member of this chat');
+    }
     return membership;
   }
 
