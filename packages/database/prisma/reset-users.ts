@@ -19,8 +19,17 @@ async function main() {
     return;
   }
 
-  await prisma.user.deleteMany({});
-  console.log('Deleted all users and cascading user-owned authentication/application records. Global configuration was preserved.');
+  await prisma.$transaction(async (tx) => {
+    // Remove records whose schema intentionally restricts deleting their creator/owner.
+    await tx.chat.deleteMany({});
+    await tx.event.deleteMany({});
+    await tx.schedule.deleteMany({});
+    await tx.payment.deleteMany({});
+    await tx.invoice.deleteMany({});
+    await tx.subscription.deleteMany({});
+    await tx.user.deleteMany({});
+  });
+  console.log('Deleted all users and user-dependent records. Global configuration was preserved.');
 }
 
 main().finally(() => prisma.$disconnect());

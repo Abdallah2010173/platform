@@ -23,6 +23,8 @@ export function Header({ title, description, actions }: HeaderProps) {
   const { resolvedTheme, setTheme } = useTheme();
 
   const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure you want to log out?');
+    if (!confirmed) return;
     router.replace('/logout');
   };
 

@@ -37,6 +37,15 @@ function LoginFormInner() {
     defaultValues: { email: '', password: '' },
   });
 
+  const oauthError = searchParams.get('oauth_error');
+  const oauthMessage = oauthError === 'google_account_not_registered'
+    ? 'No account is connected to this Google account. Create an account with email and password first.'
+    : oauthError === 'google_account_link_required'
+      ? 'This email already has an account. Sign in with your password before using Google.'
+      : oauthError
+        ? 'Google sign-in failed. Please try again.'
+        : null;
+
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
     setError(null);
@@ -88,7 +97,7 @@ function LoginFormInner() {
               <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {(error || oauthMessage) && <p className="text-destructive text-sm">{error || oauthMessage}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>
