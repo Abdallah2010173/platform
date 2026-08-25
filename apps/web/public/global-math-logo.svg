@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" role="img" aria-labelledby="title desc">
+  <title id="title">Global Math</title>
+  <desc id="desc">Global Math math learning platform logo</desc>
+  <rect width="900" height="300" fill="#f7fafb"/>
+  <g transform="translate(45 28)">
+    <circle cx="115" cy="122" r="92" fill="#1d2c68" stroke="#16245b" stroke-width="3"/>
+    <path d="M24 102c55-47 160-53 204-10 26 25 15 62-22 88-45 31-133 41-183 17" fill="none" stroke="#d89a6e" stroke-width="5"/>
+    <path d="M20 153c54 35 155 35 204-14 26-26 20-60-10-84" fill="none" stroke="#28c9b8" stroke-width="5"/>
+    <path d="M62 52c36 34 47 142 5 181M169 40c-39 45-45 143-4 194M29 117h172M39 82h151M39 157h151" fill="none" stroke="#5364aa" stroke-width="2" opacity=".55"/>
+    <text x="115" y="145" text-anchor="middle" fill="#27d1c0" font-family="Georgia,serif" font-size="70" font-weight="700">II</text>
+    <circle cx="218" cy="63" r="20" fill="#ff684f"/><text x="218" y="71" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="25">x</text>
+    <circle cx="28" cy="142" r="20" fill="#28c9b8"/><text x="28" y="150" text-anchor="middle" fill="#10224e" font-family="Arial,sans-serif" font-size="25">+</text>
+  </g>
+  <text x="340" y="142" fill="#11234c" font-family="Arial,sans-serif" font-size="57" font-weight="700">Global</text>
+  <text x="340" y="205" fill="#26c9bb" font-family="Arial,sans-serif" font-size="57" font-weight="700">Math</text>
+  <text x="343" y="243" fill="#68717e" font-family="Arial,sans-serif" font-size="18" letter-spacing="6">MATH LEARNING PLATFORM</text>
+</svg>

@@ -507,6 +507,19 @@ export const useAddLessonVideo = (courseId: string) => {
   });
 };
 
+export const useUploadLessonVideo = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lessonId, file, onProgress }: { lessonId: string; file: File; onProgress?: (progress: number) => void }) =>
+      courseApi.uploadLessonVideo(lessonId, file, onProgress),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      toast.success('Video uploaded');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useDeleteLessonVideo = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({

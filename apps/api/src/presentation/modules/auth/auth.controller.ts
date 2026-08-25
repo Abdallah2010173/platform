@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  ConflictException,
   Param,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiExcludeEndpoint } from '@nestjs/swagger';
@@ -401,10 +402,15 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
       const redirectUrl = `${frontendCallback}${query}`;
       res.redirect(redirectUrl);
     } catch (error) {
-      console.error('Error during googleCallback flow:', error);
+      const code = error instanceof ConflictException ? (error.getResponse() as { code?: string }).code : undefined;
       try {
-        const loginUrl = this.getFrontendLoginUrl(req, state.frontendOrigin);
-        res.redirect(loginUrl);
+        const base = state.frontendOrigin || this.configService.get<string>('FRONTEND_URL') || this.resolveFrontendOrigin(req);
+        if (code === 'GOOGLE_ACCOUNT_NOT_REGISTERED') {
+          const email = req.user?.email ? `&email=${encodeURIComponent(req.user.email)}` : '';
+          res.redirect(`${base.replace(/\/+$/, '')}/register?google=required${email}`);
+        } else {
+          res.redirect(this.getFrontendLoginUrl(req, state.frontendOrigin));
+        }
       } catch (innerErr) {
         console.error('Inner error:', innerErr);
         res.redirect('/login?oauth_error=1');

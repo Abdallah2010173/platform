@@ -29,7 +29,7 @@ export function Sidebar() {
             />
             <div className="border-primary-foreground absolute bottom-2.5 h-1.5 w-3 rounded-full border-b-2" />
           </div>
-          <span className="text-foreground text-lg font-semibold">Platform LMS</span>
+          <span className="text-foreground text-lg font-semibold">Global Math</span>
         </Link>
       </div>
 

@@ -15,9 +15,11 @@ export function LoadingState({ label = 'Loading...' }: { label?: string }) {
 export function EmptyState({
   title = 'No data available',
   description,
+  action,
 }: {
   title?: string;
   description?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-50 flex-col items-center justify-center gap-3 text-center">
@@ -28,6 +30,7 @@ export function EmptyState({
         <p className="text-foreground font-medium">{title}</p>
         {description && <p className="text-muted-foreground text-sm">{description}</p>}
       </div>
+      {action}
     </div>
   );
 }

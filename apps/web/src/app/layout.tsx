@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Platform LMS',
-    template: '%s | Platform LMS',
+    default: 'Global Math',
+    template: '%s | Global Math',
   },
   description: 'Enterprise Learning Management System',
 };

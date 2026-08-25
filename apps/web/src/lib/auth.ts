@@ -57,6 +57,15 @@ export function clearSession(): void {
   localStorage.removeItem(USER_KEY);
 }
 
+export function isAccessTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1] ?? '')) as { exp?: number };
+    return typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now() + 30_000;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Map a user role to its dashboard route.
  */

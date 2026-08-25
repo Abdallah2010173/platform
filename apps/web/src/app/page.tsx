@@ -62,7 +62,7 @@ export default function HomePage() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <GraduationCap className="text-primary h-6 w-6" />
-            <span>Platform LMS</span>
+            <span>Global Math</span>
           </Link>
           <nav className="flex items-center gap-4">
             {ready && isAuthenticated && user ? (
@@ -158,7 +158,7 @@ export default function HomePage() {
       </main>
 
       <footer className="text-muted-foreground border-t py-8 text-center text-sm">
-        Platform LMS &copy; {new Date().getFullYear()}
+        Global Math &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );

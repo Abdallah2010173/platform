@@ -1,6 +1,9 @@
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
+
+const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const PASSWORD_MESSAGE = 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.';
 
 export class LoginDto {
   @ApiProperty({ example: 'admin@platform.local' })
@@ -9,7 +12,7 @@ export class LoginDto {
 
   @ApiProperty({ example: 'SuperAdmin@123' })
   @IsString()
-  @MinLength(8)
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
   password!: string;
 }
 
@@ -20,7 +23,7 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'Password@123' })
   @IsString()
-  @MinLength(8)
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
   password!: string;
 
   @ApiProperty({ example: 'John' })
@@ -62,7 +65,7 @@ export class ResetPasswordDto {
 
   @ApiProperty({ example: 'NewPassword@123' })
   @IsString()
-  @MinLength(8)
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
   password!: string;
 }
 
@@ -75,12 +78,12 @@ export class VerifyEmailDto {
 export class ChangePasswordDto {
   @ApiProperty()
   @IsString()
-  @MinLength(8)
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
   currentPassword!: string;
 
   @ApiProperty()
   @IsString()
-  @MinLength(8)
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
   newPassword!: string;
 }
 

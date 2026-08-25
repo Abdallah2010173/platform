@@ -47,12 +47,15 @@ export class AuthService implements IAuthService {
   }
 
   async login(email: string, password: string): Promise<ITokens> {
-    const user = await this.validateUser(email, password);
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+    const existing = await this.userRepository.findByEmail(email);
+    if (!existing) throw new UnauthorizedException({ code: 'ACCOUNT_NOT_FOUND', message: 'No account found with these details. Please check your email or sign up for a new account.' });
+    if (!existing.isActive) throw new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'This account is unavailable.' });
+    if (!existing.passwordHash || !(await bcrypt.compare(password, existing.passwordHash))) {
+      throw new UnauthorizedException({ code: 'INVALID_PASSWORD', message: 'Incorrect password. Please try again.' });
     }
+    await this.userRepository.updateLastLogin(existing.id);
 
-    return this.generateTokens(user.id, user.email, user.role);
+    return this.generateTokens(existing.id, existing.email, existing.role);
   }
 
   async register(dto: {
@@ -64,8 +67,10 @@ export class AuthService implements IAuthService {
   }): Promise<ITokens> {
     const existing = await this.userRepository.findByEmail(dto.email);
     if (existing) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException({ code: 'EMAIL_ALREADY_EXISTS', message: 'This email is already registered.' });
     }
+
+    this.assertStrongPassword(dto.password);
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
@@ -116,18 +121,7 @@ export class AuthService implements IAuthService {
     }
 
     if (isNewUser) {
-      // 3) First login — auto-provision a student account.
-      user = await this.userRepository.create({
-        email,
-        passwordHash: '',
-        firstName: profile.firstName ?? '',
-        lastName: profile.lastName ?? '',
-        displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl,
-        googleId: profile.googleId,
-        role: Role.STUDENT,
-        emailVerified: profile.emailVerified,
-      });
+      throw new ConflictException({ code: 'GOOGLE_ACCOUNT_NOT_REGISTERED', message: 'No account is registered for this Google identity. Please complete sign up first.' });
     } else {
       if (!user) {
         throw new UnauthorizedException('Account is suspended');
@@ -138,7 +132,7 @@ export class AuthService implements IAuthService {
         profile.googleId,
       );
       if (!alreadyLinked) {
-        await this.userRepository.linkGoogleAccount(user.id, profile.googleId);
+        throw new ConflictException({ code: 'GOOGLE_ACCOUNT_LINK_REQUIRED', message: 'This email already has an account. Sign in with your password before linking Google.' });
       }
       // Keep the Google avatar + name fresh on every login.
       await this.userRepository.updateGoogleProfile(user.id, {
@@ -321,6 +315,7 @@ export class AuthService implements IAuthService {
   }
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    this.assertStrongPassword(password);
     const passwordHash = await bcrypt.hash(password, 12);
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const userId = await this.userRepository.resetPasswordWithToken(tokenHash, passwordHash);
@@ -367,6 +362,7 @@ export class AuthService implements IAuthService {
     currentPassword: string,
     newPassword: string,
   ): Promise<{ message: string }> {
+    this.assertStrongPassword(newPassword);
     const user = await this.userRepository.findById(userId);
     if (!user || !user.passwordHash) {
       throw new NotFoundException('User not found');
@@ -418,5 +414,11 @@ export class AuthService implements IAuthService {
     };
 
     return value * (multipliers[unit] ?? 60000);
+  }
+
+  private assertStrongPassword(password: string): void {
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(password)) {
+      throw new BadRequestException({ code: 'WEAK_PASSWORD', message: 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.' });
+    }
   }
 }

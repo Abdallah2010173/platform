@@ -276,8 +276,57 @@ export class TeacherService {
   }
 
   async getAllStudents(user: AuthenticatedUser, search?: string) {
-    // Teachers must only see students enrolled in a course they manage.
-    return this.getStudents(user, undefined, search);
+    await this.teacherHelper.getTeacherId(user);
+
+    const q = search?.trim();
+    const students = await this.prisma.student.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        user: {
+          isActive: true,
+          deletedAt: null,
+          ...(q
+            ? {
+                OR: [
+                  { email: { contains: q, mode: 'insensitive' } },
+                  { profile: { firstName: { contains: q, mode: 'insensitive' } } },
+                  { profile: { lastName: { contains: q, mode: 'insensitive' } } },
+                  { profile: { displayName: { contains: q, mode: 'insensitive' } } },
+                ],
+              }
+            : {}),
+        },
+      },
+      include: {
+        user: { include: { profile: true } },
+        courses: {
+          where: { deletedAt: null },
+          select: { courseId: true, progress: true, status: true, course: { select: { title: true } } },
+          orderBy: { updatedAt: 'desc' },
+        },
+      },
+      orderBy: { user: { email: 'asc' } },
+      take: 200,
+    });
+
+    return students.map((student) => ({
+      id: student.id,
+      userId: student.userId,
+      name: student.user.profile
+        ? `${student.user.profile.firstName} ${student.user.profile.lastName}`.trim()
+        : student.user.email,
+      email: student.user.email,
+      avatarUrl: student.user.profile?.avatarUrl,
+      grade: student.grade,
+      school: student.school,
+      enrolledCourses: student.courses.map((enrollment) => ({
+        id: enrollment.courseId,
+        title: enrollment.course.title,
+        progress: Number(enrollment.progress),
+        status: enrollment.status,
+      })),
+    }));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -28,9 +28,9 @@ export class MessagingService {
       if (!teacher) throw new NotFoundException('Teacher profile not found');
       const students = await this.prisma.student.findMany({
         where: {
+          isActive: true,
           deletedAt: null,
-          courses: { some: { course: { teachers: { some: { teacherId: teacher.id } } }, deletedAt: null } },
-          user: { profile: profileFilter },
+          user: { isActive: true, deletedAt: null, profile: profileFilter },
         },
         include: { user: { select: { id: true, email: true, profile: true } } },
         orderBy: { user: { email: 'asc' } },

@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsIn,
   IsUrl,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
@@ -46,7 +47,7 @@ export class UpdateTeacherProfileDto {
 
 export class ChangeTeacherPasswordDto {
   @ApiProperty() @IsString() currentPassword!: string;
-  @ApiProperty({ minLength: 8 }) @IsString() newPassword!: string;
+  @ApiProperty({ minLength: 8 }) @IsString() @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/, { message: 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.' }) newPassword!: string;
 }
 
 export class CreateAssignmentDto {

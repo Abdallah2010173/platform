@@ -245,6 +245,17 @@ export const courseApi = {
     getApiData(await apiClient.post(`/chapters/${chapterId}/lessons`, data)),
   addLessonVideo: async (lessonId: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.post(`/lessons/${lessonId}/videos`, data)),
+  uploadLessonVideo: async (lessonId: string, file: File, onUploadProgress?: (progress: number) => void) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post(`/media/lessons/${lessonId}/videos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (event.total) onUploadProgress?.(Math.round((event.loaded / event.total) * 100));
+      },
+    });
+    return getApiData(response);
+  },
   deleteLessonVideo: async (videoId: string) =>
     getApiData(await apiClient.delete(`/videos/${videoId}`)),
   createCourse: async (data: Record<string, unknown>) =>

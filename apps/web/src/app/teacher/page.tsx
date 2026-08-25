@@ -1,6 +1,8 @@
 'use client';
 
 import { BookOpen, Users, GraduationCap, Video, ClipboardList, CalendarDays } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTeacherStats, useTeacherCalendar, useTeacherMeetings } from '@/lib/api/hooks';
 import { LoadingState } from '@/components/dashboard/data-states';
@@ -87,6 +89,18 @@ export default function TeacherDashboardPage() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Quick actions</CardTitle></CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild><Link href="/teacher/courses"><BookOpen className="mr-2 h-4 w-4" />Create New Course</Link></Button>
+          <Button asChild variant="outline"><Link href="/teacher/courses"><ClipboardList className="mr-2 h-4 w-4" />Add Lesson or Video</Link></Button>
+          <Button asChild variant="outline"><Link href="/teacher/live-classes"><Video className="mr-2 h-4 w-4" />Schedule Live Class</Link></Button>
+          <Button asChild variant="outline"><Link href="/teacher/exams"><GraduationCap className="mr-2 h-4 w-4" />Create Exam</Link></Button>
+          <Button asChild variant="outline"><Link href="/teacher/surveys"><ClipboardList className="mr-2 h-4 w-4" />Create Survey</Link></Button>
+          <Button asChild variant="outline"><Link href="/teacher/messages"><Users className="mr-2 h-4 w-4" />Send Message</Link></Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

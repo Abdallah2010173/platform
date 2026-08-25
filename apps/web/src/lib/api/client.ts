@@ -27,6 +27,21 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 
 let refreshPromise: Promise<string | null> | null = null;
 
+export async function refreshAccessTokenRequest(refreshToken: string): Promise<string | null> {
+  try {
+    const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+    const tokens = res.data?.data ?? res.data;
+    if (tokens?.accessToken) {
+      localStorage.setItem('accessToken', tokens.accessToken);
+      if (tokens.refreshToken) localStorage.setItem('refreshToken', tokens.refreshToken);
+      return tokens.accessToken;
+    }
+  } catch {
+    // The caller clears the local session when renewal fails.
+  }
+  return null;
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
@@ -34,20 +49,7 @@ async function refreshAccessToken(): Promise<string | null> {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) return null;
-      const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-      
-      const body = res.data;
-      const tokens = body?.data ?? body;
-      const newAccessToken = tokens?.accessToken ?? null;
-      const newRefreshToken = tokens?.refreshToken ?? null;
-      
-      if (newAccessToken) {
-        localStorage.setItem('accessToken', newAccessToken);
-      }
-      if (newRefreshToken) {
-        localStorage.setItem('refreshToken', newRefreshToken);
-      }
-      return newAccessToken;
+      return await refreshAccessTokenRequest(refreshToken);
     } catch {
       return null;
     } finally {

@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { StudentHelper, AuthenticatedUser } from '../student.helper';
 
@@ -112,12 +113,21 @@ export class StudentSettingsService {
       throw new NotFoundException('User not found');
     }
 
-    // bcrypt compare is handled by StudentProfileService; this is a pass-through
-    // that validates the current password matches.
     void profileService;
     if (!dbUser.passwordHash) {
       throw new ForbiddenException('Password login is not enabled for this account');
     }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(_dto.newPassword)) {
+      throw new BadRequestException('Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.');
+    }
+    if (!(await bcrypt.compare(_dto.currentPassword, dbUser.passwordHash))) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(_dto.newPassword, 12) },
+    });
 
     return { success: true };
   }

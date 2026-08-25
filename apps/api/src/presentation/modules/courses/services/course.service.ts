@@ -77,6 +77,9 @@ export class CourseService {
     const where: Prisma.CourseWhereInput = { deletedAt: null };
 
     if (isStaff) {
+      if (user?.role === 'TEACHER') {
+        where.teachers = { some: { teacher: { userId: user.id, deletedAt: null }, deletedAt: null } };
+      }
       if (status && status !== 'ALL') {
         if (status === 'PUBLISHED') {
           where.status = 'PUBLISHED';
@@ -101,7 +104,7 @@ export class CourseService {
     if (price === 'free') where.isFree = true;
     if (price === 'paid') where.isFree = false;
 
-    if (teacherId) {
+    if (teacherId && user?.role !== 'TEACHER') {
       where.teachers = { some: { teacherId, isPrimary: true } };
     }
 
@@ -1263,7 +1266,18 @@ export class CourseService {
     if (!course) throw new NotFoundException('Course not found');
 
     if (!user) return;
-    if (user.role === 'ADMIN' || user.role === 'TEACHER') return;
+    if (user.role === 'ADMIN') return;
+
+    if (user.role === 'TEACHER') {
+      const assignment = await this.prisma.courseTeacher.findFirst({
+        where: {
+          courseId,
+          teacher: { userId: user.id, deletedAt: null },
+          deletedAt: null,
+        },
+      });
+      if (assignment) return;
+    }
 
     throw new ForbiddenException('You do not have access to this course');
   }

@@ -5,7 +5,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/lib/store';
 import { hydrate } from '@/lib/store/slices/auth.slice';
-import { getStoredTokens, getStoredUser } from '@/lib/auth';
+import { getStoredTokens, getStoredUser, isAccessTokenExpired, clearSession } from '@/lib/auth';
+import { refreshAccessTokenRequest } from '@/lib/api/client';
+import { clearCredentials, updateAccessToken } from '@/lib/store/slices/auth.slice';
 
 export function useAuthHydration() {
   const dispatch = useDispatch<AppDispatch>();
@@ -13,8 +15,20 @@ export function useAuthHydration() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    dispatch(hydrate());
-    setReady(true);
+    let cancelled = false;
+    const restore = async () => {
+      dispatch(hydrate());
+      const { accessToken, refreshToken } = getStoredTokens();
+      if (accessToken && refreshToken && isAccessTokenExpired(accessToken)) {
+        const renewed = await refreshAccessTokenRequest(refreshToken);
+        if (cancelled) return;
+        if (renewed) dispatch(updateAccessToken(renewed));
+        else { clearSession(); dispatch(clearCredentials()); }
+      }
+      if (!cancelled) setReady(true);
+    };
+    void restore();
+    return () => { cancelled = true; };
   }, [dispatch]);
 
   return { isAuthenticated, ready };

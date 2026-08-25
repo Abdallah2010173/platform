@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { GraduationCap, KeyRound } from 'lucide-react';
@@ -15,8 +15,8 @@ import { authApi, formatApiError } from '@/lib/api/services';
 
 const resetSchema = z
   .object({
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z.string().regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/, 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -36,8 +36,17 @@ function ResetPasswordForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ResetForm>({ resolver: zodResolver(resetSchema) });
+  const password = useWatch({ control, name: 'password', defaultValue: '' });
+  const requirements = [
+    ['8+ characters', password.length >= 8],
+    ['Uppercase letter', /[A-Z]/.test(password)],
+    ['Lowercase letter', /[a-z]/.test(password)],
+    ['Number', /\d/.test(password)],
+    ['Special character', /[^A-Za-z\d]/.test(password)],
+  ] as const;
 
   const onSubmit = async (data: ResetForm) => {
     if (!token) {
@@ -82,6 +91,9 @@ function ResetPasswordForm() {
           <Label htmlFor="password">New Password</Label>
           <Input id="password" type="password" {...register('password')} />
           {errors.password && <p className="text-destructive text-sm">{errors.password.message}</p>}
+          <ul className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+            {requirements.map(([label, valid]) => <li key={label} className={valid ? 'text-primary' : undefined}>{valid ? '✓' : '○'} {label}</li>)}
+          </ul>
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm Password</Label>

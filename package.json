@@ -15,6 +15,7 @@
     "db:push": "pnpm --filter @platform/database db:push",
     "db:seed": "pnpm --filter @platform/database seed",
     "db:studio": "pnpm --filter @platform/database studio",
+      "db:reset-users": "pnpm --filter @platform/database reset:users",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"

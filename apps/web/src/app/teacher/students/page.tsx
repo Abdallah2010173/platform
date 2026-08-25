@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAllTeacherStudents } from '@/lib/api/hooks';
@@ -13,6 +15,7 @@ interface StudentItem {
   lastName?: string;
   email?: string;
   progress?: number;
+  enrolledCourses?: { id: string; title: string; progress: number; status: string }[];
   [key: string]: unknown;
 }
 
@@ -54,9 +57,11 @@ export default function TeacherStudentsPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-sm">{student.email}</p>
-                {typeof student.progress === 'number' && (
-                  <p className="mt-2 text-sm font-medium">Progress: {student.progress}%</p>
-                )}
+                <p className="mt-2 text-sm font-medium">{student.enrolledCourses?.length ?? 0} enrolled courses</p>
+                {student.enrolledCourses?.slice(0, 3).map((course) => (
+                  <p key={course.id} className="text-muted-foreground text-xs">{course.title} · {course.progress}%</p>
+                ))}
+                <Button asChild size="sm" variant="outline" className="mt-3"><Link href={`/teacher/messages?studentId=${student.userId ?? student.id}`}>Message student</Link></Button>
               </CardContent>
             </Card>
           ))}

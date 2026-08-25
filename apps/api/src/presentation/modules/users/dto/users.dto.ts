@@ -6,6 +6,7 @@ import {
   IsBoolean,
   MinLength,
   IsArray,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Role } from '@platform/database';
@@ -15,7 +16,7 @@ export class CreateUserDto {
 
   @ApiProperty({ minLength: 8 })
   @IsString()
-  @MinLength(8)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/, { message: 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.' })
   password!: string;
 
   @ApiProperty({ enum: Role, default: Role.STUDENT })
@@ -49,6 +50,6 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {}
 export class ChangeUserPasswordDto {
   @ApiProperty({ minLength: 8 })
   @IsString()
-  @MinLength(8)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/, { message: 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.' })
   newPassword!: string;
 }

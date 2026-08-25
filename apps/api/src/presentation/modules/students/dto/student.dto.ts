@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
   Max,
+  Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -38,7 +39,7 @@ export class UpdateProfileDto {
 
 export class ChangePasswordDto {
   @ApiProperty() @IsString() @MinLength(8) currentPassword!: string;
-  @ApiProperty() @IsString() @MinLength(8) newPassword!: string;
+  @ApiProperty() @IsString() @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/, { message: 'Password must contain at least 8 characters, an uppercase letter, a lowercase letter, a number, and a special character.' }) newPassword!: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
