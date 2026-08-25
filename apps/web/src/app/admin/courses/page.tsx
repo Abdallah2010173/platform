@@ -231,7 +231,7 @@ export default function AdminCoursesPage() {
               <TableBody>
                 {courses.map((course) => (
                   <TableRow key={course.id}>
-                    <TableCell className="max-w-[240px]">
+                    <TableCell className="max-w-60">
                       <div className="truncate font-medium">{String(course.title ?? '—')}</div>
                     </TableCell>
                     <TableCell>{String(course.category ?? '—')}</TableCell>
