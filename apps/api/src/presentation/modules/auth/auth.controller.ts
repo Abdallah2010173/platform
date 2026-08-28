@@ -30,6 +30,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   VerifyEmailDto,
+  ResendVerificationDto,
   ChangePasswordDto,
   AuthTokensResponseDto,
   UserResponseDto,
@@ -49,24 +50,8 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new student account' })
-  async register(@Body() dto: RegisterDto): Promise<AuthTokensResponseDto> {
-    const tokens = await this.authService.register(dto);
-    const fullUser = await this.userRepository.findByEmail(dto.email);
-    return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresIn: tokens.expiresIn,
-      user: fullUser
-        ? {
-            id: fullUser.id,
-            email: fullUser.email,
-            role: fullUser.role,
-            firstName: fullUser.profile?.firstName,
-            lastName: fullUser.profile?.lastName,
-            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
-          }
-        : undefined,
-    };
+  async register(@Body() dto: RegisterDto): Promise<{ message: string }> {
+    return this.authService.register(dto);
   }
 
 // src/presentation/modules/auth/auth.controller.ts
@@ -104,15 +89,10 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   async googleExchange(
     @Body() dto: GoogleOAuthExchangeDto,
   ): Promise<AuthTokensResponseDto> {
-    let result: any;
-    try {
-      result = await this.authService.exchangeOAuthCode(dto.code);
-    } catch {
-      result = await this.authService.googleOAuthLogin({ code: dto.code } as any);
-    }
+    const result = await this.authService.exchangeOAuthCode(dto.code);
 
-    const userId = result?.user?.id || result?.id;
-    const user = userId ? await this.userRepository.findById(userId) : null;
+    const userId = result.user.id;
+    const user = await this.userRepository.findById(userId);
 
     return {
       accessToken: result.accessToken,
@@ -161,6 +141,14 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   @ApiOperation({ summary: 'Verify email with a token' })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto.token);
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend an email verification link' })
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendEmailVerification(dto.email);
   }
 
   @Post('logout')
@@ -296,10 +284,12 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
     const redirectTarget =
       redirectParam && redirectParam.startsWith('/') ? redirectParam : '';
 
+    const intent = req.query?.intent === 'signup' ? 'signup' : 'signin';
     const stateWithRedirect = [
       state,
       encodeURIComponent(frontendOrigin),
       encodeURIComponent(redirectTarget),
+      intent,
     ].join('|');
 
     this.authService.setOAuthStateCookie(res, stateWithRedirect);
@@ -321,9 +311,10 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
     csrf: string;
     frontendOrigin: string;
     redirect: string;
+    intent: 'signin' | 'signup';
   } {
     const raw = this.readStateCookie(req);
-    const fallback = { csrf: raw, frontendOrigin: '', redirect: '' };
+    const fallback = { csrf: raw, frontendOrigin: '', redirect: '', intent: 'signin' as const };
     if (!raw) return fallback;
 
     const parts = raw.split('|');
@@ -342,7 +333,8 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
       redirect = '';
     }
 
-    return { csrf: parts[0] ?? '', frontendOrigin, redirect };
+    const intent = parts[3] === 'signup' ? 'signup' : 'signin';
+    return { csrf: parts[0] ?? '', frontendOrigin, redirect, intent };
   }
 
   private getFrontendCallbackUrl(req: Request, storedOrigin: string): string {
@@ -389,7 +381,7 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
     const state = this.parseStateCookie(req);
 
     try {
-      const user = await this.authService.googleOAuthLogin(req.user);
+      const user = await this.authService.googleOAuthLogin(req.user, state.intent);
       const code = await this.authService.createOAuthExchangeCode(user.id);
       const frontendCallback = this.getFrontendCallbackUrl(req, state.frontendOrigin);
 
@@ -407,10 +399,13 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
         const base = state.frontendOrigin || this.configService.get<string>('FRONTEND_URL') || this.resolveFrontendOrigin(req);
         const errorCode = code === 'GOOGLE_ACCOUNT_NOT_REGISTERED'
           ? 'google_account_not_registered'
-          : code === 'GOOGLE_ACCOUNT_LINK_REQUIRED'
-            ? 'google_account_link_required'
-            : 'google_signin_failed';
-        res.redirect(`${base.replace(/\/+$/, '')}/login?oauth_error=${errorCode}`);
+          : code === 'GOOGLE_ACCOUNT_ALREADY_EXISTS'
+            ? 'google_account_already_exists'
+            : code === 'GOOGLE_ACCOUNT_LINK_REQUIRED'
+              ? 'google_account_link_required'
+              : 'google_signin_failed';
+        const destination = code === 'GOOGLE_ACCOUNT_NOT_REGISTERED' ? 'register' : 'login';
+        res.redirect(`${base.replace(/\/+$/, '')}/${destination}?oauth_error=${errorCode}`);
       } catch (innerErr) {
         console.error('Inner error:', innerErr);
         res.redirect('/login?oauth_error=1');

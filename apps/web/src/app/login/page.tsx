@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { loginRequest } from '@/lib/api/client';
+import { authApi } from '@/lib/api/services';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/lib/store';
 import { setCredentials } from '@/lib/store/slices/auth.slice';
@@ -27,19 +28,23 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 function LoginFormInner() {
   const [error, setError] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const { register, handleSubmit, getValues, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
 
   const oauthError = searchParams.get('oauth_error');
   const oauthMessage = oauthError === 'google_account_not_registered'
-    ? 'No account is connected to this Google account. Create an account with email and password first.'
+    ? 'No account exists with this Google email. Please create an account first.'
+    : oauthError === 'google_account_already_exists'
+      ? 'An account already exists with this email. Please sign in instead.'
     : oauthError === 'google_account_link_required'
       ? 'This email already has an account. Sign in with your password before using Google.'
       : oauthError
@@ -74,6 +79,21 @@ function LoginFormInner() {
     }
   };
 
+  const resendVerification = async () => {
+    setResending(true);
+    setResendMessage(null);
+    try {
+      const response = await authApi.resendVerification(getValues('email')) as { message?: string };
+      setResendMessage(response.message ?? 'A new verification email has been sent.');
+    } catch {
+      setResendMessage('Unable to resend verification email. Please try again later.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const needsVerification = error === 'Please verify your email address to continue.';
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
@@ -98,6 +118,13 @@ function LoginFormInner() {
             )}
           </div>
           {(error || oauthMessage) && <p className="text-destructive text-sm">{error || oauthMessage}</p>}
+          {searchParams.get('registered') === '1' && <p className="text-primary text-sm">Please verify your email address to continue.</p>}
+          {needsVerification && (
+            <Button type="button" variant="outline" className="w-full" onClick={resendVerification} disabled={resending}>
+              {resending ? 'Sending...' : 'Resend verification email'}
+            </Button>
+          )}
+          {resendMessage && <p className="text-primary text-sm">{resendMessage}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
           </Button>

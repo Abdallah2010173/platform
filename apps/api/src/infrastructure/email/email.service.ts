@@ -17,6 +17,28 @@ export class EmailService {
       : null;
   }
 
+  async sendEmailVerificationEmail(email: string, token: string): Promise<void> {
+    if (!this.transporter) {
+      throw new ServiceUnavailableException('Email delivery is not configured');
+    }
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    if (!frontendUrl) {
+      throw new ServiceUnavailableException('Email verification URL is not configured');
+    }
+
+    const verificationUrl = `${frontendUrl.replace(/\/+$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
+    const from = this.configService.get<string>('SMTP_FROM') ?? this.configService.get<string>('SMTP_USER');
+
+    await this.transporter.sendMail({
+      from,
+      to: email,
+      subject: 'Verify your Platform LMS email',
+      text: `Verify your email using this link: ${verificationUrl}\n\nThis link expires in 24 hours and can be used once.`,
+      html: `<p>Verify your Platform LMS email:</p><p><a href="${verificationUrl}">Verify email</a></p><p>This link expires in 24 hours and can be used once.</p>`,
+    });
+  }
+
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     if (!this.transporter) {
       throw new ServiceUnavailableException('Email delivery is not configured');

@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,10 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/lib/store';
-import { setCredentials } from '@/lib/store/slices/auth.slice';
-import { AuthUser, roleToRoute } from '@/lib/auth';
+import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 
 const registerSchema = z
   .object({
@@ -34,14 +31,15 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 function RegisterContent() {
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [resending, setResending] = useState(false);
   const searchParams = useSearchParams();
-  const dispatch = useDispatch<AppDispatch>();
 
   const {
     register,
     handleSubmit,
+    getValues,
     control,
     formState: { errors },
   } = useForm<RegisterForm>({
@@ -61,33 +59,29 @@ function RegisterContent() {
     setLoading(true);
     setError(null);
     try {
-      const payload = (await authApi.register({
+      await authApi.register({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
-      })) as {
-        accessToken: string;
-        refreshToken: string;
-        user: AuthUser;
-      };
-
-      if (payload.accessToken && payload.refreshToken && payload.user) {
-        dispatch(
-          setCredentials({
-            user: payload.user,
-            accessToken: payload.accessToken,
-            refreshToken: payload.refreshToken,
-          }),
-        );
-        router.replace(roleToRoute(payload.user.role));
-      } else {
-        router.replace('/login?registered=1');
-      }
+      });
+      setSuccess('Please verify your email address to continue. Check your inbox for the verification link.');
     } catch (e) {
       setError(formatApiError(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    setResending(true);
+    setError(null);
+    try {
+      await authApi.resendVerification(getValues('email'));
+    } catch {
+      setError('Unable to resend verification email. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -98,7 +92,7 @@ function RegisterContent() {
           <GraduationCap className="text-primary h-8 w-8" />
         </Link>
         <CardTitle>Create an account</CardTitle>
-          <CardDescription>{searchParams.get('google') === 'required' ? 'Complete registration to connect your Google identity.' : 'Register to start learning on the platform'}</CardDescription>
+          <CardDescription>{searchParams.get('oauth_error') === 'google_account_not_registered' ? 'No account exists with this Google email. Create one to continue.' : searchParams.get('oauth_error') === 'google_account_already_exists' ? 'An account already exists with this email. Please sign in instead.' : 'Register to start learning on the platform'}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -141,9 +135,18 @@ function RegisterContent() {
             )}
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {success && (
+            <div className="space-y-2 text-sm">
+              <p className="text-primary">{success}</p>
+              <Button type="button" variant="outline" className="w-full" onClick={resendVerification} disabled={resending}>
+                {resending ? 'Sending...' : 'Resend verification email'}
+              </Button>
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={loading || !!success}>
             {loading ? 'Creating account...' : 'Create account'}
           </Button>
+          <GoogleSignInButton intent="signup" />
           <p className="text-muted-foreground text-center text-sm">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline">

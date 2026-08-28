@@ -36,7 +36,7 @@ export interface IRefreshToken {
 
 export interface CreateUserData {
   email: string;
-  passwordHash: string;
+  passwordHash?: string | null;
   role?: Role;
   firstName: string;
   lastName: string;

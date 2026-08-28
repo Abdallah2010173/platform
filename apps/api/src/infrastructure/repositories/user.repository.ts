@@ -29,7 +29,7 @@ export class UserRepository implements IUserRepository {
     return this.prisma.user.create({
       data: {
         email: data.email.toLowerCase(),
-        passwordHash: data.passwordHash,
+        passwordHash: data.passwordHash ?? null,
         role: data.role ?? Role.STUDENT,
         emailVerified:
           data.emailVerified ?? false ? new Date() : undefined,
@@ -205,6 +205,30 @@ export class UserRepository implements IUserRepository {
   async markEmailVerificationTokenUsed(id: string): Promise<void> {
     await this.prisma.emailVerificationToken.update({
       where: { id },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async consumeEmailVerificationToken(token: string, now: Date): Promise<{ id: string; userId: string } | null> {
+    const result = await this.prisma.emailVerificationToken.updateMany({
+      where: { token, userId: { not: null }, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+    if (result.count !== 1) return null;
+
+    const consumed = await this.prisma.emailVerificationToken.findUnique({ where: { token } });
+    return consumed?.userId ? { id: consumed.id, userId: consumed.userId } : null;
+  }
+
+  async countRecentEmailVerificationTokens(userId: string, since: Date): Promise<number> {
+    return this.prisma.emailVerificationToken.count({
+      where: { userId, createdAt: { gt: since } },
+    });
+  }
+
+  async invalidateEmailVerificationTokens(userId: string): Promise<void> {
+    await this.prisma.emailVerificationToken.updateMany({
+      where: { userId, usedAt: null },
       data: { usedAt: new Date() },
     });
   }

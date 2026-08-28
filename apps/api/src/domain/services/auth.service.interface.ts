@@ -18,6 +18,7 @@ export interface IAuthService {
     expiresIn: number;
   }>;
   revokeRefreshToken(refreshToken: string): Promise<void>;
+  resendEmailVerification(email: string): Promise<{ message: string }>;
   googleOAuthLogin(profile: {
     googleId: string;
     email: string;
@@ -26,7 +27,7 @@ export interface IAuthService {
     lastName?: string;
     displayName?: string;
     avatarUrl?: string;
-  }): Promise<{ id: string; email: string; role: Role }>;
+  }, intent?: 'signin' | 'signup'): Promise<{ id: string; email: string; role: Role }>;
   createOAuthExchangeCode(userId: string): Promise<string>;
   exchangeOAuthCode(code: string): Promise<{
     accessToken: string;

@@ -15,7 +15,9 @@ export const authApi = {
     getApiData(await apiClient.post('/auth/reset-password', { token, password })),
   verifyEmail: async (token: string) =>
     getApiData(await apiClient.post('/auth/verify-email', { token })),
-changePassword: async (currentPassword: string, newPassword: string) =>
+  resendVerification: async (email: string) =>
+    getApiData(await apiClient.post('/auth/resend-verification', { email })),
+  changePassword: async (currentPassword: string, newPassword: string) =>
     getApiData(await apiClient.post('/auth/change-password', { currentPassword, newPassword })),
   googleExchange: async (code: string) =>
     getApiData(await apiClient.post('/auth/google/exchange', { code })),

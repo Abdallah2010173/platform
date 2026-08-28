@@ -32,7 +32,7 @@ export class AuthService implements IAuthService {
     password: string,
   ): Promise<{ id: string; email: string; role: Role } | null> {
     const user = await this.userRepository.findByEmail(email);
-    if (!user || !user.passwordHash || !user.isActive) {
+    if (!user || !user.passwordHash || !user.isActive || !user.emailVerified) {
       return null;
     }
 
@@ -48,8 +48,9 @@ export class AuthService implements IAuthService {
 
   async login(email: string, password: string): Promise<ITokens> {
     const existing = await this.userRepository.findByEmail(email);
-    if (!existing) throw new UnauthorizedException({ code: 'ACCOUNT_NOT_FOUND', message: 'No account found with these details. Please check your email or sign up for a new account.' });
+    if (!existing) throw new UnauthorizedException({ code: 'ACCOUNT_NOT_FOUND', message: 'No account found with this email. Please sign up first.' });
     if (!existing.isActive) throw new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'This account is unavailable.' });
+    if (!existing.emailVerified) throw new UnauthorizedException({ code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email address to continue.' });
     if (!existing.passwordHash || !(await bcrypt.compare(password, existing.passwordHash))) {
       throw new UnauthorizedException({ code: 'INVALID_PASSWORD', message: 'Incorrect password. Please try again.' });
     }
@@ -64,7 +65,7 @@ export class AuthService implements IAuthService {
     firstName: string;
     lastName: string;
     displayName?: string;
-  }): Promise<ITokens> {
+  }): Promise<{ message: string }> {
     const existing = await this.userRepository.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException({ code: 'EMAIL_ALREADY_EXISTS', message: 'This email is already registered.' });
@@ -83,7 +84,15 @@ export class AuthService implements IAuthService {
       role: Role.STUDENT,
     });
 
-    return this.generateTokens(user.id, user.email, user.role);
+    const verificationToken = await this.generateEmailVerification(user.id);
+    try {
+      await this.emailService.sendEmailVerificationEmail(user.email, verificationToken);
+    } catch (error) {
+      await this.userRepository.invalidateEmailVerificationTokens(user.id);
+      throw error;
+    }
+
+    return { message: 'Please verify your email address to continue.' };
   }
 
 /**
@@ -100,7 +109,7 @@ export class AuthService implements IAuthService {
     lastName?: string;
     displayName?: string;
     avatarUrl?: string;
-  }): Promise<{ id: string; email: string; role: Role }> {
+  }, intent: 'signin' | 'signup' = 'signin'): Promise<{ id: string; email: string; role: Role }> {
     if (!profile?.googleId || !profile?.email) {
       throw new UnauthorizedException('Invalid Google profile');
     }
@@ -121,20 +130,41 @@ export class AuthService implements IAuthService {
     }
 
     if (isNewUser) {
-      throw new ConflictException({ code: 'GOOGLE_ACCOUNT_NOT_REGISTERED', message: 'No account is registered for this Google identity. Please complete sign up first.' });
+      if (intent !== 'signup') {
+        throw new ConflictException({ code: 'GOOGLE_ACCOUNT_NOT_REGISTERED', message: 'No account exists with this Google email. Please create an account first.' });
+      }
+      if (!profile.emailVerified) {
+        throw new UnauthorizedException('Google email ownership could not be verified');
+      }
+      user = await this.userRepository.create({
+        email,
+        passwordHash: null,
+        firstName: profile.firstName ?? '',
+        lastName: profile.lastName ?? '',
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        role: Role.STUDENT,
+        googleId: profile.googleId,
+        emailVerified: true,
+      });
     } else {
       if (!user) {
         throw new UnauthorizedException('Account is suspended');
       }
-      // 4) Existing user — link the Google identity if not already linked.
       const alreadyLinked = await this.userRepository.findByProviderAccountId(
         AccountProvider.GOOGLE,
         profile.googleId,
       );
       if (!alreadyLinked) {
-        throw new ConflictException({ code: 'GOOGLE_ACCOUNT_LINK_REQUIRED', message: 'This email already has an account. Sign in with your password before linking Google.' });
+        if (intent === 'signup') {
+          throw new ConflictException({ code: 'GOOGLE_ACCOUNT_ALREADY_EXISTS', message: 'An account already exists with this email. Please sign in instead.' });
+        }
+        if (!profile.emailVerified) {
+          throw new UnauthorizedException('Google email ownership could not be verified');
+        }
+        await this.userRepository.linkGoogleAccount(user.id, profile.googleId);
+        if (!user.emailVerified) await this.userRepository.markEmailVerified(user.id);
       }
-      // Keep the Google avatar + name fresh on every login.
       await this.userRepository.updateGoogleProfile(user.id, {
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -145,6 +175,9 @@ export class AuthService implements IAuthService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Account is suspended');
+    }
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('Please verify your email address to continue.');
     }
 
     await this.userRepository.updateLastLogin(user.id);
@@ -203,7 +236,7 @@ export class AuthService implements IAuthService {
     await this.userRepository.markOAuthStateUsed(state.id);
 
     const user = await this.userRepository.findById(state.userId);
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || !user.emailVerified) {
       throw new UnauthorizedException('User not found or inactive');
     }
 
@@ -327,34 +360,46 @@ export class AuthService implements IAuthService {
   }
 
   async generateEmailVerification(userId: string): Promise<string> {
-    const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 24 * 3600_000); // 24 hours
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 3600_000);
     await this.userRepository.createEmailVerificationToken({
       userId,
-      token,
+      token: tokenHash,
       expiresAt,
     });
     return token;
   }
 
   async verifyEmail(token: string): Promise<{ message: string }> {
-    const verificationToken = await this.userRepository.findEmailVerificationToken(token);
-    if (
-      !verificationToken ||
-      verificationToken.usedAt ||
-      verificationToken.expiresAt < new Date()
-    ) {
-      throw new BadRequestException('Invalid or expired verification token');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const consumed = await this.userRepository.consumeEmailVerificationToken(tokenHash, new Date());
+    if (!consumed) {
+      throw new BadRequestException('The verification code is invalid or has expired.');
     }
 
-    if (!verificationToken.userId) {
-      throw new BadRequestException('Invalid or expired verification token');
+    await this.userRepository.markEmailVerified(consumed.userId);
+    return { message: 'Your email has been successfully verified.' };
+  }
+
+  async resendEmailVerification(email: string): Promise<{ message: string }> {
+    const genericMessage = 'If that email is eligible, a new verification email has been sent.';
+    const user = await this.userRepository.findByEmail(email);
+    if (!user || user.emailVerified || !user.isActive) return { message: genericMessage };
+
+    const since = new Date(Date.now() - 60_000);
+    if (await this.userRepository.countRecentEmailVerificationTokens(user.id, since) > 0) {
+      return { message: genericMessage };
     }
 
-    await this.userRepository.markEmailVerified(verificationToken.userId);
-    await this.userRepository.markEmailVerificationTokenUsed(verificationToken.id);
-
-    return { message: 'Email verified successfully' };
+    const token = await this.generateEmailVerification(user.id);
+    try {
+      await this.emailService.sendEmailVerificationEmail(user.email, token);
+    } catch {
+      await this.userRepository.invalidateEmailVerificationTokens(user.id);
+      return { message: genericMessage };
+    }
+    return { message: 'A new verification email has been sent.' };
   }
 
   async changePassword(

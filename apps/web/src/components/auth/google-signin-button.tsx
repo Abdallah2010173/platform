@@ -3,9 +3,9 @@
 import { Button } from '@/components/ui/button';
 import { API_URL } from '@/lib/api/client';
 
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ intent = 'signin' }: { intent?: 'signin' | 'signup' }) {
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = `${API_URL}/auth/google?intent=${intent}`;
   };
 
   return (
@@ -33,7 +33,7 @@ export function GoogleSignInButton() {
           fill="#EA4335"
         />
       </svg>
-      Sign in with Google
+      {intent === 'signup' ? 'Continue with Google' : 'Sign in with Google'}
     </Button>
   );
 }
