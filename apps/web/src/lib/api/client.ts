@@ -64,7 +64,18 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as RetriableRequestConfig | undefined;
-    if (error.response?.status === 401 && original && !original._retry) {
+    const requestUrl = original?.url ?? '';
+    const isPublicAuthRequest = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/forgot-password',
+      '/auth/reset-password',
+      '/auth/verify-email',
+      '/auth/resend-verification',
+      '/auth/google/exchange',
+    ].some((path) => requestUrl.includes(path));
+
+    if (error.response?.status === 401 && original && !original._retry && !isPublicAuthRequest) {
       original._retry = true;
       const newToken = await refreshAccessToken();
       if (newToken) {

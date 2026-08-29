@@ -223,6 +223,64 @@ export class TeacherService {
     return { success: true };
   }
 
+  async grantStudentAccess(
+    user: AuthenticatedUser,
+    courseId: string,
+    studentUserId: string,
+    accessType: 'TEACHER_GRANTED' | 'ADMIN_GRANTED' = 'TEACHER_GRANTED',
+  ) {
+    const teacherId = await this.teacherHelper.getTeacherId(user);
+    await this.assertCourseAccess(courseId, teacherId);
+
+    const student = await this.prisma.student.findUnique({ where: { userId: studentUserId } });
+    if (!student) throw new NotFoundException('Student not found');
+
+    const enrollment = await this.prisma.courseStudent.upsert({
+      where: { courseId_studentId: { courseId, studentId: student.id } },
+      create: {
+        courseId,
+        studentId: student.id,
+        status: 'ACTIVE',
+        accessType,
+        accessGrantedBy: user.id,
+        accessGrantedAt: new Date(),
+      },
+      update: {
+        status: 'ACTIVE',
+        accessType,
+        accessGrantedBy: user.id,
+        accessGrantedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      enrollmentId: enrollment.id,
+      accessType: enrollment.accessType,
+      grantedBy: user.id,
+    };
+  }
+
+  async revokeStudentAccess(user: AuthenticatedUser, courseId: string, studentUserId: string) {
+    const teacherId = await this.teacherHelper.getTeacherId(user);
+    await this.assertCourseAccess(courseId, teacherId);
+
+    const student = await this.prisma.student.findUnique({ where: { userId: studentUserId } });
+    if (!student) throw new NotFoundException('Student not found');
+
+    const enrollment = await this.prisma.courseStudent.findUnique({
+      where: { courseId_studentId: { courseId, studentId: student.id } },
+    });
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+
+    await this.prisma.courseStudent.update({
+      where: { id: enrollment.id },
+      data: { status: 'CANCELED', accessType: 'FREE', canceledAt: new Date(), deletedAt: new Date() },
+    });
+
+    return { success: true };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // STUDENTS
   // ═══════════════════════════════════════════════════════════════════════════

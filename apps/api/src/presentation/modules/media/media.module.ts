@@ -1,3 +1,12 @@
 import { Module } from '@nestjs/common';
 import { MediaController } from './media.controller';
-@Module({ controllers: [MediaController] }) export class MediaModule {}
+import { CoursesModule } from '../courses/courses.module';
+import { BunnyStreamService } from '../../../infrastructure/bunny/bunny-stream.service';
+
+@Module({
+  imports: [CoursesModule],
+  controllers: [MediaController],
+  providers: [BunnyStreamService],
+  exports: [BunnyStreamService],
+})
+export class MediaModule {}

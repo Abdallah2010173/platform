@@ -4,6 +4,8 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -19,6 +21,8 @@ import { IAuthService, ITokenPayload, ITokens } from '../../domain/services/auth
 
 @Injectable()
 export class AuthService implements IAuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly refreshTokenRepository: RefreshTokenRepository,
@@ -340,8 +344,13 @@ export class AuthService implements IAuthService {
 
     try {
       await this.emailService.sendPasswordResetEmail(email, token);
-    } catch {
+    } catch (error) {
       await this.userRepository.invalidatePasswordResetToken(tokenHash);
+      this.logger.error(
+        'Password reset email delivery failed',
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException('Email delivery is temporarily unavailable. Please try again later.');
     }
 
     return { message: 'If that email exists, a password reset link has been sent.' };

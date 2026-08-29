@@ -80,6 +80,26 @@ export class TeacherController {
     return this.teacherService.getStudents(user, courseId, search);
   }
 
+  @Post('courses/:courseId/grant-access')
+  @ApiOperation({ summary: 'Grant a student free access to a course' })
+  grantStudentAccess(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('courseId') courseId: string,
+    @Body() dto: { studentId: string },
+  ) {
+    return this.teacherService.grantStudentAccess(user, courseId, dto.studentId, 'TEACHER_GRANTED');
+  }
+
+  @Delete('courses/:courseId/students/:studentId/access')
+  @ApiOperation({ summary: 'Revoke a granted course access' })
+  revokeStudentAccess(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('courseId') courseId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.teacherService.revokeStudentAccess(user, courseId, studentId);
+  }
+
   @Get('students/all')
   @ApiOperation({ summary: 'Get all active platform students' })
   getAllStudents(@CurrentUser() user: AuthenticatedUser, @Query('search') search?: string) {

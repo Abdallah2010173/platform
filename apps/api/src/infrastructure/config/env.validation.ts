@@ -58,6 +58,19 @@ export class EnvironmentVariables {
   @IsString()
   FRONTEND_CALLBACK_URL!: string;
 
+  @IsString()
+  BUNNY_STREAM_LIBRARY_ID!: string;
+
+  @IsString()
+  BUNNY_STREAM_API_KEY!: string;
+
+  @IsString()
+  BUNNY_STREAM_CDN_HOSTNAME!: string;
+
+  @IsOptional()
+  @IsString()
+  BUNNY_STREAM_WEBHOOK_SECRET?: string;
+
   @IsOptional()
   @IsString()
   ZOOM_CLIENT_ID?: string;
@@ -106,6 +119,9 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     'GOOGLE_CALLBACK_URL',
     'FRONTEND_URL',
     'FRONTEND_CALLBACK_URL',
+    'BUNNY_STREAM_LIBRARY_ID',
+    'BUNNY_STREAM_API_KEY',
+    'BUNNY_STREAM_CDN_HOSTNAME',
   ];
 
   for (const key of required) {

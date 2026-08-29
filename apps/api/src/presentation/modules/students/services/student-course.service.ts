@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
+import { CourseAccessService } from '../../courses/services/course-access.service';
 import { StudentHelper, AuthenticatedUser } from '../student.helper';
 
 @Injectable()
@@ -7,6 +8,7 @@ export class StudentCourseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly studentHelper: StudentHelper,
+    private readonly courseAccessService: CourseAccessService,
   ) {}
 
   async getMyCourses(
@@ -98,7 +100,78 @@ export class StudentCourseService {
     });
 
     if (!enrollment) {
-      throw new NotFoundException('You are not enrolled in this course');
+      const access = await this.courseAccessService.canAccessCourse(user.id, courseId);
+      if (!access.hasAccess) {
+        throw new NotFoundException('You are not enrolled in this course');
+      }
+      const course = await this.prisma.course.findUnique({
+        where: { id: courseId, deletedAt: null },
+        include: {
+          category: true,
+          subCategory: true,
+          chapters: {
+            include: { lessons: { include: { videos: true, pdfs: true, attachments: true, resources: true }, orderBy: { orderIndex: 'asc' } } },
+            orderBy: { sortOrder: 'asc' },
+          },
+          teachers: { include: { teacher: { include: { user: { include: { profile: true } } } } } },
+        },
+      });
+      if (!course) throw new NotFoundException('Course not found');
+
+      const totalLessons = course.chapters.reduce((sum, ch) => sum + ch.lessons.length, 0);
+      return {
+        enrollment: {
+          id: null,
+          progress: 0,
+          status: 'ACTIVE',
+          completedAt: null,
+          enrolledAt: null,
+        },
+        course: {
+          id: course.id,
+          title: course.title,
+          slug: course.slug,
+          description: course.description,
+          thumbnailUrl: course.thumbnailUrl,
+          level: course.level,
+          language: course.language,
+          price: course.price ? Number(course.price) : null,
+          isFree: course.isFree,
+          totalLessons,
+          durationMinutes: course.durationMinutes,
+          averageRating: Number(course.averageRating),
+          ratingCount: course.ratingCount,
+          tags: course.tags,
+          learningOutcomes: course.learningOutcomes,
+          requirements: course.requirements,
+          category: course.category?.name,
+          subCategory: course.subCategory?.name,
+          teachers: course.teachers.map((ct) => ({
+            name: ct.teacher.user.profile
+              ? `${ct.teacher.user.profile.firstName} ${ct.teacher.user.profile.lastName}`
+              : ct.teacher.user.email,
+            avatarUrl: ct.teacher.user.profile?.avatarUrl,
+            bio: ct.teacher.bio,
+          })),
+        },
+        chapters: course.chapters.map((ch) => ({
+          id: ch.id,
+          title: ch.title,
+          sortOrder: ch.sortOrder,
+          lessons: ch.lessons.map((l) => ({
+            id: l.id,
+            title: l.title,
+            type: l.type,
+            orderIndex: l.orderIndex,
+            durationMinutes: l.durationMinutes,
+            isFree: l.isFree,
+            isPublished: l.isPublished,
+            hasVideo: l.videos.length > 0,
+            hasPdf: l.pdfs.length > 0,
+            hasAttachments: l.attachments.length > 0,
+          })),
+        })),
+      };
     }
 
     const course = enrollment.course;
@@ -170,7 +243,10 @@ export class StudentCourseService {
       where: { courseId_studentId: { courseId, studentId } },
     });
     if (!enrollment) {
-      throw new NotFoundException('You are not enrolled in this course');
+      const access = await this.courseAccessService.canAccessCourse(user.id, courseId);
+      if (!access.hasAccess) {
+        throw new ForbiddenException('You do not have access to this course');
+      }
     }
 
     const lesson = await this.prisma.lesson.findFirst({

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CoursesModule } from '../courses/courses.module';
 import { StudentsController } from './students.controller';
 import { StudentProfileController } from './student-profile.controller';
 import { StudentCoursesController } from './student-courses.controller';
@@ -34,6 +35,7 @@ import {
 import { StudentHelper } from './student.helper';
 
 @Module({
+  imports: [CoursesModule],
   controllers: [
     StudentsController,
     StudentProfileController,
