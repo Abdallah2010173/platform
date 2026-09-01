@@ -103,7 +103,6 @@ export default function HomePage() {
         <section className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             Enterprise Learning
-            <span className="text-primary"> Management System</span>
           </h1>
           <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg">
             A production-ready LMS platform built with Next.js, NestJS, PostgreSQL, and Prisma.
