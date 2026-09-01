@@ -4,5 +4,13 @@
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
     ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
   ],
-  "tailwindCSS.lint.unknownAtRules": "ignore"
+  "tailwindCSS.lint.unknownAtRules": "ignore",
+  "files.associations": {
+    "*.sql": "postgresql"
+  },
+  "sql.defaultDialect": "postgresql",
+  "sql.defaultDatabase": "postgres",
+  "mssql.intelliSense.enable": false,
+  "mssql.enableSqlServerProjects": false,
+  "mssql.logDebugInfo": false
 }
