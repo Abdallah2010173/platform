@@ -389,6 +389,23 @@ export class StudentCourseService {
       throw new ConflictException('You are already enrolled in this course');
     }
 
+    const requiresPayment = !course.isFree && Number(course.price ?? 0) > 0;
+    if (requiresPayment) {
+      const completedPayment = await this.prisma.payment.findFirst({
+        where: {
+          userId: user.id,
+          courseId,
+          status: 'COMPLETED',
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (!completedPayment) {
+        throw new ForbiddenException('Payment is required before enrolling in this paid course');
+      }
+    }
+
     const enrollment = await this.prisma.courseStudent.create({
       data: {
         courseId,
@@ -396,18 +413,19 @@ export class StudentCourseService {
         enrolledAt: new Date(),
         progress: 0,
         status: 'ACTIVE',
+        accessType: requiresPayment ? 'PAID' : 'FREE',
+        accessGrantedBy: requiresPayment ? user.id : null,
+        accessGrantedAt: new Date(),
         certificateEligible: false,
       },
       include: { course: { select: { id: true, title: true, slug: true } } },
     });
 
-    // Increment course student count
     await this.prisma.course.update({
       where: { id: courseId },
       data: { totalStudents: { increment: 1 } },
     });
 
-    // Create analytics
     await this.prisma.courseAnalytics.upsert({
       where: { courseId },
       create: { courseId, enrollmentCount: 1 },
@@ -423,6 +441,7 @@ export class StudentCourseService {
         slug: enrollment.course.slug,
         status: enrollment.status,
         enrolledAt: enrollment.enrolledAt,
+        accessType: enrollment.accessType,
       },
     };
   }

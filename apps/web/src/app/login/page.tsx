@@ -42,15 +42,17 @@ function LoginFormInner() {
   });
 
   const oauthError = searchParams.get('oauth_error');
-  const oauthMessage = oauthError === 'google_account_not_registered'
-    ? 'No account exists with this Google email. Please create an account first.'
-    : oauthError === 'google_account_already_exists'
-      ? 'An account already exists with this email. Please sign in instead.'
-    : oauthError === 'google_account_link_required'
-      ? 'This email already has an account. Sign in with your password before using Google.'
-      : oauthError
-        ? 'Google sign-in failed. Please try again.'
-        : null;
+const oauthMessage = oauthError === 'google_signup_disabled'
+    ? 'Google signup is not available. Please create your account with email and password first.'
+    : oauthError === 'google_account_not_registered'
+      ? 'No account exists with this Google email. Please create an account first.'
+      : oauthError === 'google_account_already_exists'
+        ? 'An account already exists with this email. Please sign in instead.'
+        : oauthError === 'google_account_link_required'
+          ? 'This email already has an account. Sign in with your password before using Google.'
+          : oauthError
+            ? 'Google sign-in failed. Please try again.'
+            : null;
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);

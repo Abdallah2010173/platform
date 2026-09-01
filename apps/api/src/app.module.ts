@@ -14,6 +14,7 @@ import { MessagingModule } from './presentation/modules/messaging/messaging.modu
 import { AdminModule } from './presentation/modules/admin/admin.module';
 import { SurveysModule } from './presentation/modules/surveys/surveys.module';
 import { MediaModule } from './presentation/modules/media/media.module';
+import { PaymentsModule } from './presentation/modules/payments/payments.module';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 import { RolesGuard } from './presentation/guards/roles.guard';
 
@@ -47,6 +48,7 @@ import { RolesGuard } from './presentation/guards/roles.guard';
     AdminModule,
     SurveysModule,
     MediaModule,
+    PaymentsModule,
   ],
   providers: [
     {

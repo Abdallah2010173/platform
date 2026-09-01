@@ -11,6 +11,8 @@ ALTER TABLE "admins" DROP COLUMN IF EXISTS "isSuper";
 -- 3. Rebuild the Role enum without SUPER_ADMIN and MODERATOR values.
 --    PostgreSQL does not support removing enum values directly, so we create a
 --    new enum type, migrate existing rows, and swap the type.
+ALTER TABLE "users" ALTER COLUMN "role" DROP DEFAULT;
+
 CREATE TYPE "Role_new" AS ENUM ('ADMIN', 'TEACHER', 'STUDENT');
 
 -- Map existing rows to the new enum (SUPER_ADMIN -> ADMIN, MODERATOR -> STUDENT)
@@ -33,3 +35,4 @@ ALTER TABLE "role_permissions" ALTER COLUMN "role" TYPE "Role_new" USING (
 
 DROP TYPE "Role";
 ALTER TYPE "Role_new" RENAME TO "Role";
+ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'STUDENT';

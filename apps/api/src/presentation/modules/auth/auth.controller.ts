@@ -431,14 +431,16 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
       const code = error instanceof ConflictException ? (error.getResponse() as { code?: string }).code : undefined;
       try {
         const base = state.frontendOrigin || this.configService.get<string>('FRONTEND_URL') || this.resolveFrontendOrigin(req);
-        const errorCode = code === 'GOOGLE_ACCOUNT_NOT_REGISTERED'
-          ? 'google_account_not_registered'
-          : code === 'GOOGLE_ACCOUNT_ALREADY_EXISTS'
-            ? 'google_account_already_exists'
-            : code === 'GOOGLE_ACCOUNT_LINK_REQUIRED'
-              ? 'google_account_link_required'
-              : 'google_signin_failed';
-        const destination = code === 'GOOGLE_ACCOUNT_NOT_REGISTERED' ? 'register' : 'login';
+        const errorCode = code === 'GOOGLE_SIGNUP_DISABLED'
+          ? 'google_signup_disabled'
+          : code === 'GOOGLE_ACCOUNT_NOT_REGISTERED'
+            ? 'google_account_not_registered'
+            : code === 'GOOGLE_ACCOUNT_ALREADY_EXISTS'
+              ? 'google_account_already_exists'
+              : code === 'GOOGLE_ACCOUNT_LINK_REQUIRED'
+                ? 'google_account_link_required'
+                : 'google_signin_failed';
+        const destination = code === 'GOOGLE_ACCOUNT_NOT_REGISTERED' || code === 'GOOGLE_SIGNUP_DISABLED' ? 'register' : 'login';
         res.redirect(`${base.replace(/\/+$/, '')}/${destination}?oauth_error=${errorCode}`);
       } catch (innerErr) {
         console.error('Inner error:', innerErr);

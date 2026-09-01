@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
-import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 
 const registerSchema = z
   .object({
@@ -92,7 +91,15 @@ function RegisterContent() {
           <GraduationCap className="text-primary h-8 w-8" />
         </Link>
         <CardTitle>Create an account</CardTitle>
-          <CardDescription>{searchParams.get('oauth_error') === 'google_account_not_registered' ? 'No account exists with this Google email. Create one to continue.' : searchParams.get('oauth_error') === 'google_account_already_exists' ? 'An account already exists with this email. Please sign in instead.' : 'Register to start learning on the platform'}</CardDescription>
+          <CardDescription>
+            {searchParams.get('oauth_error') === 'google_signup_disabled'
+              ? 'Google signup is not available. Create your account with email and password first.'
+              : searchParams.get('oauth_error') === 'google_account_not_registered'
+                ? 'No account exists with this Google email. Create one to continue.'
+                : searchParams.get('oauth_error') === 'google_account_already_exists'
+                  ? 'An account already exists with this email. Please sign in instead.'
+                  : 'Register to start learning on the platform'}
+          </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -146,7 +153,6 @@ function RegisterContent() {
           <Button type="submit" className="w-full" disabled={loading || !!success}>
             {loading ? 'Creating account...' : 'Create account'}
           </Button>
-          <GoogleSignInButton intent="signup" />
           <p className="text-muted-foreground text-center text-sm">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline">

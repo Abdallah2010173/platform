@@ -209,26 +209,13 @@ export class AuthService implements IAuthService {
     }
 
     if (isNewUser) {
-      if (intent !== 'signup') {
-        throw new ConflictException({ code: 'GOOGLE_ACCOUNT_NOT_REGISTERED', message: 'No account exists with this Google email. Please create an account first.' });
+      if (intent === 'signup') {
+        throw new ConflictException({
+          code: 'GOOGLE_SIGNUP_DISABLED',
+          message: 'Google signup is not available. Please create your account with email and password first.',
+        });
       }
-      if (!profile.emailVerified) {
-        throw new UnauthorizedException('Google email ownership could not be verified');
-      }
-      user = await this.userRepository.create({
-        email,
-        passwordHash: null,
-        password: null,
-        firstName: profile.firstName ?? '',
-        lastName: profile.lastName ?? '',
-        displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl,
-        role: Role.STUDENT,
-        googleId: profile.googleId,
-        emailVerified: true,
-        isVerified: true,
-        authProvider: AuthProvider.GOOGLE,
-      });
+      throw new ConflictException({ code: 'GOOGLE_ACCOUNT_NOT_REGISTERED', message: 'No account exists with this Google email. Please create an account first.' });
     } else {
       if (!user) {
         throw new UnauthorizedException('Account is suspended');
