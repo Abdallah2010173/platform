@@ -46,6 +46,12 @@ enum AccountProvider {
   MICROSOFT
 }
 
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  BOTH
+}
+
 enum OAuthProvider {
   GOOGLE
   FACEBOOK
@@ -478,18 +484,24 @@ enum ErrorStatus {
 // ═════════════════════════════════════════════════════════════════════════════
 
 model User {
-  id               String    @id @default(uuid())
-  email            String    @unique
+  id               String       @id @default(uuid())
+  email            String       @unique
+  password         String?
   passwordHash     String?
-  role             Role      @default(STUDENT)
+  avatar           String?
+  role             Role         @default(STUDENT)
+  isVerified       Boolean      @default(false)
   emailVerified    DateTime?
   emailVerifiedAt  DateTime?
-  twoFactorEnabled Boolean   @default(false)
+  verificationCode String?
+  codeExpiresAt    DateTime?
+  authProvider     AuthProvider @default(EMAIL)
+  twoFactorEnabled Boolean      @default(false)
   twoFactorSecret  String?
-  isActive         Boolean   @default(true)
+  isActive         Boolean      @default(true)
   lastLoginAt      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
   deletedAt        DateTime?
 
 // Relations

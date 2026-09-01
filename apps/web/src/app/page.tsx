@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ROLE_LABELS, UserRole } from '@platform/shared';
 import { useAuth } from '@/components/auth/protected-route';
 import { roleToRoute } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n';
 
 const roles = Object.values(UserRole);
 
@@ -55,6 +56,7 @@ const features = [
 
 export default function HomePage() {
   const { user, isAuthenticated, ready } = useAuth();
+  const { locale, setLocale } = useLocale();
 
   return (
     <div className="bg-background min-h-screen">
@@ -65,6 +67,14 @@ export default function HomePage() {
             <span>Global Math</span>
           </Link>
           <nav className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
+              className="text-muted-foreground hover:text-foreground text-sm font-medium"
+              aria-label="Toggle language"
+            >
+              {locale === 'ar' ? 'EN' : 'AR'}
+            </button>
             {ready && isAuthenticated && user ? (
               <>
                 <span className="text-muted-foreground text-sm">{ROLE_LABELS[user.role]}</span>

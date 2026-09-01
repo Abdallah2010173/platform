@@ -1,4 +1,4 @@
-import { Role } from '@platform/database';
+import { Role, AuthProvider } from '@platform/database';
 
 export interface IAuthService {
   validateUser(email: string, password: string): Promise<{ id: string; email: string; role: Role } | null>;
@@ -19,6 +19,12 @@ export interface IAuthService {
   }>;
   revokeRefreshToken(refreshToken: string): Promise<void>;
   resendEmailVerification(email: string): Promise<{ message: string }>;
+  verifyOtp(email: string, otp: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  }>;
+  setPasswordForGoogleUser(userId: string, password: string): Promise<{ message: string }>;
   googleOAuthLogin(profile: {
     googleId: string;
     email: string;

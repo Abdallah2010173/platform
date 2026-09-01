@@ -30,6 +30,8 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   VerifyEmailDto,
+  VerifyOtpDto,
+  SetPasswordDto,
   ResendVerificationDto,
   ChangePasswordDto,
   AuthTokensResponseDto,
@@ -141,6 +143,38 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   @ApiOperation({ summary: 'Verify email with a token' })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto.token);
+  }
+
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify a registration OTP code and issue tokens' })
+  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<AuthTokensResponseDto> {
+    const tokens = await this.authService.verifyOtp(dto.email, dto.otp);
+    const fullUser = await this.userRepository.findByEmail(dto.email);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      user: fullUser
+        ? {
+            id: fullUser.id,
+            email: fullUser.email,
+            role: fullUser.role,
+            firstName: fullUser.profile?.firstName,
+            lastName: fullUser.profile?.lastName,
+            avatarUrl: fullUser.profile?.avatarUrl ?? undefined,
+          }
+        : undefined,
+    };
+  }
+
+  @Post('set-password')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set a password for a Google-created account' })
+  async setPassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: SetPasswordDto) {
+    return this.authService.setPasswordForGoogleUser(user.id, dto.password);
   }
 
   @Public()

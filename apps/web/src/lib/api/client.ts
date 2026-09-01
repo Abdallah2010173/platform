@@ -71,6 +71,7 @@ apiClient.interceptors.response.use(
       '/auth/forgot-password',
       '/auth/reset-password',
       '/auth/verify-email',
+      '/auth/verify-otp',
       '/auth/resend-verification',
       '/auth/google/exchange',
     ].some((path) => requestUrl.includes(path));

@@ -3,6 +3,7 @@ export {
   Role,
   PermissionAction,
   AccountProvider,
+  AuthProvider,
   OAuthProvider,
   AuditAction,
   SessionStatus,

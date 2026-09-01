@@ -75,6 +75,23 @@ export class VerifyEmailDto {
   token!: string;
 }
 
+export class VerifyOtpDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsString()
+  otp!: string;
+}
+
+export class SetPasswordDto {
+  @ApiProperty({ example: 'NewPassword@123' })
+  @IsString()
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
+  password!: string;
+}
+
 export class ResendVerificationDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsEmail()

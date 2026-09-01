@@ -18,6 +18,7 @@ import { AppDispatch } from '@/lib/store';
 import { setCredentials } from '@/lib/store/slices/auth.slice';
 import { AuthUser, roleToRoute } from '@/lib/auth';
 import { GoogleSignInButton } from '@/components/auth/google-signin-button';
+import { API_URL } from '@/lib/api/client';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -64,16 +65,26 @@ function LoginFormInner() {
         throw new Error('Invalid login response');
       }
 
-      // Persist session + update Redux auth state.
       dispatch(setCredentials({ user, accessToken, refreshToken }));
 
-      // Respect a requested redirect if it is safe and belongs to the user's role,
-      // otherwise fall back to the role-based dashboard.
       const requested = searchParams.get('redirect');
       const target = requested && requested.startsWith('/') ? requested : roleToRoute(user.role);
       router.replace(target);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Login failed');
+      const payload = (e as { response?: { data?: { code?: string; message?: string } } })?.response?.data;
+      const code = payload?.code ?? '';
+
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        router.replace(`/verify-email?email=${encodeURIComponent(data.email)}`);
+        return;
+      }
+
+      if (code === 'LOGIN_WITH_GOOGLE_REQUIRED') {
+        setError("This account was created via Google. Please click 'Sign in with Google' below.");
+        return;
+      }
+
+      setError(payload?.message || (e instanceof Error ? e.message : 'Login failed'));
     } finally {
       setLoading(false);
     }
@@ -117,7 +128,23 @@ function LoginFormInner() {
               <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
           </div>
-          {(error || oauthMessage) && <p className="text-destructive text-sm">{error || oauthMessage}</p>}
+          {(error || oauthMessage) && (
+            <div className="space-y-2">
+              <p className="text-destructive text-sm">{error || oauthMessage}</p>
+              {error === "This account was created via Google. Please click 'Sign in with Google' below." && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    window.location.href = `${API_URL}/auth/google?intent=signin`;
+                  }}
+                >
+                  Sign in with Google
+                </Button>
+              )}
+            </div>
+          )}
           {searchParams.get('registered') === '1' && <p className="text-primary text-sm">Please verify your email address to continue.</p>}
           {needsVerification && (
             <Button type="button" variant="outline" className="w-full" onClick={resendVerification} disabled={resending}>

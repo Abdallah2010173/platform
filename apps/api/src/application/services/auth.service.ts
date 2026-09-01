@@ -6,14 +6,15 @@ import {
   NotFoundException,
   ServiceUnavailableException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomInt } from 'crypto';
 import { Response } from 'express';
-import { Role, AccountProvider } from '@platform/database';
+import { Role, AccountProvider, AuthProvider } from '@platform/database';
 import { UserRepository } from '../../infrastructure/repositories/user.repository';
 import { RefreshTokenRepository } from '../../infrastructure/repositories/refresh-token.repository';
 import { EmailService } from '../../infrastructure/email/email.service';
@@ -52,11 +53,23 @@ export class AuthService implements IAuthService {
 
   async login(email: string, password: string): Promise<ITokens> {
     const existing = await this.userRepository.findByEmail(email);
-    if (!existing) throw new UnauthorizedException({ code: 'ACCOUNT_NOT_FOUND', message: 'No account found with this email. Please sign up first.' });
-    if (!existing.isActive) throw new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'This account is unavailable.' });
-    if (!existing.emailVerified) throw new UnauthorizedException({ code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email address to continue.' });
-    if (!existing.passwordHash || !(await bcrypt.compare(password, existing.passwordHash))) {
-      throw new UnauthorizedException({ code: 'INVALID_PASSWORD', message: 'Incorrect password. Please try again.' });
+    if (!existing) {
+      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials.' });
+    }
+    if (!existing.isActive) {
+      throw new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'This account is unavailable.' });
+    }
+    if (!existing.passwordHash) {
+      throw new BadRequestException({
+        code: 'LOGIN_WITH_GOOGLE_REQUIRED',
+        message: 'This account was created with Google. Please sign in with Google or use "Set Password".',
+      });
+    }
+    if (!existing.isVerified) {
+      throw new ForbiddenException({ code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email address to continue.' });
+    }
+    if (!(await bcrypt.compare(password, existing.passwordHash))) {
+      throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS', message: 'Invalid credentials.' });
     }
     await this.userRepository.updateLastLogin(existing.id);
 
@@ -70,29 +83,51 @@ export class AuthService implements IAuthService {
     lastName: string;
     displayName?: string;
   }): Promise<{ message: string }> {
-    const existing = await this.userRepository.findByEmail(dto.email);
-    if (existing) {
-      throw new ConflictException({ code: 'EMAIL_ALREADY_EXISTS', message: 'This email is already registered.' });
+    const normalizedEmail = dto.email.toLowerCase();
+    const existing = await this.userRepository.findByEmail(normalizedEmail);
+
+    if (existing?.authProvider === AuthProvider.GOOGLE && !existing.passwordHash) {
+      throw new ConflictException({
+        code: 'GOOGLE_ACCOUNT_EXISTS',
+        message: 'This email is linked to Google. Please sign in with Google or set a password first.',
+      });
+    }
+
+    if (existing && existing.isVerified) {
+      throw new ConflictException({ code: 'EMAIL_ALREADY_IN_USE', message: 'Email already in use.' });
     }
 
     this.assertStrongPassword(dto.password);
-
     const passwordHash = await bcrypt.hash(dto.password, 12);
+    const otp = this.generateOtpCode();
+    const otpHash = createHash('sha256').update(otp).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60_000);
+
+    if (existing) {
+      await this.userRepository.saveVerificationCode(existing.id, otpHash, expiresAt);
+      await this.userRepository.setPasswordWithAuthProvider(existing.id, passwordHash, AuthProvider.EMAIL);
+      await this.emailService.sendOtpEmail(existing.email, otp);
+      return { message: 'Please verify your email address to continue.' };
+    }
 
     const user = await this.userRepository.create({
-      email: dto.email,
+      email: normalizedEmail,
       passwordHash,
+      password: passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
       displayName: dto.displayName,
       role: Role.STUDENT,
+      isVerified: false,
+      authProvider: AuthProvider.EMAIL,
+      verificationCode: otpHash,
+      codeExpiresAt: expiresAt,
     });
 
-    const verificationToken = await this.generateEmailVerification(user.id);
     try {
-      await this.emailService.sendEmailVerificationEmail(user.email, verificationToken);
+      await this.emailService.sendOtpEmail(user.email, otp);
     } catch (error) {
-      await this.userRepository.invalidateEmailVerificationTokens(user.id);
+      await this.userRepository.saveVerificationCode(user.id, '', new Date(0));
       throw error;
     }
 
@@ -105,6 +140,46 @@ export class AuthService implements IAuthService {
    * identity to an existing email/password account. Only performs the DB
    * provisioning — token issuance is delegated to generateTokens().
    */
+  async verifyOtp(email: string, otp: string): Promise<ITokens> {
+    const normalizedEmail = email.toLowerCase();
+    const user = await this.userRepository.findByEmail(normalizedEmail);
+
+    if (!user) {
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'No account found with this email.' });
+    }
+
+    if (!user.verificationCode || !user.codeExpiresAt || user.codeExpiresAt < new Date()) {
+      throw new BadRequestException({ code: 'OTP_EXPIRED', message: 'The verification code is invalid or has expired.' });
+    }
+
+    const incomingHash = createHash('sha256').update(otp).digest('hex');
+    if (user.verificationCode !== incomingHash) {
+      throw new BadRequestException({ code: 'INVALID_OTP', message: 'The verification code is invalid.' });
+    }
+
+    await this.userRepository.verifyOtpAndClear(user.id);
+    await this.userRepository.updateLastLogin(user.id);
+
+    return this.generateTokens(user.id, user.email, user.role);
+  }
+
+  async setPasswordForGoogleUser(userId: string, password: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    this.assertStrongPassword(password);
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await this.userRepository.setPasswordWithAuthProvider(
+      userId,
+      passwordHash,
+      user.authProvider === AuthProvider.GOOGLE ? AuthProvider.BOTH : user.authProvider,
+    );
+
+    return { message: 'Password has been set successfully.' };
+  }
+
   async googleOAuthLogin(profile: {
     googleId: string;
     email: string;
@@ -143,6 +218,7 @@ export class AuthService implements IAuthService {
       user = await this.userRepository.create({
         email,
         passwordHash: null,
+        password: null,
         firstName: profile.firstName ?? '',
         lastName: profile.lastName ?? '',
         displayName: profile.displayName,
@@ -150,6 +226,8 @@ export class AuthService implements IAuthService {
         role: Role.STUDENT,
         googleId: profile.googleId,
         emailVerified: true,
+        isVerified: true,
+        authProvider: AuthProvider.GOOGLE,
       });
     } else {
       if (!user) {
@@ -167,7 +245,6 @@ export class AuthService implements IAuthService {
           throw new UnauthorizedException('Google email ownership could not be verified');
         }
         await this.userRepository.linkGoogleAccount(user.id, profile.googleId);
-        if (!user.emailVerified) await this.userRepository.markEmailVerified(user.id);
       }
       await this.userRepository.updateGoogleProfile(user.id, {
         firstName: profile.firstName,
@@ -180,8 +257,8 @@ export class AuthService implements IAuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Account is suspended');
     }
-    if (!user.emailVerified) {
-      throw new UnauthorizedException('Please verify your email address to continue.');
+    if (!user.isVerified) {
+      await this.userRepository.markEmailVerified(user.id);
     }
 
     await this.userRepository.updateLastLogin(user.id);
@@ -468,6 +545,10 @@ export class AuthService implements IAuthService {
     };
 
     return value * (multipliers[unit] ?? 60000);
+  }
+
+  private generateOtpCode(): string {
+    return randomInt(100000, 999999).toString();
   }
 
   private assertStrongPassword(password: string): void {

@@ -1,11 +1,16 @@
-import { Role, AccountProvider } from '@platform/database';
+import { Role, AccountProvider, AuthProvider } from '@platform/database';
 
 export interface IUser {
   id: string;
   email: string;
+  password: string | null;
   passwordHash: string | null;
   role: Role;
+  isVerified: boolean;
   emailVerified: Date | null;
+  verificationCode: string | null;
+  codeExpiresAt: Date | null;
+  authProvider: AuthProvider;
   twoFactorEnabled: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -36,6 +41,7 @@ export interface IRefreshToken {
 
 export interface CreateUserData {
   email: string;
+  password?: string | null;
   passwordHash?: string | null;
   role?: Role;
   firstName: string;
@@ -44,6 +50,10 @@ export interface CreateUserData {
   avatarUrl?: string;
   googleId?: string;
   emailVerified?: boolean;
+  isVerified?: boolean;
+  authProvider?: AuthProvider;
+  verificationCode?: string | null;
+  codeExpiresAt?: Date | null;
 }
 
 export interface IUserRepository {

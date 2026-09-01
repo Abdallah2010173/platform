@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Role, AccountProvider } from '@platform/database';
+import { Role, AccountProvider, AuthProvider } from '@platform/database';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
   IUserRepository,
@@ -29,8 +29,13 @@ export class UserRepository implements IUserRepository {
     return this.prisma.user.create({
       data: {
         email: data.email.toLowerCase(),
+        password: data.password ?? data.passwordHash ?? null,
         passwordHash: data.passwordHash ?? null,
         role: data.role ?? Role.STUDENT,
+        isVerified: data.isVerified ?? data.emailVerified ?? false,
+        authProvider: data.authProvider ?? (data.googleId ? AuthProvider.GOOGLE : AuthProvider.EMAIL),
+        verificationCode: data.verificationCode ?? null,
+        codeExpiresAt: data.codeExpiresAt ?? null,
         emailVerified:
           data.emailVerified ?? false ? new Date() : undefined,
         profile: {
@@ -198,7 +203,45 @@ export class UserRepository implements IUserRepository {
   async markEmailVerified(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { emailVerified: new Date(), emailVerifiedAt: new Date() },
+      data: {
+        emailVerified: new Date(),
+        emailVerifiedAt: new Date(),
+        isVerified: true,
+      },
+    });
+  }
+
+  async saveVerificationCode(userId: string, hashedCode: string, expiresAt: Date): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        verificationCode: hashedCode,
+        codeExpiresAt: expiresAt,
+      },
+    });
+  }
+
+  async verifyOtpAndClear(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isVerified: true,
+        emailVerified: new Date(),
+        emailVerifiedAt: new Date(),
+        verificationCode: null,
+        codeExpiresAt: null,
+      },
+    });
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        password: passwordHash,
+        authProvider: AuthProvider.BOTH,
+      },
     });
   }
 
@@ -233,10 +276,14 @@ export class UserRepository implements IUserRepository {
     });
   }
 
-  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+  async setPasswordWithAuthProvider(userId: string, passwordHash: string, authProvider: AuthProvider): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        password: passwordHash,
+        authProvider,
+      },
     });
   }
 

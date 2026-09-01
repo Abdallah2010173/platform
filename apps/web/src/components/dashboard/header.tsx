@@ -11,6 +11,7 @@ import { useAuth } from '@/components/auth/protected-route';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/components/providers/theme-provider';
 import { ROLE_LABELS } from '@platform/shared';
+import { useLocale } from '@/lib/i18n';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ export function Header({ title, description, actions }: HeaderProps) {
   const { user } = useAuth();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   const handleLogout = () => {
@@ -64,7 +66,18 @@ export function Header({ title, description, actions }: HeaderProps) {
           </div>
         </div>
 
-<div className="flex items-center gap-1.5 md:gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-xs"
+            onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
+            aria-label="Toggle language"
+          >
+            {locale === 'ar' ? 'EN' : 'AR'}
+          </Button>
+
           <NotificationCenter />
           <Button
             variant="ghost"

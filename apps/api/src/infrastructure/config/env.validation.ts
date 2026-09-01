@@ -81,6 +81,14 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  RESEND_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  EMAIL_FROM_ADDRESS?: string;
+
+  @IsOptional()
+  @IsString()
   SMTP_HOST?: string;
 
   @IsOptional()
