@@ -4,14 +4,14 @@ Phase 1 foundation: monorepo, authentication architecture, database schema, Dock
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
+| Layer    | Technology                                                   |
+| -------- | ------------------------------------------------------------ |
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS v4, shadcn/ui |
-| Backend | NestJS, TypeScript, Prisma ORM |
-| Database | PostgreSQL 16 |
-| Cache | Redis 7 (ready for Phase 2) |
-| Auth | JWT access + refresh tokens, RBAC |
-| Monorepo | pnpm workspaces, Turbo |
+| Backend  | NestJS, TypeScript, Prisma ORM                               |
+| Database | PostgreSQL 16                                                |
+| Cache    | Redis 7 (ready for Phase 2)                                  |
+| Auth     | JWT access + refresh tokens, RBAC                            |
+| Monorepo | pnpm workspaces, Turbo                                       |
 
 ## Project Structure
 
@@ -78,41 +78,41 @@ pnpm db:seed
 pnpm dev
 ```
 
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:3000 |
-| API | http://localhost:4000/api/v1 |
-| Swagger Docs | http://localhost:4000/docs |
-| Prisma Studio | `pnpm db:studio` |
+| Service       | URL                          |
+| ------------- | ---------------------------- |
+| Frontend      | http://localhost:3000        |
+| API           | http://localhost:4000/api/v1 |
+| Swagger Docs  | http://localhost:4000/docs   |
+| Prisma Studio | `pnpm db:studio`             |
 
 ## Default Super Admin
 
-| Field | Value |
-|---|---|
-| Email | admin@platform.local |
-| Password | SuperAdmin@123 |
+| Field    | Value                |
+| -------- | -------------------- |
+| Email    | admin@platform.local |
+| Password | SuperAdmin@123       |
 
 **Change this password immediately in production.**
 
 ## User Roles
 
-| Role | Description |
-|---|---|
-| `SUPER_ADMIN` | Full system access, role management |
-| `ADMIN` | User and course management, audit logs |
-| `TEACHER` | Create and manage own courses |
-| `STUDENT` | Enroll and consume courses |
-| `MODERATOR` | User moderation, content review |
+| Role          | Description                            |
+| ------------- | -------------------------------------- |
+| `SUPER_ADMIN` | Full system access, role management    |
+| `ADMIN`       | User and course management, audit logs |
+| `TEACHER`     | Create and manage own courses          |
+| `STUDENT`     | Enroll and consume courses             |
+| `MODERATOR`   | User moderation, content review        |
 
 ## API Endpoints (Phase 1)
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/v1/health` | Health check |
-| POST | `/api/v1/auth/login` | Login, receive JWT tokens |
-| POST | `/api/v1/auth/refresh` | Refresh access token |
-| POST | `/api/v1/auth/logout` | Revoke refresh token |
-| GET | `/api/v1/auth/me` | Current user (requires JWT) |
+| Method | Endpoint               | Description                 |
+| ------ | ---------------------- | --------------------------- |
+| GET    | `/api/v1/health`       | Health check                |
+| POST   | `/api/v1/auth/login`   | Login, receive JWT tokens   |
+| POST   | `/api/v1/auth/refresh` | Refresh access token        |
+| POST   | `/api/v1/auth/logout`  | Revoke refresh token        |
+| GET    | `/api/v1/auth/me`      | Current user (requires JWT) |
 
 ## Scripts
 

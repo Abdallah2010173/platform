@@ -8,9 +8,9 @@ interface BrandLogoProps {
 }
 
 const sizeClasses = {
-  sm: 'h-8 w-8',
-  md: 'h-10 w-10',
-  lg: 'h-14 w-14',
+  sm: 'h-12 w-12',
+  md: 'h-16 w-16',
+  lg: 'h-20 w-20',
 } as const;
 
 export function BrandLogo({ size = 'md', link = true, className = '' }: BrandLogoProps) {
@@ -19,8 +19,8 @@ export function BrandLogo({ size = 'md', link = true, className = '' }: BrandLog
       <Image
         src="/logo.png"
         alt="Global Math"
-        width={size === 'lg' ? 56 : size === 'md' ? 40 : 32}
-        height={size === 'lg' ? 56 : size === 'md' ? 40 : 32}
+        width={size === 'lg' ? 80 : size === 'md' ? 64 : 48}
+        height={size === 'lg' ? 80 : size === 'md' ? 64 : 48}
         className={`${sizeClasses[size]} rounded-full object-cover shadow-sm`}
         priority={size !== 'sm'}
       />

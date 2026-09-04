@@ -39,7 +39,7 @@ export class EmailService {
     const html = `
       <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 24px;">
-          <img src="${logoUrl}" alt="Global Math Logo" style="width: 64px; height: 64px; margin-bottom: 12px; object-fit: contain;" />
+          <img src="${logoUrl}" alt="Global Math Logo" style="width: 96px; height: 96px; margin-bottom: 12px; object-fit: contain;" />
           <h2 style="color: #1e293b; margin: 0; font-size: 22px; font-weight: 700;">Global Math</h2>
         </div>
         <p style="font-size: 16px; color: #334155; line-height: 1.6; margin-bottom: 8px;">مرحباً بك،</p>
@@ -72,7 +72,7 @@ export class EmailService {
     const text = `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`;
     const html = `
       <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background-color: #ffffff;">
-        <div style="text-align: center; margin-bottom: 24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width: 64px; height: 64px; object-fit: contain;" /><h2 style="color: #1e293b; margin: 12px 0 0;">Global Math</h2></div>
+        <div style="text-align: center; margin-bottom: 24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width: 96px; height: 96px; object-fit: contain;" /><h2 style="color: #1e293b; margin: 12px 0 0;">Global Math</h2></div>
         <p style="font-size: 16px; color: #334155; line-height: 1.6;">استخدم رمز التحقق التالي لإعادة تعيين كلمة المرور:</p>
         <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 18px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0f172a; margin: 24px 0; border-radius: 8px;">${otp}</div>
         <p style="font-size: 13px; color: #64748b;">هذا الرمز صالح لمدة 10 دقائق فقط.</p>
@@ -96,7 +96,7 @@ export class EmailService {
     const verificationUrl = `${this.frontendUrl.replace(/\/+$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
     const from = this.getFromAddress();
     const logoUrl = 'https://globalmathematics.online/logo.png';
-    const verificationHtml = `<div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background: #fff;"><div style="text-align:center; margin-bottom:24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width:64px;height:64px;object-fit:contain;" /><h2 style="color:#1e293b;margin:12px 0 0;">Global Math</h2></div><p style="font-size:16px;color:#334155;line-height:1.6;">تحقق من بريدك الإلكتروني في منصة Global Math:</p><p style="text-align:center;margin:28px 0;"><a href="${verificationUrl}" style="background:#047a35;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;">تأكيد البريد الإلكتروني</a></p><p style="font-size:13px;color:#64748b;">هذا الرابط صالح لمدة 24 ساعة ويمكن استخدامه مرة واحدة.</p></div>`;
+    const verificationHtml = `<div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background: #fff;"><div style="text-align:center; margin-bottom:24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width:96px;height:96px;object-fit:contain;" /><h2 style="color:#1e293b;margin:12px 0 0;">Global Math</h2></div><p style="font-size:16px;color:#334155;line-height:1.6;">تحقق من بريدك الإلكتروني في منصة Global Math:</p><p style="text-align:center;margin:28px 0;"><a href="${verificationUrl}" style="background:#047a35;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;">تأكيد البريد الإلكتروني</a></p><p style="font-size:13px;color:#64748b;">هذا الرابط صالح لمدة 24 ساعة ويمكن استخدامه مرة واحدة.</p></div>`;
 
     try {
       if (this.resendApiKey) {
@@ -130,7 +130,7 @@ export class EmailService {
     const resetUrl = `${this.frontendUrl.replace(/\/+$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
     const from = this.getFromAddress();
     const logoUrl = 'https://globalmathematics.online/logo.png';
-    const resetHtml = `<div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background: #fff;"><div style="text-align:center; margin-bottom:24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width:64px;height:64px;object-fit:contain;" /><h2 style="color:#1e293b;margin:12px 0 0;">Global Math</h2></div><p style="font-size:16px;color:#334155;line-height:1.6;">لإعادة تعيين كلمة مرور حسابك:</p><p style="text-align:center;margin:28px 0;"><a href="${resetUrl}" style="background:#047a35;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;">إعادة تعيين كلمة المرور</a></p><p style="font-size:13px;color:#64748b;">هذا الرابط صالح لمدة 30 دقيقة ويمكن استخدامه مرة واحدة.</p></div>`;
+    const resetHtml = `<div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background: #fff;"><div style="text-align:center; margin-bottom:24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width:96px;height:96px;object-fit:contain;" /><h2 style="color:#1e293b;margin:12px 0 0;">Global Math</h2></div><p style="font-size:16px;color:#334155;line-height:1.6;">لإعادة تعيين كلمة مرور حسابك:</p><p style="text-align:center;margin:28px 0;"><a href="${resetUrl}" style="background:#047a35;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;">إعادة تعيين كلمة المرور</a></p><p style="font-size:13px;color:#64748b;">هذا الرابط صالح لمدة 30 دقيقة ويمكن استخدامه مرة واحدة.</p></div>`;
 
     try {
       if (this.resendApiKey) {

@@ -88,17 +88,17 @@ Guards:
 
 ## Database Schema (Phase 1)
 
-| Model | Purpose |
-|---|---|
-| User | Core identity, role, auth state |
-| Profile | User display info |
-| RefreshToken | JWT refresh token storage with family tracking |
-| OAuthAccount | Social login accounts (schema ready) |
-| Permission | Resource-action permission definitions |
-| RolePermission | Role-to-permission mapping |
-| AuditLog | Activity tracking |
-| EmailVerificationToken | Email verification (schema ready) |
-| PasswordResetToken | Password reset (schema ready) |
+| Model                  | Purpose                                        |
+| ---------------------- | ---------------------------------------------- |
+| User                   | Core identity, role, auth state                |
+| Profile                | User display info                              |
+| RefreshToken           | JWT refresh token storage with family tracking |
+| OAuthAccount           | Social login accounts (schema ready)           |
+| Permission             | Resource-action permission definitions         |
+| RolePermission         | Role-to-permission mapping                     |
+| AuditLog               | Activity tracking                              |
+| EmailVerificationToken | Email verification (schema ready)              |
+| PasswordResetToken     | Password reset (schema ready)                  |
 
 ## Frontend Architecture
 
@@ -127,10 +127,10 @@ See `.env.example` for the complete list.
 
 ## Docker Services
 
-| Service | Port | Purpose |
-|---|---|---|
-| postgres | 5432 | Primary database |
-| redis | 6379 | Caching, sessions (Phase 2+) |
+| Service  | Port | Purpose                      |
+| -------- | ---- | ---------------------------- |
+| postgres | 5432 | Primary database             |
+| redis    | 6379 | Caching, sessions (Phase 2+) |
 
 ## Future Module Placeholders
 
