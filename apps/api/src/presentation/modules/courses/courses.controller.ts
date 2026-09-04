@@ -49,6 +49,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { UseInterceptors, UploadedFile } from '@nestjs/common';
+import { memoryStorage } from 'multer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { ParsePaginationPipe } from '../../common/pipes/parse-pagination.pipe';
 
@@ -563,6 +564,7 @@ export class CoursesController {
   })
   @UseInterceptors(
     FileInterceptor('file', {
+      storage: memoryStorage(),
       limits: { fileSize: 500 * 1024 * 1024 },
       fileFilter: (_request, file, callback) => {
         const allowed = /^(image|video)\/(jpeg|png|webp|gif|mp4|webm|quicktime)$|^(application\/pdf|application\/zip|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword)$/;

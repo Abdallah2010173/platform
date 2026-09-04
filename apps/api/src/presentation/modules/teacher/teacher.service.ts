@@ -366,7 +366,7 @@ export class TeacherService {
         user: { include: { profile: true } },
         courses: {
           where: { deletedAt: null },
-          select: { courseId: true, progress: true, status: true, course: { select: { title: true } } },
+          select: { courseId: true, progress: true, status: true, accessType: true, course: { select: { title: true } } },
           orderBy: { updatedAt: 'desc' },
         },
       },
@@ -389,6 +389,7 @@ export class TeacherService {
         title: enrollment.course.title,
         progress: Number(enrollment.progress),
         status: enrollment.status,
+        accessType: enrollment.accessType,
       })),
     }));
   }

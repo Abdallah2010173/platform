@@ -41,7 +41,7 @@ function VerifyEmailForm() {
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [email, token]);
 
   const submitOtp = async () => {
     setState('loading');

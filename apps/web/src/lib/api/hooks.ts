@@ -538,7 +538,20 @@ export const useGrantCourseAccess = (courseId: string) => {
     mutationFn: (studentId: string) => teacherApi.grantCourseAccess(courseId, studentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['course', courseId] });
+      qc.invalidateQueries({ queryKey: ['teacher', 'all-students'] });
       toast.success('Free access granted');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useRevokeCourseAccess = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (studentId: string) => teacherApi.revokeCourseAccess(courseId, studentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teacher', 'all-students'] });
+      toast.success('Free access canceled');
     },
     onError: (e) => toast.error(formatApiError(e)),
   });
