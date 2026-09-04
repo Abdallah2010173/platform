@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +23,9 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const router = useRouter();
 
   const {
     register,
@@ -34,6 +38,7 @@ export default function ForgotPasswordPage() {
     setError(null);
     try {
       await authApi.forgotPassword(data.email);
+      setEmail(data.email);
       setSent(true);
     } catch (e) {
       setError(formatApiError(e));
@@ -59,12 +64,18 @@ export default function ForgotPasswordPage() {
                 <MailCheck className="text-primary h-7 w-7" />
               </div>
               <p className="font-medium">Check your email</p>
-              <p className="text-muted-foreground text-sm">
-                If an account exists for that email, you will receive a password reset link shortly.
-              </p>
-              <Button variant="outline" className="mt-2" onClick={() => setSent(false)}>
-                Send again
-              </Button>
+              <p className="text-muted-foreground text-sm">If an account exists for that email, a four-digit reset code will arrive shortly.</p>
+              <Label htmlFor="otp" className="sr-only">Reset code</Label>
+              <Input id="otp" inputMode="numeric" maxLength={4} placeholder="4-digit code" value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))} />
+              <Button className="w-full" disabled={otp.length !== 4} onClick={async () => {
+                try {
+                  await authApi.verifyResetOtp(email, otp);
+                  router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`);
+                } catch (e) {
+                  setError(formatApiError(e));
+                }
+              }}>Continue</Button>
+              <Button variant="outline" className="mt-2" onClick={() => { setOtp(''); setSent(false); }}>Send again</Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

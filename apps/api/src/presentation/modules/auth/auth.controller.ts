@@ -31,6 +31,7 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
   VerifyOtpDto,
+  VerifyResetOtpDto,
   SetPasswordDto,
   ResendVerificationDto,
   ChangePasswordDto,
@@ -64,8 +65,9 @@ export class AuthController {
 @Post('login')
 @HttpCode(HttpStatus.OK)
 @ApiOperation({ summary: 'Login with email and password' })
-async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<AuthTokensResponseDto> {
   const tokens = await this.authService.login(dto.email, dto.password);
+    this.authService.setRefreshTokenCookie(res, tokens.refreshToken);
   const fullUser = await this.userRepository.findByEmail(dto.email);
   return {
     accessToken: tokens.accessToken,
@@ -90,11 +92,13 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   @ApiOperation({ summary: 'Exchange Google OAuth code for JWT tokens' })
   async googleExchange(
     @Body() dto: GoogleOAuthExchangeDto,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokensResponseDto> {
     const result = await this.authService.exchangeOAuthCode(dto.code);
 
     const userId = result.user.id;
     const user = await this.userRepository.findById(userId);
+    this.authService.setRefreshTokenCookie(res, result.refreshToken);
 
     return {
       accessToken: result.accessToken,
@@ -117,8 +121,12 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
-  async refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokensResponseDto> {
-    return this.authService.refreshTokens(dto.refreshToken);
+  async refresh(@Req() req: Request, @Body() dto: RefreshTokenDto, @Res({ passthrough: true }) res: Response): Promise<AuthTokensResponseDto> {
+    const refreshToken = dto.refreshToken ?? this.getRefreshToken(req);
+    if (!refreshToken) throw new UnauthorizedException('Refresh token is required');
+    const tokens = await this.authService.refreshTokens(refreshToken);
+    this.authService.setRefreshTokenCookie(res, tokens.refreshToken);
+    return tokens;
   }
 
   @Public()
@@ -134,23 +142,35 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with a token' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto.token, dto.password);
+    if (dto.email && dto.otp && dto.newPassword) {
+      return this.authService.resetPasswordWithOtp(dto.email, dto.otp, dto.newPassword);
+    }
+    if (dto.token && dto.password) return this.authService.resetPassword(dto.token, dto.password);
+    throw new UnauthorizedException('Email, OTP, and new password are required');
   }
 
   @Public()
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email with a token' })
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.authService.verifyEmail(dto.token);
+  async verifyEmail(@Body() dto: VerifyEmailDto, @Res({ passthrough: true }) res: Response) {
+    if (dto.email && dto.otp) {
+      const tokens = await this.authService.verifyOtp(dto.email, dto.otp);
+      this.authService.setRefreshTokenCookie(res, tokens.refreshToken);
+      const user = await this.userRepository.findByEmail(dto.email);
+      return { ...tokens, user: user ? { id: user.id, email: user.email, role: user.role } : undefined };
+    }
+    if (dto.token) return this.authService.verifyEmail(dto.token);
+    throw new UnauthorizedException('Email and OTP are required');
   }
 
   @Public()
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify a registration OTP code and issue tokens' })
-  async verifyOtp(@Body() dto: VerifyOtpDto): Promise<AuthTokensResponseDto> {
+  async verifyOtp(@Body() dto: VerifyOtpDto, @Res({ passthrough: true }) res: Response): Promise<AuthTokensResponseDto> {
     const tokens = await this.authService.verifyOtp(dto.email, dto.otp);
+    this.authService.setRefreshTokenCookie(res, tokens.refreshToken);
     const fullUser = await this.userRepository.findByEmail(dto.email);
     return {
       accessToken: tokens.accessToken,
@@ -167,6 +187,14 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
           }
         : undefined,
     };
+  }
+
+  @Public()
+  @Post('verify-reset-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify a password reset OTP code' })
+  async verifyResetOtp(@Body() dto: VerifyResetOtpDto) {
+    return this.authService.verifyResetOtp(dto.email, dto.otp);
   }
 
   @Post('set-password')
@@ -189,8 +217,10 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Revoke refresh token and logout' })
-  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
-    await this.authService.revokeRefreshToken(dto.refreshToken);
+  async logout(@Req() req: Request, @Body() dto: RefreshTokenDto, @Res({ passthrough: true }) res: Response): Promise<void> {
+    const refreshToken = dto.refreshToken ?? this.getRefreshToken(req);
+    if (refreshToken) await this.authService.revokeRefreshToken(refreshToken);
+    this.authService.clearRefreshTokenCookie(res);
   }
 
   @Get('me')
@@ -265,6 +295,10 @@ async login(@Body() dto: LoginDto): Promise<AuthTokensResponseDto> {
         'Google OAuth is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_CALLBACK_URL.',
       );
     }
+  }
+
+  private getRefreshToken(req: Request): string | undefined {
+    return (req as Request & { cookies?: Record<string, string> }).cookies?.refresh_token;
   }
 
   private resolveFrontendOrigin(req: Request): string {

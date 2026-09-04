@@ -56,6 +56,21 @@ export class EmailService {
     }
   }
 
+  async sendPasswordResetOtpEmail(email: string, otp: string): Promise<void> {
+    const from = this.getFromAddress();
+    const subject = 'Your Platform LMS password reset code';
+    const text = `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`;
+    const html = `<p>Your Platform LMS password reset code is:</p><p style="font-size: 28px; font-weight: bold; letter-spacing: 6px;">${otp}</p><p>This code expires in 10 minutes.</p>`;
+    try {
+      if (this.resendApiKey) await this.sendWithResend({ from, to: email, subject, text, html });
+      else if (this.transporter) await this.transporter.sendMail({ from, to: email, subject, text, html });
+      else throw new ServiceUnavailableException('Email delivery is not configured');
+    } catch (error) {
+      this.logger.error(`Failed to send password reset OTP to ${email}`, error instanceof Error ? error.stack : undefined);
+      throw new ServiceUnavailableException('Email delivery failed');
+    }
+  }
+
   async sendEmailVerificationEmail(email: string, token: string): Promise<void> {
     if (!this.transporter && !this.resendApiKey) {
       throw new ServiceUnavailableException('Email delivery is not configured');

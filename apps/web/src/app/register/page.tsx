@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
+import { PasswordInput } from '@/components/auth/password-input';
 
 const registerSchema = z
   .object({
@@ -34,6 +35,7 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const {
     register,
@@ -64,7 +66,7 @@ function RegisterContent() {
         email: data.email,
         password: data.password,
       });
-      setSuccess('Please verify your email address to continue. Check your inbox for the verification link.');
+      setSuccess('Please verify your email address to continue. Check your inbox for the four-digit code.');
     } catch (e) {
       setError(formatApiError(e));
     } finally {
@@ -126,7 +128,7 @@ function RegisterContent() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register('password')} />
+            <PasswordInput id="password" {...register('password')} />
             {errors.password && (
               <p className="text-destructive text-sm">{errors.password.message}</p>
             )}
@@ -136,7 +138,7 @@ function RegisterContent() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
+            <PasswordInput id="confirmPassword" {...register('confirmPassword')} />
             {errors.confirmPassword && (
               <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
             )}
@@ -145,6 +147,9 @@ function RegisterContent() {
           {success && (
             <div className="space-y-2 text-sm">
               <p className="text-primary">{success}</p>
+              <Button type="button" className="w-full" onClick={() => router.push(`/verify-email?email=${encodeURIComponent(getValues('email'))}`)}>
+                Enter verification code
+              </Button>
               <Button type="button" variant="outline" className="w-full" onClick={resendVerification} disabled={resending}>
                 {resending ? 'Sending...' : 'Resend verification email'}
               </Button>

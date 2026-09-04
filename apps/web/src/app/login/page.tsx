@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/auth/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { loginRequest } from '@/lib/api/client';
@@ -125,7 +126,7 @@ const oauthMessage = oauthError === 'google_signup_disabled'
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register('password')} />
+            <PasswordInput id="password" {...register('password')} />
             {errors.password && (
               <p className="text-destructive text-sm">{errors.password.message}</p>
             )}

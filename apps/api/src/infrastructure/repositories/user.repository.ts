@@ -245,6 +245,14 @@ export class UserRepository implements IUserRepository {
     });
   }
 
+  async resetPasswordWithOtp(userId: string, otpHash: string, passwordHash: string): Promise<boolean> {
+    const result = await this.prisma.user.updateMany({
+      where: { id: userId, verificationCode: otpHash, codeExpiresAt: { gt: new Date() } },
+      data: { passwordHash, password: passwordHash, verificationCode: null, codeExpiresAt: null },
+    });
+    return result.count === 1;
+  }
+
   async markEmailVerificationTokenUsed(id: string): Promise<void> {
     await this.prisma.emailVerificationToken.update({
       where: { id },

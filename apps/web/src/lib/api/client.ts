@@ -27,9 +27,9 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 
 let refreshPromise: Promise<string | null> | null = null;
 
-export async function refreshAccessTokenRequest(refreshToken: string): Promise<string | null> {
+export async function refreshAccessTokenRequest(refreshToken?: string): Promise<string | null> {
   try {
-    const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+    const res = await axios.post(`${API_URL}/auth/refresh`, refreshToken ? { refreshToken } : undefined, { withCredentials: true });
     const tokens = res.data?.data ?? res.data;
     if (tokens?.accessToken) {
       localStorage.setItem('accessToken', tokens.accessToken);
@@ -47,9 +47,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) return null;
-      return await refreshAccessTokenRequest(refreshToken);
+      return await refreshAccessTokenRequest(localStorage.getItem('refreshToken') ?? undefined);
     } catch {
       return null;
     } finally {
@@ -117,8 +115,6 @@ export async function logoutRequest(): Promise<void> {
 
   const accessToken = localStorage.getItem('accessToken');
   const refreshToken = localStorage.getItem('refreshToken');
-
-  if (!refreshToken) return;
 
   try {
     await axios.post(

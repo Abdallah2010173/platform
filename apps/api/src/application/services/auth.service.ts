@@ -392,24 +392,18 @@ export class AuthService implements IAuthService {
     const user = await this.userRepository.findByEmail(email);
     // Always return generic message to avoid user enumeration
     if (!user) {
-      return { message: 'If that email exists, a password reset link has been sent.' };
+      return { message: 'If that email exists, a password reset code has been sent.' };
     }
 
-    const token = randomBytes(32).toString('hex');
-    const tokenHash = createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + 30 * 60_000);
-
-    await this.userRepository.createPasswordResetToken({
-      userId: user.id,
-      email,
-      token: tokenHash,
-      expiresAt,
-    });
+    const otp = this.generateOtpCode();
+    const otpHash = createHash('sha256').update(otp).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60_000);
+    await this.userRepository.saveVerificationCode(user.id, otpHash, expiresAt);
 
     try {
-      await this.emailService.sendPasswordResetEmail(email, token);
+      await this.emailService.sendPasswordResetOtpEmail(user.email, otp);
     } catch (error) {
-      await this.userRepository.invalidatePasswordResetToken(tokenHash);
+      await this.userRepository.saveVerificationCode(user.id, '', new Date(0));
       this.logger.error(
         'Password reset email delivery failed',
         error instanceof Error ? error.stack : undefined,
@@ -417,7 +411,33 @@ export class AuthService implements IAuthService {
       throw new ServiceUnavailableException('Email delivery is temporarily unavailable. Please try again later.');
     }
 
-    return { message: 'If that email exists, a password reset link has been sent.' };
+    return { message: 'If that email exists, a password reset code has been sent.' };
+  }
+
+  async verifyResetOtp(email: string, otp: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user || !this.isValidOtp(user.verificationCode, user.codeExpiresAt, otp)) {
+      throw new BadRequestException('The reset code is invalid or has expired.');
+    }
+    return { message: 'The reset code is valid.' };
+  }
+
+  private isValidOtp(storedHash: string | null, expiresAt: Date | null, otp: string): boolean {
+    if (!storedHash || !expiresAt || expiresAt <= new Date()) return false;
+    return storedHash === createHash('sha256').update(otp).digest('hex');
+  }
+
+  async resetPasswordWithOtp(email: string, otp: string, password: string): Promise<{ message: string }> {
+    this.assertStrongPassword(password);
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await this.userRepository.findByEmail(email);
+    if (!user || !this.isValidOtp(user.verificationCode, user.codeExpiresAt, otp)) {
+      throw new BadRequestException('The reset code is invalid or has expired.');
+    }
+    const consumed = await this.userRepository.resetPasswordWithOtp(user.id, createHash('sha256').update(otp).digest('hex'), passwordHash);
+    if (!consumed) throw new BadRequestException('The reset code is invalid or has expired.');
+    await this.refreshTokenRepository.revokeByUserId(user.id);
+    return { message: 'Password has been reset successfully' };
   }
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
@@ -534,8 +554,27 @@ export class AuthService implements IAuthService {
     return value * (multipliers[unit] ?? 60000);
   }
 
+  generateRefreshCookieOptions() {
+    const secure = this.configService.get<string>('NODE_ENV') === 'production';
+    return {
+      httpOnly: true,
+      secure,
+      sameSite: 'lax' as const,
+      maxAge: this.parseExpiry(this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d')),
+      path: '/api/v1/auth',
+    };
+  }
+
+  setRefreshTokenCookie(res: Response, refreshToken: string): void {
+    res.cookie('refresh_token', refreshToken, this.generateRefreshCookieOptions());
+  }
+
+  clearRefreshTokenCookie(res: Response): void {
+    res.clearCookie('refresh_token', this.generateRefreshCookieOptions());
+  }
+
   private generateOtpCode(): string {
-    return randomInt(100000, 999999).toString();
+    return randomInt(1000, 10000).toString();
   }
 
   private assertStrongPassword(password: string): void {

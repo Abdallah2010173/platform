@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
+import { PasswordInput } from '@/components/auth/password-input';
 
 const resetSchema = z
   .object({
@@ -31,6 +32,8 @@ function ResetPasswordForm() {
   const [done, setDone] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const email = searchParams.get('email') ?? '';
+  const otp = searchParams.get('otp') ?? '';
   const token = searchParams.get('token') ?? '';
 
   const {
@@ -49,14 +52,15 @@ function ResetPasswordForm() {
   ] as const;
 
   const onSubmit = async (data: ResetForm) => {
-    if (!token) {
-      setError('Missing reset token. Please use the link from your email.');
+    if ((!email || !otp) && !token) {
+      setError('Missing reset code. Please use the code from your email.');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await authApi.resetPassword(token, data.password);
+      if (email && otp) await authApi.resetPassword(email, otp, data.password);
+      else await authApi.resetPassword(token, data.password);
       setDone(true);
     } catch (e) {
       setError(formatApiError(e));
@@ -89,7 +93,7 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="password">New Password</Label>
-          <Input id="password" type="password" {...register('password')} />
+          <PasswordInput id="password" {...register('password')} />
           {errors.password && <p className="text-destructive text-sm">{errors.password.message}</p>}
           <ul className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
             {requirements.map(([label, valid]) => <li key={label} className={valid ? 'text-primary' : undefined}>{valid ? '✓' : '○'} {label}</li>)}
@@ -97,7 +101,7 @@ function ResetPasswordForm() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
+          <PasswordInput id="confirmPassword" {...register('confirmPassword')} />
           {errors.confirmPassword && (
             <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
           )}

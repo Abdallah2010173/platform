@@ -11,12 +11,16 @@ export const authApi = {
     getApiData(await apiClient.post('/auth/register', data)),
   forgotPassword: async (email: string) =>
     getApiData(await apiClient.post('/auth/forgot-password', { email })),
-  resetPassword: async (token: string, password: string) =>
-    getApiData(await apiClient.post('/auth/reset-password', { token, password })),
-  verifyEmail: async (token: string) =>
-    getApiData(await apiClient.post('/auth/verify-email', { token })),
+  resetPassword: async (emailOrToken: string, otpOrPassword: string, password?: string) =>
+    getApiData(await apiClient.post('/auth/reset-password', password
+      ? { email: emailOrToken, otp: otpOrPassword, newPassword: password }
+      : { token: emailOrToken, password: otpOrPassword })),
+  verifyEmail: async (tokenOrEmail: string, otp?: string) =>
+    getApiData(await apiClient.post('/auth/verify-email', otp ? { email: tokenOrEmail, otp } : { token: tokenOrEmail })),
   verifyOtp: async (email: string, otp: string) =>
     getApiData(await apiClient.post('/auth/verify-otp', { email, otp })),
+  verifyResetOtp: async (email: string, otp: string) =>
+    getApiData(await apiClient.post('/auth/verify-reset-otp', { email, otp })),
   setPassword: async (password: string) =>
     getApiData(await apiClient.post('/auth/set-password', { password })),
   resendVerification: async (email: string) =>

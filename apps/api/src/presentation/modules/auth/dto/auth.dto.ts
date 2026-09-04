@@ -42,8 +42,9 @@ export class RegisterDto {
 
 export class RefreshTokenDto {
   @ApiProperty()
+  @IsOptional()
   @IsString()
-  refreshToken!: string;
+  refreshToken?: string;
 }
 
 export class GoogleOAuthExchangeDto {
@@ -59,20 +60,51 @@ export class ForgotPasswordDto {
 }
 
 export class ResetPasswordDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  token!: string;
+  token?: string;
 
-  @ApiProperty({ example: 'NewPassword@123' })
+  @ApiPropertyOptional({ example: 'user@example.com' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiPropertyOptional({ example: '1234' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'OTP must be a 4-digit code.' })
+  otp?: string;
+
+  @ApiPropertyOptional({ example: 'NewPassword@123' })
+  @IsOptional()
   @IsString()
   @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
-  password!: string;
+  password?: string;
+
+  @ApiPropertyOptional({ example: 'NewPassword@123' })
+  @IsOptional()
+  @IsString()
+  @Matches(STRONG_PASSWORD, { message: PASSWORD_MESSAGE })
+  newPassword?: string;
 }
 
 export class VerifyEmailDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  token!: string;
+  token?: string;
+
+  @ApiPropertyOptional({ example: 'user@example.com' })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @ApiPropertyOptional({ example: '1234' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'OTP must be a 4-digit code.' })
+  otp?: string;
 }
 
 export class VerifyOtpDto {
@@ -80,8 +112,20 @@ export class VerifyOtpDto {
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ example: '123456' })
+  @ApiProperty({ example: '1234' })
   @IsString()
+  @Matches(/^\d{4}$/, { message: 'OTP must be a 4-digit code.' })
+  otp!: string;
+}
+
+export class VerifyResetOtpDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({ example: '1234' })
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'OTP must be a 4-digit code.' })
   otp!: string;
 }
 

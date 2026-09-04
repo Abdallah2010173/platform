@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GraduationCap, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
 
@@ -14,11 +15,14 @@ function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const email = searchParams.get('email') ?? '';
+  const [otp, setOtp] = useState('');
 
   useEffect(() => {
     if (!token) {
       setState('error');
-      setMessage('Missing verification token.');
+      setState(email ? 'loading' : 'error');
+      if (!email) setMessage('Missing verification email.');
       return;
     }
     let active = true;
@@ -38,10 +42,33 @@ function VerifyEmailForm() {
     };
   }, [token]);
 
+  const submitOtp = async () => {
+    setState('loading');
+    try {
+      const response = await authApi.verifyEmail(email, otp) as { accessToken?: string; refreshToken?: string };
+      if (response.accessToken) localStorage.setItem('accessToken', response.accessToken);
+      if (response.refreshToken) localStorage.setItem('refreshToken', response.refreshToken);
+      setState('success');
+    } catch (e) {
+      setState('error');
+      setMessage(formatApiError(e));
+    }
+  };
+
   return (
     <CardContent>
       <div className="flex flex-col items-center gap-3 py-4 text-center">
-        {state === 'loading' && (
+        {state === 'loading' && !token && email && (
+          <>
+            <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-full">
+              <ShieldCheck className="text-primary h-7 w-7" />
+            </div>
+            <p className="font-medium">Enter the code from your email</p>
+            <Input inputMode="numeric" maxLength={4} placeholder="4-digit code" value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))} />
+            <Button className="mt-2 w-full" disabled={otp.length !== 4} onClick={submitOtp}>Verify email</Button>
+          </>
+        )}
+        {state === 'loading' && token && (
           <>
             <div className="bg-primary/10 flex h-14 w-14 items-center justify-center rounded-full">
               <ShieldCheck className="text-primary h-7 w-7 animate-pulse" />
