@@ -619,6 +619,13 @@ export class CoursesController {
     return this.courseService.deleteCourseResource(id, user);
   }
 
+  @Delete('courses/resources/:id')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Delete a course resource (legacy path)' })
+  deleteCourseResourceLegacy(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.courseService.deleteCourseResource(id, user);
+  }
+
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('test')
   @Roles(Role.ADMIN, Role.TEACHER)
