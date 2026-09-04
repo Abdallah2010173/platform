@@ -12,7 +12,35 @@ interface LocaleContextValue {
   setLocale: (locale: Locale) => void;
   toggleLocale: () => void;
   isArabic: boolean;
+  t: (text: string) => string;
 }
+
+const translations: Record<string, string> = {
+  Menu: 'القائمة',
+  General: 'عام',
+  Dashboard: 'لوحة التحكم',
+  'My Courses': 'كورساتي',
+  Instructors: 'المدرسون',
+  'Live Classes': 'الحصص المباشرة',
+  Assignments: 'الواجبات',
+  Exams: 'الاختبارات',
+  Surveys: 'الاستبيانات',
+  Grades: 'الدرجات',
+  Schedule: 'الجدول',
+  Messages: 'الرسائل',
+  Certificates: 'الشهادات',
+  Profile: 'الملف الشخصي',
+  Settings: 'الإعدادات',
+  Help: 'المساعدة',
+  Logout: 'تسجيل الخروج',
+  Courses: 'الكورسات',
+  Categories: 'التصنيفات',
+  Students: 'الطلاب',
+  Analytics: 'التحليلات',
+  Availability: 'الأوقات المتاحة',
+  Users: 'المستخدمون',
+  Meetings: 'الاجتماعات',
+};
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 
@@ -55,6 +83,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       },
       toggleLocale: () => setLocaleState((current) => (current === 'ar' ? 'en' : 'ar')),
       isArabic: locale === 'ar',
+      t: (text) => locale === 'ar' ? translations[text] ?? text : text,
     }),
     [locale],
   );

@@ -539,6 +539,18 @@ export const useUploadCourseResource = (courseId: string) => {
   });
 };
 
+export const useAddCourseResource = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => courseApi.addCourseResource(courseId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      toast.success('Resource uploaded');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useUpdateCourseResource = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({

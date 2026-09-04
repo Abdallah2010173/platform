@@ -7,11 +7,13 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth/protected-route';
 import { getNavForRole } from '@/lib/navigation';
+import { useLocale } from '@/lib/i18n';
 
 export function Sidebar() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const pathname = usePathname();
   const { user } = useAuth();
+  const { t } = useLocale();
 
   const sections = getNavForRole(user?.role);
 
@@ -35,7 +37,7 @@ export function Sidebar() {
         {sections.map((section) => (
           <div key={section.label}>
             <p className="text-muted-foreground mb-2 text-[10px] font-medium uppercase tracking-wider">
-              {section.label}
+              {t(section.label)}
             </p>
             <nav className="space-y-0.5">
               {section.items.map((item) => {
@@ -56,7 +58,7 @@ export function Sidebar() {
                     )}
                   >
                     <item.icon className="h-4 w-4" />
-                    <span className="text-sm">{item.label}</span>
+                    <span className="text-sm">{t(item.label)}</span>
                     {item.badge && (
                       <span className="bg-primary text-primary-foreground ml-auto animate-pulse rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
                         {item.badge}

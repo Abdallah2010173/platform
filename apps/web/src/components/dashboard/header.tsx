@@ -32,7 +32,7 @@ export function Header({ title, description, actions }: HeaderProps) {
   const { user } = useAuth();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
-  const { locale, setLocale } = useLocale();
+  const { locale, setLocale, t } = useLocale();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   const handleLogout = () => {
@@ -84,7 +84,7 @@ export function Header({ title, description, actions }: HeaderProps) {
             onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
             aria-label="Toggle language"
           >
-            {locale === 'ar' ? 'EN' : 'AR'}
+            {locale === 'ar' ? 'English' : 'العربية'}
           </Button>
 
           <NotificationCenter />
@@ -120,17 +120,17 @@ export function Header({ title, description, actions }: HeaderProps) {
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Log out of Global Math?</DialogTitle>
+            <DialogTitle>{locale === 'ar' ? 'تسجيل الخروج من Global Math؟' : 'Log out of Global Math?'}</DialogTitle>
             <DialogDescription>
-              Your current session will be closed on this device.
+              {locale === 'ar' ? 'سيتم إغلاق جلستك الحالية على هذا الجهاز.' : 'Your current session will be closed on this device.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setLogoutOpen(false)}>
-              Cancel
+              {locale === 'ar' ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button type="button" variant="destructive" onClick={confirmLogout}>
-              Log out
+              {t('Logout')}
             </Button>
           </DialogFooter>
         </DialogContent>

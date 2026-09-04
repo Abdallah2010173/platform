@@ -279,6 +279,8 @@ export const courseApi = {
     });
     return getApiData(response);
   },
+  addCourseResource: async (courseId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/courses/courses/${courseId}/resources`, data)),
   updateCourseResource: async (id: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.patch(`/courses/resources/${id}`, data)),
   deleteCourseResource: async (id: string) =>
