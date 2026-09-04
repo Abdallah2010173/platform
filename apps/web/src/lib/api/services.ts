@@ -280,11 +280,15 @@ export const courseApi = {
     return getApiData(response);
   },
   addCourseResource: async (courseId: string, data: Record<string, unknown>) =>
-    getApiData(await apiClient.post(`/courses/courses/${courseId}/resources`, data)),
+    getApiData(await apiClient.post(`/courses/${courseId}/resources`, data)),
   updateCourseResource: async (id: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.patch(`/courses/resources/${id}`, data)),
   deleteCourseResource: async (id: string) =>
-    getApiData(await apiClient.delete(`/courses/resources/${id}`)),
+    getApiData(await apiClient.delete(`/courses/resources/${id}`).catch(async (error: unknown) => {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      if (status !== 404) throw error;
+      return apiClient.delete(`/courses/courses/resources/${id}`);
+    })),
   deleteLessonVideo: async (videoId: string) =>
     getApiData(await apiClient.delete(`/videos/${videoId}`)),
   createCourse: async (data: Record<string, unknown>) =>

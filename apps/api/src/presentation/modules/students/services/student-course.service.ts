@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { EnrollmentStatus } from '@platform/database';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { CourseAccessService } from '../../courses/services/course-access.service';
 import { StudentHelper, AuthenticatedUser } from '../student.helper';
@@ -15,10 +16,10 @@ export class StudentCourseService {
     user: AuthenticatedUser,
     status?: string,
     search?: string,
-  ): Promise<Record<string, any>[]> {
+  ): Promise<Record<string, unknown>[]> {
     const studentId = await this.studentHelper.getStudentId(user);
 
-    const statusFilter = status === 'ALL' || !status ? {} : { status: status as any };
+    const statusFilter = status === 'ALL' || !status ? {} : { status: status as EnrollmentStatus };
 
     const where = {
       studentId,
@@ -66,7 +67,7 @@ export class StudentCourseService {
     }));
   }
 
-  async getCourseDetail(user: AuthenticatedUser, courseId: string): Promise<Record<string, any>> {
+  async getCourseDetail(user: AuthenticatedUser, courseId: string): Promise<Record<string, unknown>> {
     const studentId = await this.studentHelper.getStudentId(user);
 
     const enrollment = await this.prisma.courseStudent.findUnique({
@@ -278,7 +279,7 @@ export class StudentCourseService {
     user: AuthenticatedUser,
     courseId: string,
     lessonId: string,
-  ): Promise<Record<string, any>> {
+  ): Promise<Record<string, unknown>> {
     const studentId = await this.studentHelper.getStudentId(user);
 
     const enrollment = await this.prisma.courseStudent.findUnique({
@@ -391,7 +392,7 @@ export class StudentCourseService {
     return { success: true, progress };
   }
 
-  async getFavorites(user: AuthenticatedUser): Promise<Record<string, any>[]> {
+  async getFavorites(user: AuthenticatedUser): Promise<Record<string, unknown>[]> {
     const studentId = await this.studentHelper.getStudentId(user);
 
     // Favorites are tracked via the isFavorite flag on the enrollment

@@ -1151,7 +1151,9 @@ export class CourseService {
     });
     if (!resource) throw new NotFoundException('Resource not found');
     await this.assertAccess(resource.courseId, user);
-    await this.prisma.courseResource.update({ where: { id }, data: { deletedAt: new Date() } });
+    if (!resource.deletedAt) {
+      await this.prisma.courseResource.update({ where: { id }, data: { deletedAt: new Date() } });
+    }
     return { success: true };
   }
 
