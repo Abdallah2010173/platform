@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTeacherProfile, useUpdateTeacherProfile } from '@/lib/api/hooks';
 import { LoadingState } from '@/components/dashboard/data-states';
+import { ProfileImageUpload } from '@/components/profile-image-upload';
 
 const profileSchema = z.object({
   firstName: z.string().optional(),
@@ -72,11 +73,15 @@ export default function TeacherProfilePage() {
                 {String(user.lastName ?? '').charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="font-medium">
                 {String(user.firstName ?? '')} {String(user.lastName ?? '')}
               </p>
               <p className="text-muted-foreground text-sm">{String(user.email ?? '')}</p>
+              <ProfileImageUpload
+                onUploaded={(avatarUrl) => updateProfile.mutate({ avatarUrl })}
+                disabled={updateProfile.isPending}
+              />
             </div>
           </div>
 

@@ -5,8 +5,14 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useTheme, useThemeColor } from '@/components/providers/theme-provider';
 import { THEME_COLORS, type ThemeColor } from '@/lib/theme-settings';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProfileImageUpload } from '@/components/profile-image-upload';
+import { useAuth } from '@/components/auth/protected-route';
+import { useUpdateUser } from '@/lib/api/hooks';
 
 export default function AdminSettingsPage() {
+  const { user } = useAuth();
+  const updateUser = useUpdateUser();
   const { setTheme } = useTheme();
   const { color, setColor } = useThemeColor();
 
@@ -18,6 +24,13 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
+      <Card>
+        <CardHeader><CardTitle>Profile photo</CardTitle></CardHeader>
+        <CardContent className="flex items-center gap-4">
+          <Avatar className="h-16 w-16"><AvatarImage src={user?.avatarUrl ?? ''} /><AvatarFallback>{user?.firstName?.[0] ?? 'A'}</AvatarFallback></Avatar>
+          <ProfileImageUpload onUploaded={(avatarUrl) => user?.id && updateUser.mutate({ id: user.id, data: { avatarUrl } })} disabled={updateUser.isPending} />
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Appearance</CardTitle>

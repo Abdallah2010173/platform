@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState, LoadingState } from '@/components/dashboard/data-states';
 import { API_URL } from '@/lib/api/client';
 import {
@@ -25,7 +26,7 @@ interface VideoItem { id: string; title?: string; url?: string }
 interface Lesson { id: string; title: string; videos?: VideoItem[] }
 interface Chapter { id: string; title: string; lessons?: Lesson[] }
 interface Resource { id: string; title: string; fileUrl?: string | null }
-interface Student { userId: string; name?: string; email: string }
+interface Student { userId: string; name?: string; email: string; avatarUrl?: string | null }
 interface Course { id: string; title: string; chapters?: Chapter[]; resources?: Resource[] }
 
 export default function TeacherCourseContentPage() {
@@ -45,10 +46,14 @@ export default function TeacherCourseContentPage() {
   const [videoForms, setVideoForms] = useState<Record<string, { title: string; url: string }>>({});
   const [uploadLessonId, setUploadLessonId] = useState('');
   const [resourceTitle, setResourceTitle] = useState('');
-  const [studentId, setStudentId] = useState('');
+  const [studentSearch, setStudentSearch] = useState('');
   const course = data as Course | undefined;
   const chapters = course?.chapters ?? [];
   const students = (Array.isArray(studentsData) ? studentsData : []) as Student[];
+  const visibleStudents = students.filter((student) => {
+    const query = studentSearch.trim().toLowerCase();
+    return !query || `${student.name ?? ''} ${student.email}`.toLowerCase().includes(query);
+  });
   const resourceUrl = (url: string) => url.startsWith('http') ? url : `${API_URL.replace(/\/api\/v1$/, '')}${url}`;
 
   const submitChapter = (event: FormEvent) => {
@@ -91,7 +96,7 @@ export default function TeacherCourseContentPage() {
       <div><h1 className="text-xl font-semibold">{course.title}</h1><p className="text-muted-foreground text-sm">Manage lessons, resources, and student access.</p></div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card><CardHeader><CardTitle className="text-base">Course resources</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} placeholder="Resource title" /><label className="border-input hover:bg-muted inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-md border px-3 text-sm"><Upload className="mr-2 h-4 w-4" />{uploadResource.isPending ? 'Uploading...' : 'Upload image, video, or file'}<input className="sr-only" type="file" accept="image/*,video/*,.pdf,.doc,.docx,.zip" disabled={!resourceTitle.trim() || uploadResource.isPending} onChange={submitResourceUpload} /></label><div className="space-y-2">{(course.resources ?? []).map((resource) => <div key={resource.id} className="flex items-center gap-2 rounded-md border p-2 text-sm"><FileText className="h-4 w-4 shrink-0" /><span className="min-w-0 flex-1 truncate">{resource.title}</span>{resource.fileUrl && <a className="text-primary underline" href={resourceUrl(resource.fileUrl)} target="_blank" rel="noreferrer">Open</a>}</div>)}{!(course.resources ?? []).length && <p className="text-muted-foreground text-sm">No resources uploaded yet.</p>}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-base">Free student access</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">Choose a student to access this paid course without payment.</p><div className="flex gap-2"><select className="border-input bg-background h-9 min-w-0 flex-1 rounded-md border px-3 text-sm" value={studentId} onChange={(event) => setStudentId(event.target.value)}><option value="">Choose a student</option>{students.map((student) => <option key={student.userId} value={student.userId}>{student.name || student.email} ({student.email})</option>)}</select><Button type="button" disabled={!studentId || grantAccess.isPending} onClick={() => grantAccess.mutate(studentId)}><Gift className="mr-2 h-4 w-4" />Grant</Button></div></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-base">Free student access</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">All platform students are shown here. Choose one to access this paid course without payment.</p><Input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Search students by name or email" /><div className="max-h-64 space-y-2 overflow-y-auto pr-1">{visibleStudents.map((student) => <div key={student.userId} className="flex items-center gap-3 rounded-md border p-2"><Avatar className="h-8 w-8"><AvatarImage src={student.avatarUrl ?? ''} alt={student.name ?? student.email} /><AvatarFallback>{(student.name ?? student.email).slice(0, 1).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{student.name || 'Unnamed student'}</p><p className="text-muted-foreground truncate text-xs">{student.email}</p></div><Button type="button" size="sm" disabled={grantAccess.isPending} onClick={() => grantAccess.mutate(student.userId)}><Gift className="mr-1.5 h-4 w-4" />Free access</Button></div>)}{visibleStudents.length === 0 && <p className="text-muted-foreground py-4 text-center text-sm">No platform students found.</p>}</div></CardContent></Card>
       </div>
       <Card><CardHeader><CardTitle className="text-base">Add chapter</CardTitle></CardHeader><CardContent><form onSubmit={submitChapter} className="flex gap-2"><Input value={chapterTitle} onChange={(event) => setChapterTitle(event.target.value)} placeholder="Chapter title" /><Button type="submit" disabled={addChapter.isPending}><Plus className="mr-2 h-4 w-4" />Add chapter</Button></form></CardContent></Card>
       <Card><CardHeader><CardTitle className="text-base">Upload lesson video</CardTitle></CardHeader><CardContent className="flex flex-col gap-2 sm:flex-row"><select className="border-input bg-background h-9 rounded-md border px-3 text-sm" value={uploadLessonId} onChange={(event) => setUploadLessonId(event.target.value)}><option value="">Choose a lesson</option>{chapters.flatMap((chapter) => (chapter.lessons ?? []).map((lesson) => <option key={lesson.id} value={lesson.id}>{chapter.title} / {lesson.title}</option>))}</select><label className="border-input hover:bg-muted inline-flex h-9 cursor-pointer items-center justify-center rounded-md border px-3 text-sm"><Video className="mr-2 h-4 w-4" />{uploadVideo.isPending ? 'Uploading...' : 'Choose video'}<input className="sr-only" type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime" disabled={!uploadLessonId || uploadVideo.isPending} onChange={submitLessonUpload} /></label></CardContent></Card>

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Search, Pencil, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Search, Pencil, Trash2, Plus, Eye, EyeOff, FolderOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,6 +100,7 @@ type ModalState = { type: 'create' } | { type: 'edit'; course: CourseItem } | nu
 
 export default function AdminCoursesPage() {
   const pathname = usePathname();
+  const router = useRouter();
   const contentBasePath = pathname.startsWith('/teacher') ? '/teacher/courses' : '/admin/courses';
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -166,7 +167,13 @@ export default function AdminCoursesPage() {
     }
 
     if (modal.type === 'create') {
-      createCourse.mutate(payload, { onSuccess: () => setModal(null) });
+      createCourse.mutate(payload, {
+        onSuccess: (createdCourse) => {
+          setModal(null);
+          const courseId = (createdCourse as { id?: string })?.id;
+          if (courseId) router.push(`${contentBasePath}/${courseId}`);
+        },
+      });
     } else {
       updateCourse.mutate(
         { id: modal.course.id, data: payload },
@@ -268,9 +275,10 @@ export default function AdminCoursesPage() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" aria-label="Manage course content" asChild>
+                        <Button variant="outline" size="sm" aria-label="Manage course content" asChild>
                           <Link href={`${contentBasePath}/${course.id}`}>
-                            <Plus className="h-4 w-4" />
+                            <FolderOpen className="mr-1.5 h-4 w-4" />
+                            Content
                           </Link>
                         </Button>
                         <Button

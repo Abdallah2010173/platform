@@ -257,6 +257,7 @@ this.prisma.user.findMany({
       dto.firstName !== undefined ||
       dto.lastName !== undefined ||
       dto.displayName !== undefined ||
+      dto.avatarUrl !== undefined ||
       dto.phone !== undefined ||
       dto.bio !== undefined ||
       dto.timezone !== undefined ||
@@ -271,6 +272,7 @@ this.prisma.user.findMany({
           firstName: dto.firstName,
           lastName: dto.lastName,
           displayName: dto.displayName,
+          avatarUrl: dto.avatarUrl,
           phone: dto.phone,
           bio: dto.bio,
           timezone: dto.timezone,
