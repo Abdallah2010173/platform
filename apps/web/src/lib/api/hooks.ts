@@ -21,6 +21,19 @@ export const useStudentCourses = (params?: Record<string, string>) =>
     queryFn: () => studentApi.courses(params),
   });
 
+export const useCompleteStudentLesson = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (lessonId: string) => studentApi.completeLesson(courseId, lessonId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student', 'course', courseId] });
+      qc.invalidateQueries({ queryKey: ['student', 'courses'] });
+      toast.success('Lesson completed');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useStudentCourseDetail = (courseId: string) =>
   useQuery({
     queryKey: ['student', 'course', courseId],

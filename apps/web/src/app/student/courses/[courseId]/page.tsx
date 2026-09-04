@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, BookOpen, CheckCircle2, FileText, PlayCircle, Video } from 'lucide-react';
+import { ArrowLeft, BookOpen, FileText, PlayCircle, Video } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState, LoadingState } from '@/components/dashboard/data-states';
 import { API_URL } from '@/lib/api/client';
-import { useStudentCourseDetail } from '@/lib/api/hooks';
+import { useCompleteStudentLesson, useStudentCourseDetail } from '@/lib/api/hooks';
 import { useParams } from 'next/navigation';
 
 interface Lesson {
@@ -19,6 +19,10 @@ interface Lesson {
   hasPdf?: boolean;
   hasAttachments?: boolean;
   videos?: { id: string; title?: string | null; url: string; source?: string | null }[];
+  isCompleted?: boolean;
+  pdfs?: { id: string; title: string; url?: string | null }[];
+  attachments?: { id: string; title: string; fileUrl?: string | null; fileName?: string | null }[];
+  resources?: { id: string; title: string; url?: string | null }[];
 }
 
 interface Chapter {
@@ -44,6 +48,7 @@ interface StudentCourseDetail {
 export default function StudentCourseDetailPage() {
   const params = useParams<{ courseId: string }>();
   const { data, isLoading, isError } = useStudentCourseDetail(params.courseId);
+  const completeLesson = useCompleteStudentLesson(params.courseId);
   const detail = data as StudentCourseDetail | undefined;
 
   if (isLoading) return <LoadingState label="Loading course content..." />;
@@ -82,7 +87,7 @@ export default function StudentCourseDetailPage() {
 
       {resources.length > 0 && <Card><CardHeader><CardTitle className="text-base">Course materials</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{resources.map((resource) => { const isImage = resource.mimeType?.startsWith('image/') || resource.type === 'IMAGE'; const url = resource.fileUrl ? resourceUrl(resource.fileUrl) : ''; return <a key={resource.id} href={url || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted">{isImage && url ? <Image src={url} alt={resource.title} width={48} height={48} unoptimized className="h-12 w-12 rounded-md object-cover" /> : <div className="bg-primary/10 flex h-9 w-9 items-center justify-center rounded-md"><FileText className="text-primary h-4 w-4" /></div>}<div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{resource.title}</p><p className="text-muted-foreground text-xs">{isImage ? 'Image' : resource.type ?? 'File'}</p></div><span className="text-primary text-xs">Open</span></a>; })}</CardContent></Card>}
 
-      {chapters.length === 0 ? <EmptyState title="No lessons yet" description="This course does not have published lessons yet." /> : <div className="space-y-4">{chapters.map((chapter, chapterIndex) => <Card key={chapter.id}><CardHeader><CardTitle className="text-base">Chapter {chapterIndex + 1}: {chapter.title}</CardTitle></CardHeader><CardContent className="space-y-2">{(chapter.lessons ?? []).map((lesson, lessonIndex) => <div key={lesson.id} className="rounded-lg border p-3"><div className="flex items-center gap-3"><span className="text-muted-foreground w-6 text-sm">{lessonIndex + 1}</span><div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md">{lesson.hasVideo ? <Video className="text-primary h-4 w-4" /> : <FileText className="text-primary h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="font-medium">{lesson.title}</p><p className="text-muted-foreground text-xs">{lesson.durationMinutes ? `${lesson.durationMinutes} minutes` : 'Lesson content'}</p></div><div className="flex items-center gap-2">{lesson.hasVideo && <Badge variant="outline"><PlayCircle className="mr-1 h-3 w-3" />Video</Badge>}{lesson.hasPdf && <Badge variant="outline"><FileText className="mr-1 h-3 w-3" />PDF</Badge>}{lesson.hasAttachments && <Badge variant="outline">Files</Badge>}<CheckCircle2 className="text-muted-foreground h-4 w-4" /></div></div>{lesson.videos?.map((video) => { const youtubeUrl = getYouTubeEmbedUrl(video.url); return <div key={video.id} className="mt-3 space-y-2"><p className="text-sm font-medium">{video.title || 'Lesson video'}</p>{youtubeUrl ? <iframe title={video.title || 'Lesson video'} src={youtubeUrl} className="aspect-video w-full rounded-md" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <video controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={video.url}>Your browser does not support video playback.</video>}</div>; })}</div>)}{!(chapter.lessons ?? []).length && <p className="text-muted-foreground text-sm">No lessons in this chapter.</p>}</CardContent></Card>)}</div>}
+      {chapters.length === 0 ? <EmptyState title="No lessons yet" description="This course does not have published lessons yet." /> : <div className="space-y-4">{chapters.map((chapter, chapterIndex) => <Card key={chapter.id}><CardHeader><CardTitle className="text-base">Chapter {chapterIndex + 1}: {chapter.title}</CardTitle></CardHeader><CardContent className="space-y-2">{(chapter.lessons ?? []).map((lesson, lessonIndex) => <div key={lesson.id} className="rounded-lg border p-3"><div className="flex items-center gap-3"><span className="text-muted-foreground w-6 text-sm">{lessonIndex + 1}</span><div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md">{lesson.hasVideo ? <Video className="text-primary h-4 w-4" /> : <FileText className="text-primary h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="font-medium">{lesson.title}</p><p className="text-muted-foreground text-xs">{lesson.durationMinutes ? `${lesson.durationMinutes} minutes` : 'Lesson content'}</p></div><div className="flex items-center gap-2">{lesson.hasVideo && <Badge variant="outline"><PlayCircle className="mr-1 h-3 w-3" />Video</Badge>}{lesson.hasPdf && <Badge variant="outline"><FileText className="mr-1 h-3 w-3" />PDF</Badge>}{lesson.hasAttachments && <Badge variant="outline">Files</Badge>}<Button type="button" size="sm" variant={lesson.isCompleted ? 'secondary' : 'outline'} disabled={lesson.isCompleted || completeLesson.isPending} onClick={() => completeLesson.mutate(lesson.id)}>{lesson.isCompleted ? 'Completed' : 'Complete lesson'}</Button></div></div>{lesson.videos?.map((video) => { const youtubeUrl = getYouTubeEmbedUrl(video.url); return <div key={video.id} className="mt-3 space-y-2"><p className="text-sm font-medium">{video.title || 'Lesson video'}</p>{youtubeUrl ? <iframe title={video.title || 'Lesson video'} src={youtubeUrl} className="aspect-video w-full rounded-md" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <video controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={video.url}>Your browser does not support video playback.</video>}</div>; })}<div className="mt-3 grid gap-2 sm:grid-cols-2">{lesson.pdfs?.map((pdf) => pdf.url && <a key={pdf.id} href={pdf.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm hover:bg-muted"><FileText className="text-primary h-4 w-4" />{pdf.title}</a>)}{lesson.attachments?.map((attachment) => attachment.fileUrl && <a key={attachment.id} href={resourceUrl(attachment.fileUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-md border p-2 text-sm hover:bg-muted"><FileText className="text-primary h-4 w-4" />{attachment.title || attachment.fileName}</a>)}</div></div>)}{!(chapter.lessons ?? []).length && <p className="text-muted-foreground text-sm">No lessons in this chapter.</p>}</CardContent></Card>)}</div>}
     </div>
   );
 }

@@ -137,8 +137,8 @@ export function Header({ title, description, actions }: HeaderProps) {
       </Dialog>
 
       <div>
-        <h1 className="text-foreground mb-1 text-xl font-bold md:text-2xl lg:text-3xl">{title}</h1>
-        <p className="text-muted-foreground text-xs md:text-sm">{description}</p>
+        <h1 className="text-foreground mb-1 text-xl font-bold md:text-2xl lg:text-3xl">{t(title)}</h1>
+        <p className="text-muted-foreground text-xs md:text-sm">{t(description)}</p>
       </div>
 
       {actions && <div className="flex flex-col gap-2 sm:flex-row">{actions}</div>}

@@ -29,6 +29,7 @@ export class StudentCourseService {
     const enrollments = await this.prisma.courseStudent.findMany({
       where,
       include: {
+        lessonProgress: true,
         course: {
           include: {
             category: true,
@@ -73,6 +74,7 @@ export class StudentCourseService {
         courseId_studentId: { courseId, studentId },
       },
       include: {
+        lessonProgress: true,
         course: {
           include: {
             category: true,
@@ -177,6 +179,7 @@ export class StudentCourseService {
             isFree: l.isFree,
             isPublished: l.isPublished,
             hasVideo: l.videos.length > 0,
+            isCompleted: false,
             videos: l.videos.map((video) => ({
               id: video.id,
               title: video.title,
@@ -186,6 +189,9 @@ export class StudentCourseService {
             })),
             hasPdf: l.pdfs.length > 0,
             hasAttachments: l.attachments.length > 0,
+            pdfs: l.pdfs.map((pdf) => ({ id: pdf.id, title: pdf.title, url: pdf.url })),
+            attachments: l.attachments.map((attachment) => ({ id: attachment.id, title: attachment.title, fileUrl: attachment.fileUrl, fileName: attachment.fileName })),
+            resources: l.resources.map((resource) => ({ id: resource.id, title: resource.title, url: resource.url })),
           })),
         })),
       };
@@ -250,6 +256,7 @@ export class StudentCourseService {
           isFree: l.isFree,
           isPublished: l.isPublished,
           hasVideo: l.videos.length > 0,
+          isCompleted: enrollment.lessonProgress.some((progress) => progress.lessonId === l.id && progress.isCompleted),
           videos: l.videos.map((video) => ({
             id: video.id,
             title: video.title,
@@ -259,6 +266,9 @@ export class StudentCourseService {
           })),
           hasPdf: l.pdfs.length > 0,
           hasAttachments: l.attachments.length > 0,
+          pdfs: l.pdfs.map((pdf) => ({ id: pdf.id, title: pdf.title, url: pdf.url })),
+          attachments: l.attachments.map((attachment) => ({ id: attachment.id, title: attachment.title, fileUrl: attachment.fileUrl, fileName: attachment.fileName })),
+          resources: l.resources.map((resource) => ({ id: resource.id, title: resource.title, url: resource.url })),
         })),
       })),
     };
