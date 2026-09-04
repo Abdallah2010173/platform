@@ -20,6 +20,13 @@ export const ourFileRouter: FileRouter = {
     console.log(`[UploadThing] PDF uploaded: ${file.url}`);
     return { url: file.url, name: file.name, key: file.key };
   }),
+
+  videoUploader: upload({
+    video: { maxFileSize: '512MB', maxFileCount: 1 },
+  }).onUploadComplete(({ file }) => {
+    console.log(`[UploadThing] Video uploaded: ${file.url}`);
+    return { url: file.url, name: file.name, key: file.key };
+  }),
 };
 
 export type OurFileRouter = typeof ourFileRouter;

@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState, LoadingState } from '@/components/dashboard/data-states';
 import { API_URL } from '@/lib/api/client';
+import { generateUploadButton } from '@uploadthing/react';
+import type { OurFileRouter } from '@/app/api/uploadthing/core';
 import {
   useAddChapter,
   useAddLesson,
@@ -21,7 +23,6 @@ import {
   useGrantCourseAccess,
   useRevokeCourseAccess,
   useUploadCourseResource,
-  useUploadLessonVideo,
   useUpdateCourseResource,
 } from '@/lib/api/hooks';
 
@@ -32,6 +33,8 @@ interface Resource { id: string; title: string; type?: string | null; mimeType?:
 interface Student { userId: string; name?: string; email: string; avatarUrl?: string | null; enrolledCourses?: { id: string; accessType?: string; status?: string }[] }
 interface Course { id: string; title: string; chapters?: Chapter[]; resources?: Resource[] }
 
+const VideoUploadButton = generateUploadButton<OurFileRouter>();
+
 export default function TeacherCourseContentPage() {
   const params = useParams<{ courseId: string }>();
   const courseId = params.courseId;
@@ -40,7 +43,6 @@ export default function TeacherCourseContentPage() {
   const addLesson = useAddLesson(courseId);
   const addVideo = useAddLessonVideo(courseId);
   const deleteVideo = useDeleteLessonVideo(courseId);
-  const uploadVideo = useUploadLessonVideo(courseId);
   const uploadResource = useUploadCourseResource(courseId);
   const updateResource = useUpdateCourseResource(courseId);
   const deleteResource = useDeleteCourseResource(courseId);
@@ -89,10 +91,10 @@ export default function TeacherCourseContentPage() {
     addVideo.mutate({ lessonId, data: { title: form.title.trim() || undefined, url: form.url.trim() } }, { onSuccess: () => setVideoForms({ ...videoForms, [lessonId]: { title: '', url: '' } }) });
   };
 
-  const submitLessonUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && uploadLessonId) uploadVideo.mutate({ lessonId: uploadLessonId, file });
-    event.target.value = '';
+  const handleUploadedVideo = (files: Array<{ url: string; name?: string }>) => {
+    const uploaded = files[0];
+    if (!uploaded || !uploadLessonId) return;
+    addVideo.mutate({ lessonId: uploadLessonId, data: { title: uploaded.name?.replace(/\.[^/.]+$/, ''), url: uploaded.url, source: 'UPLOAD' } });
   };
 
   const submitResourceUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +135,7 @@ export default function TeacherCourseContentPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">Files and resources</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} placeholder="Resource title (optional)" /><input ref={resourceInputRef} className="sr-only" type="file" accept="video/*,.pdf,.doc,.docx,.zip" disabled={uploadResource.isPending} onChange={submitResourceUpload} /><Button type="button" variant="outline" className="w-full" disabled={uploadResource.isPending} onClick={() => resourceInputRef.current?.click()}><Upload className="mr-2 h-4 w-4" />{uploadButtonLabel}</Button><div className="space-y-2">{fileResources.map((resource) => renderResource(resource, false))}{!fileResources.length && <p className="text-muted-foreground text-sm">No files uploaded yet.</p>}</div></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Images</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={imageTitle} onChange={(event) => setImageTitle(event.target.value)} placeholder="Image title (optional)" /><input ref={imageInputRef} className="sr-only" type="file" accept="image/*" disabled={uploadResource.isPending} onChange={submitImageUpload} /><Button type="button" variant="outline" className="w-full" disabled={uploadResource.isPending} onClick={() => imageInputRef.current?.click()}><FileImage className="mr-2 h-4 w-4" />{uploadResource.isPending ? 'Uploading...' : 'Choose image'}</Button><div className="space-y-2">{imageResources.map((resource) => renderResource(resource, true))}{!imageResources.length && <p className="text-muted-foreground text-sm">No images uploaded yet.</p>}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-base">Lesson videos</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">Choose a lesson, then upload its video.</p><select className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm" value={uploadLessonId} onChange={(event) => setUploadLessonId(event.target.value)}><option value="">Choose a lesson</option>{chapters.flatMap((chapter) => (chapter.lessons ?? []).map((lesson) => <option key={lesson.id} value={lesson.id}>{chapter.title} / {lesson.title}</option>))}</select><label className="border-input hover:bg-muted inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-md border px-3 text-sm"><Video className="mr-2 h-4 w-4" />{uploadVideo.isPending ? 'Uploading...' : 'Choose video'}<input className="sr-only" type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime" disabled={!uploadLessonId || uploadVideo.isPending} onChange={submitLessonUpload} /></label></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-base">Lesson videos</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">Choose a lesson, then upload its video.</p><select className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm" value={uploadLessonId} onChange={(event) => setUploadLessonId(event.target.value)}><option value="">Choose a lesson</option>{chapters.flatMap((chapter) => (chapter.lessons ?? []).map((lesson) => <option key={lesson.id} value={lesson.id}>{chapter.title} / {lesson.title}</option>))}</select>{uploadLessonId ? <VideoUploadButton endpoint="videoUploader" onClientUploadComplete={handleUploadedVideo} onUploadError={(error) => window.alert(`Video upload failed: ${error.message}`)} appearance={{ button: 'w-full h-10 border border-input rounded-md bg-background text-sm', allowedContent: 'text-muted-foreground text-xs' }} content={{ button: 'Choose video' }} /> : <Button type="button" variant="outline" className="w-full" disabled><Video className="mr-2 h-4 w-4" />Choose a lesson first</Button>}</CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Free student access</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">All platform students are shown here. Choose one to access this paid course without payment.</p><Input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Search students by name or email" /><div className="max-h-64 space-y-2 overflow-y-auto pr-1">{visibleStudents.map((student) => { const enrollment = student.enrolledCourses?.find((item) => item.id === courseId); const hasGift = enrollment?.status === 'ACTIVE' && (enrollment.accessType === 'TEACHER_GRANTED' || enrollment.accessType === 'ADMIN_GRANTED'); return <div key={student.userId} className="flex items-center gap-3 rounded-md border p-2"><Avatar className="h-8 w-8"><AvatarImage src={student.avatarUrl ?? ''} alt={student.name ?? student.email} /><AvatarFallback>{(student.name ?? student.email).slice(0, 1).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{student.name || 'Unnamed student'}</p><p className="text-muted-foreground truncate text-xs">{student.email}</p></div>{hasGift ? <Button type="button" size="sm" variant="outline" disabled={revokeAccess.isPending} onClick={() => revokeAccess.mutate(student.userId)}><Gift className="mr-1.5 h-4 w-4" />Cancel gift</Button> : <Button type="button" size="sm" disabled={grantAccess.isPending} onClick={() => grantAccess.mutate(student.userId)}><Gift className="mr-1.5 h-4 w-4" />Free access</Button>}</div>; })}{visibleStudents.length === 0 && <p className="text-muted-foreground py-4 text-center text-sm">No platform students found.</p>}</div></CardContent></Card>
       </div>
       <Card><CardHeader><CardTitle className="text-base">Add chapter</CardTitle></CardHeader><CardContent><form onSubmit={submitChapter} className="flex gap-2"><Input value={chapterTitle} onChange={(event) => setChapterTitle(event.target.value)} placeholder="Chapter title" /><Button type="submit" disabled={addChapter.isPending}><Plus className="mr-2 h-4 w-4" />Add chapter</Button></form></CardContent></Card>
