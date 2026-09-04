@@ -520,7 +520,7 @@ export class CoursesController {
     return this.courseService.addLessonResource(lessonId, dto, user);
   }
 
-  @Delete('resources/:id')
+  @Delete('lessons/resources/:id')
   @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Delete a lesson resource' })
   deleteLessonResource(@Param('id') id: string, @CurrentUser() user: AuthUser) {

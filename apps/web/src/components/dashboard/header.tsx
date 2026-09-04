@@ -58,9 +58,9 @@ export function Header({ title, description, actions }: HeaderProps) {
           <Image
             src="/logo.png"
             alt="Global Math"
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-full object-cover shadow-sm"
+            width={64}
+            height={64}
+            className="h-16 w-16 rounded-full object-cover shadow-sm"
           />
 
           <div className="text-muted-foreground hidden items-center gap-2 text-sm sm:flex">

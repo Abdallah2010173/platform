@@ -21,6 +21,13 @@ export const useStudentCourses = (params?: Record<string, string>) =>
     queryFn: () => studentApi.courses(params),
   });
 
+export const useStudentCourseDetail = (courseId: string) =>
+  useQuery({
+    queryKey: ['student', 'course', courseId],
+    queryFn: () => studentApi.courseDetail(courseId),
+    enabled: Boolean(courseId),
+  });
+
 export const usePublishedCourses = () =>
   useQuery({
     queryKey: ['courses', 'published'],
@@ -527,6 +534,30 @@ export const useUploadCourseResource = (courseId: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['course', courseId] });
       toast.success('Course resource uploaded');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useUpdateCourseResource = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => courseApi.updateCourseResource(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      toast.success('Resource updated');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteCourseResource = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => courseApi.deleteCourseResource(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      toast.success('Resource deleted');
     },
     onError: (e) => toast.error(formatApiError(e)),
   });

@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 
 interface CourseItem {
   id: string;
+  courseId?: string;
   title: string;
   status: string;
   progress?: number;
@@ -70,7 +71,7 @@ export default function StudentCoursesPage() {
                   </div>
                 )}
                 <Button asChild variant="outline" className="w-full">
-                  <a href={`/student/courses/${course.id}`}>
+                  <a href={`/student/courses/${course.courseId ?? course.id}`}>
                     <PlayCircle className="mr-2 h-4 w-4" /> Continue Learning
                   </a>
                 </Button>

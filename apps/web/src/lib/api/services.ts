@@ -279,6 +279,10 @@ export const courseApi = {
     });
     return getApiData(response);
   },
+  updateCourseResource: async (id: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.patch(`/courses/resources/${id}`, data)),
+  deleteCourseResource: async (id: string) =>
+    getApiData(await apiClient.delete(`/courses/resources/${id}`)),
   deleteLessonVideo: async (videoId: string) =>
     getApiData(await apiClient.delete(`/videos/${videoId}`)),
   createCourse: async (data: Record<string, unknown>) =>
