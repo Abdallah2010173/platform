@@ -170,7 +170,7 @@ const NOTIFICATION_TEMPLATES = [
   {
     name: 'welcome_email',
     type: NotificationType.EMAIL,
-    subject: 'Welcome to Platform LMS 🎓',
+    subject: 'Welcome to Global Math 🎓',
     body: 'Hi {{firstName}}, welcome to the platform! We are excited to have you on board.',
     variables: { firstName: 'string' },
   },
@@ -214,7 +214,7 @@ const NOTIFICATION_TEMPLATES = [
 const GENERAL_SETTINGS = [
   {
     key: 'platform_name',
-    value: 'Platform LMS',
+    value: 'Global Math',
     description: 'Display name of the platform',
     isPublic: true,
   },
@@ -268,7 +268,7 @@ const EMAIL_SETTINGS = [
   { key: 'smtp_port', value: 587, description: 'SMTP port' },
   { key: 'smtp_secure', value: true, description: 'Use TLS for SMTP' },
   { key: 'from_address', value: 'noreply@platform.local', description: 'Default from address' },
-  { key: 'from_name', value: 'Platform LMS', description: 'Default from name' },
+  { key: 'from_name', value: 'Global Math', description: 'Default from name' },
 ];
 
 const ZOOM_SETTINGS = [

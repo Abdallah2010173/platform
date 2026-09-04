@@ -85,6 +85,10 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  RESEND_FROM_EMAIL?: string;
+
+  @IsOptional()
+  @IsString()
   EMAIL_FROM_ADDRESS?: string;
 
   @IsOptional()

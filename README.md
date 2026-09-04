@@ -1,4 +1,4 @@
-# Platform LMS — Enterprise Learning Management System
+# Global Math — Enterprise Learning Management System
 
 Phase 1 foundation: monorepo, authentication architecture, database schema, Docker, and frontend shell.
 

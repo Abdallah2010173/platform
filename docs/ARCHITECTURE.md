@@ -1,8 +1,8 @@
-# Architecture — Platform LMS
+# Architecture — Global Math
 
 ## Overview
 
-Platform LMS follows **Clean Architecture** with a monorepo structure. The backend enforces strict layer separation; the frontend uses feature-based organization within the App Router.
+Global Math follows **Clean Architecture** with a monorepo structure. The backend enforces strict layer separation; the frontend uses feature-based organization within the App Router.
 
 ## Monorepo Layout
 

@@ -12,7 +12,9 @@ export class EmailService {
 
   constructor(private readonly configService: ConfigService) {
     this.frontendUrl = this.configService.get<string>('FRONTEND_URL') ?? 'https://platform-web-five.vercel.app';
-    this.fromAddress = this.configService.get<string>('EMAIL_FROM_ADDRESS') ?? 'Platform LMS <noreply@globalmathematics.online>';
+    this.fromAddress = this.configService.get<string>('RESEND_FROM_EMAIL')
+      ?? this.configService.get<string>('EMAIL_FROM_ADDRESS')
+      ?? 'Global Math <auth@globalmathematics.online>';
     this.resendApiKey = this.configService.get<string>('RESEND_API_KEY');
 
     const host = this.configService.get<string>('SMTP_HOST');
@@ -101,7 +103,7 @@ export class EmailService {
         await this.sendWithResend({
           from,
           to: email,
-          subject: 'Verify your Platform LMS email',
+          subject: 'Verify your Global Math email',
           text: `Verify your email using this link: ${verificationUrl}\n\nThis link expires in 24 hours and can be used once.`,
           html: verificationHtml,
         });
@@ -109,7 +111,7 @@ export class EmailService {
         await this.transporter.sendMail({
           from,
           to: email,
-          subject: 'Verify your Platform LMS email',
+          subject: 'Verify your Global Math email',
           text: `Verify your email using this link: ${verificationUrl}\n\nThis link expires in 24 hours and can be used once.`,
           html: verificationHtml,
         });
@@ -135,7 +137,7 @@ export class EmailService {
         await this.sendWithResend({
           from,
           to: email,
-          subject: 'Reset your Platform LMS password',
+          subject: 'Reset your Global Math password',
           text: `Reset your password using this link: ${resetUrl}\n\nThis link expires in 30 minutes and can be used once.`,
           html: resetHtml,
         });
@@ -143,7 +145,7 @@ export class EmailService {
         await this.transporter.sendMail({
           from,
           to: email,
-          subject: 'Reset your Platform LMS password',
+          subject: 'Reset your Global Math password',
           text: `Reset your password using this link: ${resetUrl}\n\nThis link expires in 30 minutes and can be used once.`,
           html: resetHtml,
         });

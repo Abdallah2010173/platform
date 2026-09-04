@@ -70,7 +70,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
 const swaggerConfig = new DocumentBuilder()
-    .setTitle('Platform LMS API')
+    .setTitle('Global Math API')
     .setDescription('Enterprise Learning Management System API')
     .setVersion('1.0')
     .addBearerAuth()
