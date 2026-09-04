@@ -77,6 +77,7 @@ export class StudentCourseService {
           include: {
             category: true,
             subCategory: true,
+            resources: true,
             chapters: {
               include: {
                 lessons: {
@@ -109,6 +110,7 @@ export class StudentCourseService {
         include: {
           category: true,
           subCategory: true,
+            resources: true,
           chapters: {
             include: { lessons: { include: { videos: true, pdfs: true, attachments: true, resources: true }, orderBy: { orderIndex: 'asc' } } },
             orderBy: { sortOrder: 'asc' },
@@ -144,6 +146,14 @@ export class StudentCourseService {
           tags: course.tags,
           learningOutcomes: course.learningOutcomes,
           requirements: course.requirements,
+          resources: course.resources.map((resource) => ({
+            id: resource.id,
+            title: resource.title,
+            type: resource.type,
+            fileUrl: resource.fileUrl,
+            fileName: resource.fileName,
+            mimeType: resource.mimeType,
+          })),
           category: course.category?.name,
           subCategory: course.subCategory?.name,
           teachers: course.teachers.map((ct) => ({
@@ -167,6 +177,13 @@ export class StudentCourseService {
             isFree: l.isFree,
             isPublished: l.isPublished,
             hasVideo: l.videos.length > 0,
+            videos: l.videos.map((video) => ({
+              id: video.id,
+              title: video.title,
+              url: video.url,
+              source: video.source,
+              thumbnailUrl: video.thumbnailUrl,
+            })),
             hasPdf: l.pdfs.length > 0,
             hasAttachments: l.attachments.length > 0,
           })),
@@ -202,6 +219,14 @@ export class StudentCourseService {
         tags: course.tags,
         learningOutcomes: course.learningOutcomes,
         requirements: course.requirements,
+        resources: course.resources.map((resource) => ({
+          id: resource.id,
+          title: resource.title,
+          type: resource.type,
+          fileUrl: resource.fileUrl,
+          fileName: resource.fileName,
+          mimeType: resource.mimeType,
+        })),
         category: course.category?.name,
         subCategory: course.subCategory?.name,
         teachers: course.teachers.map((ct) => ({
@@ -225,6 +250,13 @@ export class StudentCourseService {
           isFree: l.isFree,
           isPublished: l.isPublished,
           hasVideo: l.videos.length > 0,
+          videos: l.videos.map((video) => ({
+            id: video.id,
+            title: video.title,
+            url: video.url,
+            source: video.source,
+            thumbnailUrl: video.thumbnailUrl,
+          })),
           hasPdf: l.pdfs.length > 0,
           hasAttachments: l.attachments.length > 0,
         })),

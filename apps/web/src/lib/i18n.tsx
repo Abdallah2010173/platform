@@ -49,7 +49,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<LocaleContextValue>(
     () => ({
       locale,
-      setLocale: (nextLocale) => setLocaleState(nextLocale),
+      setLocale: (nextLocale) => {
+        setLocaleState(nextLocale);
+        if (typeof window !== 'undefined') window.localStorage.setItem(LOCALE_KEY, nextLocale);
+      },
       toggleLocale: () => setLocaleState((current) => (current === 'ar' ? 'en' : 'ar')),
       isArabic: locale === 'ar',
     }),

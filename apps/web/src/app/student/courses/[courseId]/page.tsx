@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, BookOpen, CheckCircle2, FileText, PlayCircle, Video } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState, LoadingState } from '@/components/dashboard/data-states';
+import { API_URL } from '@/lib/api/client';
 import { useStudentCourseDetail } from '@/lib/api/hooks';
 import { useParams } from 'next/navigation';
 
@@ -16,6 +18,7 @@ interface Lesson {
   hasVideo?: boolean;
   hasPdf?: boolean;
   hasAttachments?: boolean;
+  videos?: { id: string; title?: string | null; url: string; source?: string | null }[];
 }
 
 interface Chapter {
@@ -24,8 +27,16 @@ interface Chapter {
   lessons?: Lesson[];
 }
 
+interface Resource {
+  id: string;
+  title: string;
+  type?: string | null;
+  fileUrl?: string | null;
+  mimeType?: string | null;
+}
+
 interface StudentCourseDetail {
-  course?: { id: string; title: string; description?: string | null; level?: string | null; totalLessons?: number };
+  course?: { id: string; title: string; description?: string | null; level?: string | null; totalLessons?: number; resources?: Resource[] };
   chapters?: Chapter[];
   enrollment?: { progress?: number; status?: string };
 }
@@ -41,6 +52,8 @@ export default function StudentCourseDetailPage() {
   }
 
   const chapters = detail.chapters ?? [];
+  const resources = detail.course.resources ?? [];
+  const resourceUrl = (url: string) => url.startsWith('http') ? url : `${API_URL.replace(/\/api\/v1$/, '')}${url}`;
   const lessonCount = chapters.reduce((total, chapter) => total + (chapter.lessons?.length ?? 0), 0);
 
   return (
@@ -67,7 +80,9 @@ export default function StudentCourseDetailPage() {
         </CardHeader>
       </Card>
 
-      {chapters.length === 0 ? <EmptyState title="No lessons yet" description="This course does not have published lessons yet." /> : <div className="space-y-4">{chapters.map((chapter, chapterIndex) => <Card key={chapter.id}><CardHeader><CardTitle className="text-base">Chapter {chapterIndex + 1}: {chapter.title}</CardTitle></CardHeader><CardContent className="space-y-2">{(chapter.lessons ?? []).map((lesson, lessonIndex) => <div key={lesson.id} className="flex items-center gap-3 rounded-lg border p-3"><span className="text-muted-foreground w-6 text-sm">{lessonIndex + 1}</span><div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md">{lesson.hasVideo ? <Video className="text-primary h-4 w-4" /> : <FileText className="text-primary h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="font-medium">{lesson.title}</p><p className="text-muted-foreground text-xs">{lesson.durationMinutes ? `${lesson.durationMinutes} minutes` : 'Lesson content'}</p></div><div className="flex items-center gap-2">{lesson.hasVideo && <Badge variant="outline"><PlayCircle className="mr-1 h-3 w-3" />Video</Badge>}{lesson.hasPdf && <Badge variant="outline"><FileText className="mr-1 h-3 w-3" />PDF</Badge>}{lesson.hasAttachments && <Badge variant="outline">Files</Badge>}<CheckCircle2 className="text-muted-foreground h-4 w-4" /></div></div>)}{!(chapter.lessons ?? []).length && <p className="text-muted-foreground text-sm">No lessons in this chapter.</p>}</CardContent></Card>)}</div>}
+      {resources.length > 0 && <Card><CardHeader><CardTitle className="text-base">Course materials</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{resources.map((resource) => { const isImage = resource.mimeType?.startsWith('image/') || resource.type === 'IMAGE'; const url = resource.fileUrl ? resourceUrl(resource.fileUrl) : ''; return <a key={resource.id} href={url || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted">{isImage && url ? <Image src={url} alt={resource.title} width={48} height={48} unoptimized className="h-12 w-12 rounded-md object-cover" /> : <div className="bg-primary/10 flex h-9 w-9 items-center justify-center rounded-md"><FileText className="text-primary h-4 w-4" /></div>}<div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{resource.title}</p><p className="text-muted-foreground text-xs">{isImage ? 'Image' : resource.type ?? 'File'}</p></div><span className="text-primary text-xs">Open</span></a>; })}</CardContent></Card>}
+
+      {chapters.length === 0 ? <EmptyState title="No lessons yet" description="This course does not have published lessons yet." /> : <div className="space-y-4">{chapters.map((chapter, chapterIndex) => <Card key={chapter.id}><CardHeader><CardTitle className="text-base">Chapter {chapterIndex + 1}: {chapter.title}</CardTitle></CardHeader><CardContent className="space-y-2">{(chapter.lessons ?? []).map((lesson, lessonIndex) => <div key={lesson.id} className="rounded-lg border p-3"><div className="flex items-center gap-3"><span className="text-muted-foreground w-6 text-sm">{lessonIndex + 1}</span><div className="bg-primary/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md">{lesson.hasVideo ? <Video className="text-primary h-4 w-4" /> : <FileText className="text-primary h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="font-medium">{lesson.title}</p><p className="text-muted-foreground text-xs">{lesson.durationMinutes ? `${lesson.durationMinutes} minutes` : 'Lesson content'}</p></div><div className="flex items-center gap-2">{lesson.hasVideo && <Badge variant="outline"><PlayCircle className="mr-1 h-3 w-3" />Video</Badge>}{lesson.hasPdf && <Badge variant="outline"><FileText className="mr-1 h-3 w-3" />PDF</Badge>}{lesson.hasAttachments && <Badge variant="outline">Files</Badge>}<CheckCircle2 className="text-muted-foreground h-4 w-4" /></div></div>{lesson.videos?.map((video) => <a key={video.id} href={video.url} target="_blank" rel="noreferrer" className="text-primary mt-2 flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm hover:underline"><PlayCircle className="h-4 w-4" />{video.title || 'Watch lesson video'}</a>)}</div>)}{!(chapter.lessons ?? []).length && <p className="text-muted-foreground text-sm">No lessons in this chapter.</p>}</CardContent></Card>)}</div>}
     </div>
   );
 }
