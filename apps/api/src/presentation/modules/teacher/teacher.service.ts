@@ -229,8 +229,10 @@ export class TeacherService {
     studentUserId: string,
     accessType: 'TEACHER_GRANTED' | 'ADMIN_GRANTED' = 'TEACHER_GRANTED',
   ) {
-    const teacherId = await this.teacherHelper.getTeacherId(user);
-    await this.assertCourseAccess(courseId, teacherId);
+    if (user.role !== 'ADMIN') {
+      const teacherId = await this.teacherHelper.getTeacherId(user);
+      await this.assertCourseAccess(courseId, teacherId);
+    }
 
     const student = await this.prisma.student.findUnique({ where: { userId: studentUserId } });
     if (!student) throw new NotFoundException('Student not found');
@@ -262,8 +264,10 @@ export class TeacherService {
   }
 
   async revokeStudentAccess(user: AuthenticatedUser, courseId: string, studentUserId: string) {
-    const teacherId = await this.teacherHelper.getTeacherId(user);
-    await this.assertCourseAccess(courseId, teacherId);
+    if (user.role !== 'ADMIN') {
+      const teacherId = await this.teacherHelper.getTeacherId(user);
+      await this.assertCourseAccess(courseId, teacherId);
+    }
 
     const student = await this.prisma.student.findUnique({ where: { userId: studentUserId } });
     if (!student) throw new NotFoundException('Student not found');
@@ -334,7 +338,9 @@ export class TeacherService {
   }
 
   async getAllStudents(user: AuthenticatedUser, search?: string) {
-    await this.teacherHelper.getTeacherId(user);
+    if (user.role !== 'ADMIN') {
+      await this.teacherHelper.getTeacherId(user);
+    }
 
     const q = search?.trim();
     const students = await this.prisma.student.findMany({

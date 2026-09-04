@@ -9,6 +9,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ParsePaginationPipe } from './presentation/common/pipes/parse-pagination.pipe';
+import express from 'express';
+import { join } from 'node:path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -37,6 +39,7 @@ async function bootstrap() {
 
   app.use(helmet());
   app.use(cookieParser());
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   app.enableCors({
     origin: origins.size > 0 ? [...origins] : false,

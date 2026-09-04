@@ -1261,7 +1261,7 @@ export class CourseService {
   // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  private async assertAccess(courseId: string, user?: AuthUser) {
+  async assertAccess(courseId: string, user?: AuthUser) {
     const course = await this.prisma.course.findFirst({ where: { id: courseId, deletedAt: null } });
     if (!course) throw new NotFoundException('Course not found');
 

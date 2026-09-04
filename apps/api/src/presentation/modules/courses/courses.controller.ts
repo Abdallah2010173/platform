@@ -42,6 +42,13 @@ import {
   UpdateCourseResourceDto,
   CreateCourseReviewDto,
 } from './dto/courses.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import { UseInterceptors, UploadedFile } from '@nestjs/common';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { ParsePaginationPipe } from '../../common/pipes/parse-pagination.pipe';
 
@@ -538,6 +545,58 @@ export class CoursesController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.courseService.addCourseResource(courseId, dto, user);
+  }
+
+  @Post('courses/:courseId/resources/upload')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Upload an image, video, or file to a course' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        title: { type: 'string' },
+      },
+      required: ['file', 'title'],
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 500 * 1024 * 1024 },
+      fileFilter: (_request, file, callback) => {
+        const allowed = /^(image|video)\/(jpeg|png|webp|gif|mp4|webm|quicktime)$|^(application\/pdf|application\/zip|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword)$/;
+        callback(null, allowed.test(file.mimetype));
+      },
+    }),
+  )
+  async uploadCourseResource(
+    @Param('courseId') courseId: string,
+    @Body('title') title: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() user: AuthUser,
+  ) {
+    if (!file || !title?.trim()) {
+      throw new BadRequestException('A title and a supported file are required');
+    }
+
+    await this.courseService.assertAccess(courseId, user);
+
+    const extension = extname(file.originalname).toLowerCase();
+    const relativePath = join('course-resources', `${randomUUID()}${extension}`);
+    const uploadRoot = join(process.cwd(), 'uploads');
+    await mkdir(join(uploadRoot, 'course-resources'), { recursive: true });
+    await writeFile(join(uploadRoot, relativePath), file.buffer);
+
+    return this.courseService.addCourseResource(courseId, {
+      title: title.trim(),
+      type: file.mimetype.startsWith('video/') ? 'VIDEO' : file.mimetype.startsWith('image/') ? 'IMAGE' : 'FILE',
+      fileUrl: `/uploads/${relativePath.replaceAll('\\', '/')}`,
+      fileName: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      isExternal: false,
+    }, user);
   }
 
   @Patch('resources/:id')

@@ -520,6 +520,30 @@ export const useUploadLessonVideo = (courseId: string) => {
   });
 };
 
+export const useUploadCourseResource = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ file, title }: { file: File; title: string }) => courseApi.uploadCourseResource(courseId, file, title),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      toast.success('Course resource uploaded');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useGrantCourseAccess = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (studentId: string) => teacherApi.grantCourseAccess(courseId, studentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      toast.success('Free access granted');
+    },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useDeleteLessonVideo = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({

@@ -143,6 +143,10 @@ export const teacherApi = {
     getApiData(await apiClient.get('/teacher/students', { params })),
   allStudents: async (search?: string) =>
     getApiData(await apiClient.get('/teacher/students/all', { params: search ? { search } : undefined })),
+  grantCourseAccess: async (courseId: string, studentId: string) =>
+    getApiData(await apiClient.post(`/teacher/courses/${courseId}/grant-access`, { studentId })),
+  revokeCourseAccess: async (courseId: string, studentId: string) =>
+    getApiData(await apiClient.delete(`/teacher/courses/${courseId}/students/${studentId}/access`)),
   assignments: async (params?: Record<string, string>) =>
     getApiData(await apiClient.get('/teacher/assignments', { params })),
   createAssignment: async (courseId: string, data: Record<string, unknown>) =>
@@ -263,6 +267,15 @@ export const courseApi = {
       onUploadProgress: (event) => {
         if (event.total) onUploadProgress?.(Math.round((event.loaded / event.total) * 100));
       },
+    });
+    return getApiData(response);
+  },
+  uploadCourseResource: async (courseId: string, file: File, title: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title);
+    const response = await apiClient.post(`/courses/${courseId}/resources/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return getApiData(response);
   },

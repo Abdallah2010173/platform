@@ -9,6 +9,7 @@ import { NotificationCenter } from './notification-center';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/components/auth/protected-route';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTheme } from '@/components/providers/theme-provider';
 import { ROLE_LABELS } from '@platform/shared';
 import { useLocale } from '@/lib/i18n';
@@ -53,6 +54,14 @@ export function Header({ title, description, actions }: HeaderProps) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2">
           <MobileNav />
+
+          <Image
+            src="/logo.png"
+            alt="Global Math"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-full object-cover shadow-sm"
+          />
 
           <div className="text-muted-foreground hidden items-center gap-2 text-sm sm:flex">
             <span className="text-foreground font-medium">
