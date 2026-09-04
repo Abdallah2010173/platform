@@ -22,9 +22,9 @@ export function Sidebar() {
           <Image
             src="/logo.png"
             alt="Global Math"
-            width={96}
-            height={96}
-            className="h-24 w-24 rounded-full object-cover shadow-sm transition-transform duration-300 group-hover:scale-105"
+            width={56}
+            height={56}
+            className="h-14 w-14 rounded-full object-cover shadow-sm transition-transform duration-300 group-hover:scale-110"
             priority
           />
           <span className="text-foreground text-lg font-semibold">Global Math</span>

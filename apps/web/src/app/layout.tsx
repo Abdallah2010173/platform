@@ -11,7 +11,11 @@ export const metadata: Metadata = {
     template: '%s | Global Math',
   },
   description: 'Enterprise Learning Management System',
-  icons: { icon: '/logo.png', apple: '/logo.png' },
+  icons: {
+    icon: [{ url: '/favicon.png', type: 'image/png' }],
+    shortcut: ['/favicon.png'],
+    apple: '/favicon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
