@@ -31,14 +31,21 @@ export class EmailService {
 
   async sendOtpEmail(email: string, otp: string): Promise<void> {
     const from = this.getFromAddress();
-    const subject = 'Your Platform LMS verification code';
+    const logoUrl = 'https://globalmathematics.online/logo.png';
+    const subject = `${otp} هو رمز التحقق الخاص بك لـ Global Math`;
     const text = `Your verification code is: ${otp}\n\nThis code expires in 10 minutes.`;
     const html = `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2>Verify your Platform LMS account</h2>
-        <p>Your verification code is:</p>
-        <p style="font-size: 28px; font-weight: bold; letter-spacing: 6px;">${otp}</p>
-        <p>This code expires in 10 minutes.</p>
+      <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <img src="${logoUrl}" alt="Global Math Logo" style="width: 64px; height: 64px; margin-bottom: 12px; object-fit: contain;" />
+          <h2 style="color: #1e293b; margin: 0; font-size: 22px; font-weight: 700;">Global Math</h2>
+        </div>
+        <p style="font-size: 16px; color: #334155; line-height: 1.6; margin-bottom: 8px;">مرحباً بك،</p>
+        <p style="font-size: 15px; color: #475569; line-height: 1.6; margin-bottom: 20px;">استخدم رمز التحقق التالي لإكمال عملية تسجيل الدخول إلى حسابك في منصة <strong>Global Math</strong>:</p>
+        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 18px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0f172a; margin: 24px 0; border-radius: 8px;">${otp}</div>
+        <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 24px;">هذا الرمز صالح لمدة 10 دقائق فقط. إذا لم تطلب هذا الرمز، يمكنك تجاهل هذه الرسالة بصفة آمنة.</p>
+        <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">© Global Math Platform</p>
       </div>
     `;
 
