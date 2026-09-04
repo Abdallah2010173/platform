@@ -548,6 +548,17 @@ export class CoursesController {
     return this.courseService.addCourseResource(courseId, dto, user);
   }
 
+  @Post('courses/courses/:courseId/resources')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Add a resource to a course (legacy path)' })
+  addCourseResourceLegacy(
+    @Param('courseId') courseId: string,
+    @Body() dto: CreateCourseResourceDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.courseService.addCourseResource(courseId, dto, user);
+  }
+
   @Post('courses/:courseId/resources/upload')
   @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Upload an image, video, or file to a course' })
