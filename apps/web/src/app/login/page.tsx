@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -20,6 +19,7 @@ import { setCredentials } from '@/lib/store/slices/auth.slice';
 import { AuthUser, roleToRoute } from '@/lib/auth';
 import { GoogleSignInButton } from '@/components/auth/google-signin-button';
 import { API_URL } from '@/lib/api/client';
+import { BrandLogo } from '@/components/brand-logo';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -112,7 +112,7 @@ const oauthMessage = oauthError === 'google_signup_disabled'
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
-          <GraduationCap className="text-primary h-8 w-8" />
+          <BrandLogo size="md" link={false} />
         </Link>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Enter your credentials to access the platform</CardDescription>

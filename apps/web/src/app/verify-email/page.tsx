@@ -3,11 +3,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { GraduationCap, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
+import { BrandLogo } from '@/components/brand-logo';
 
 function VerifyEmailForm() {
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading');
@@ -117,7 +118,7 @@ export default function VerifyEmailPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
-            <GraduationCap className="text-primary h-8 w-8" />
+            <BrandLogo size="md" link={false} />
           </Link>
           <CardTitle>Email verification</CardTitle>
           <CardDescription>Confirm your email address</CardDescription>

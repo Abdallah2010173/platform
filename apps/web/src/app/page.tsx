@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  GraduationCap,
   ArrowRight,
   LayoutDashboard,
   BookOpen,
@@ -12,6 +11,7 @@ import {
   BarChart3,
   Award,
 } from 'lucide-react';
+import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ROLE_LABELS, UserRole } from '@platform/shared';
@@ -62,10 +62,7 @@ export default function HomePage() {
     <div className="bg-background min-h-screen">
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <GraduationCap className="text-primary h-6 w-6" />
-            <span>Global Math</span>
-          </Link>
+          <BrandLogo size="sm" />
           <nav className="flex items-center gap-4">
             <button
               type="button"

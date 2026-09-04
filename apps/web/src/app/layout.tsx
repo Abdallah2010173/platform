@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     template: '%s | Global Math',
   },
   description: 'Enterprise Learning Management System',
+  icons: { icon: '/logo.png', apple: '/logo.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

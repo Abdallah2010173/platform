@@ -6,12 +6,13 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { GraduationCap, MailCheck } from 'lucide-react';
+import { MailCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { authApi, formatApiError } from '@/lib/api/services';
+import { BrandLogo } from '@/components/brand-logo';
 
 const forgotSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -52,7 +53,7 @@ export default function ForgotPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="mx-auto mb-2 flex items-center gap-2">
-            <GraduationCap className="text-primary h-8 w-8" />
+            <BrandLogo size="md" link={false} />
           </Link>
           <CardTitle>Forgot password</CardTitle>
           <CardDescription>Enter your email to receive a password reset link</CardDescription>

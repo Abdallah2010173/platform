@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth/protected-route';
@@ -18,17 +19,14 @@ export function Sidebar() {
     <aside className="bg-card border-border fixed left-0 top-0 h-screen w-64 overflow-y-auto border-r p-4 lg:block">
       <div className="group mb-6 flex cursor-pointer items-center gap-2">
         <Link href="/" className="flex items-center gap-2">
-          <div className="bg-primary relative flex h-8 w-8 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-110">
-            <div
-              className="bg-primary-foreground absolute h-1.5 w-1.5 rounded-full"
-              style={{ top: '30%', left: '30%' }}
-            />
-            <div
-              className="bg-primary-foreground absolute h-1.5 w-1.5 rounded-full"
-              style={{ top: '30%', right: '30%' }}
-            />
-            <div className="border-primary-foreground absolute bottom-2.5 h-1.5 w-3 rounded-full border-b-2" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Global Math"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-full object-cover shadow-sm transition-transform duration-300 group-hover:scale-110"
+            priority
+          />
           <span className="text-foreground text-lg font-semibold">Global Math</span>
         </Link>
       </div>

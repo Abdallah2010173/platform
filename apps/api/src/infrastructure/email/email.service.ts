@@ -65,9 +65,17 @@ export class EmailService {
 
   async sendPasswordResetOtpEmail(email: string, otp: string): Promise<void> {
     const from = this.getFromAddress();
-    const subject = 'Your Platform LMS password reset code';
+    const logoUrl = 'https://globalmathematics.online/logo.png';
+    const subject = `${otp} هو رمز إعادة تعيين كلمة المرور لـ Global Math`;
     const text = `Your password reset code is: ${otp}\n\nThis code expires in 10 minutes.`;
-    const html = `<p>Your Platform LMS password reset code is:</p><p style="font-size: 28px; font-weight: bold; letter-spacing: 6px;">${otp}</p><p>This code expires in 10 minutes.</p>`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background-color: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width: 64px; height: 64px; object-fit: contain;" /><h2 style="color: #1e293b; margin: 12px 0 0;">Global Math</h2></div>
+        <p style="font-size: 16px; color: #334155; line-height: 1.6;">استخدم رمز التحقق التالي لإعادة تعيين كلمة المرور:</p>
+        <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 18px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0f172a; margin: 24px 0; border-radius: 8px;">${otp}</div>
+        <p style="font-size: 13px; color: #64748b;">هذا الرمز صالح لمدة 10 دقائق فقط.</p>
+        <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;" /><p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">© Global Math Platform</p>
+      </div>`;
     try {
       if (this.resendApiKey) await this.sendWithResend({ from, to: email, subject, text, html });
       else if (this.transporter) await this.transporter.sendMail({ from, to: email, subject, text, html });
@@ -85,6 +93,8 @@ export class EmailService {
 
     const verificationUrl = `${this.frontendUrl.replace(/\/+$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
     const from = this.getFromAddress();
+    const logoUrl = 'https://globalmathematics.online/logo.png';
+    const verificationHtml = `<div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background: #fff;"><div style="text-align:center; margin-bottom:24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width:64px;height:64px;object-fit:contain;" /><h2 style="color:#1e293b;margin:12px 0 0;">Global Math</h2></div><p style="font-size:16px;color:#334155;line-height:1.6;">تحقق من بريدك الإلكتروني في منصة Global Math:</p><p style="text-align:center;margin:28px 0;"><a href="${verificationUrl}" style="background:#047a35;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;">تأكيد البريد الإلكتروني</a></p><p style="font-size:13px;color:#64748b;">هذا الرابط صالح لمدة 24 ساعة ويمكن استخدامه مرة واحدة.</p></div>`;
 
     try {
       if (this.resendApiKey) {
@@ -93,7 +103,7 @@ export class EmailService {
           to: email,
           subject: 'Verify your Platform LMS email',
           text: `Verify your email using this link: ${verificationUrl}\n\nThis link expires in 24 hours and can be used once.`,
-          html: `<p>Verify your Platform LMS email:</p><p><a href="${verificationUrl}">Verify email</a></p><p>This link expires in 24 hours and can be used once.</p>`,
+          html: verificationHtml,
         });
       } else if (this.transporter) {
         await this.transporter.sendMail({
@@ -101,7 +111,7 @@ export class EmailService {
           to: email,
           subject: 'Verify your Platform LMS email',
           text: `Verify your email using this link: ${verificationUrl}\n\nThis link expires in 24 hours and can be used once.`,
-          html: `<p>Verify your Platform LMS email:</p><p><a href="${verificationUrl}">Verify email</a></p><p>This link expires in 24 hours and can be used once.</p>`,
+          html: verificationHtml,
         });
       }
     } catch (error) {
@@ -117,6 +127,8 @@ export class EmailService {
 
     const resetUrl = `${this.frontendUrl.replace(/\/+$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
     const from = this.getFromAddress();
+    const logoUrl = 'https://globalmathematics.online/logo.png';
+    const resetHtml = `<div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto; background: #fff;"><div style="text-align:center; margin-bottom:24px;"><img src="${logoUrl}" alt="Global Math Logo" style="width:64px;height:64px;object-fit:contain;" /><h2 style="color:#1e293b;margin:12px 0 0;">Global Math</h2></div><p style="font-size:16px;color:#334155;line-height:1.6;">لإعادة تعيين كلمة مرور حسابك:</p><p style="text-align:center;margin:28px 0;"><a href="${resetUrl}" style="background:#047a35;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;">إعادة تعيين كلمة المرور</a></p><p style="font-size:13px;color:#64748b;">هذا الرابط صالح لمدة 30 دقيقة ويمكن استخدامه مرة واحدة.</p></div>`;
 
     try {
       if (this.resendApiKey) {
@@ -125,7 +137,7 @@ export class EmailService {
           to: email,
           subject: 'Reset your Platform LMS password',
           text: `Reset your password using this link: ${resetUrl}\n\nThis link expires in 30 minutes and can be used once.`,
-          html: `<p>Reset your Platform LMS password:</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in 30 minutes and can be used once.</p>`,
+          html: resetHtml,
         });
       } else if (this.transporter) {
         await this.transporter.sendMail({
@@ -133,7 +145,7 @@ export class EmailService {
           to: email,
           subject: 'Reset your Platform LMS password',
           text: `Reset your password using this link: ${resetUrl}\n\nThis link expires in 30 minutes and can be used once.`,
-          html: `<p>Reset your Platform LMS password:</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in 30 minutes and can be used once.</p>`,
+          html: resetHtml,
         });
       }
     } catch (error) {
