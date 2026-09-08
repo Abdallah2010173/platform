@@ -605,7 +605,22 @@ export const useGrantCourseAccess = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (studentId: string) => teacherApi.grantCourseAccess(courseId, studentId),
-    onSuccess: () => {
+    onSuccess: (_result, studentId) => {
+      qc.setQueriesData({ queryKey: ['teacher', 'all-students'] }, (current: unknown) => {
+        if (!Array.isArray(current)) return current;
+        return current.map((student: { userId?: string; enrolledCourses?: { id?: string; courseId?: string; accessType?: string; status?: string }[] }) => {
+          if (student.userId !== studentId) return student;
+          const enrolledCourses = [...(student.enrolledCourses ?? [])];
+          const existing = enrolledCourses.find((item) => (item.courseId ?? item.id) === courseId);
+          if (existing) {
+            existing.status = 'ACTIVE';
+            existing.accessType = 'TEACHER_GRANTED';
+          } else {
+            enrolledCourses.push({ id: courseId, status: 'ACTIVE', accessType: 'TEACHER_GRANTED' });
+          }
+          return { ...student, enrolledCourses };
+        });
+      });
       qc.invalidateQueries({ queryKey: ['course', courseId] });
       qc.invalidateQueries({ queryKey: ['teacher', 'all-students'] });
       qc.invalidateQueries({ queryKey: ['student', 'courses'] });
