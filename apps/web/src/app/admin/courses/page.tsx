@@ -105,6 +105,7 @@ export default function AdminCoursesPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<ModalState>(null);
+  const [courseToDelete, setCourseToDelete] = useState<CourseItem | null>(null);
   const [form, setForm] = useState<CourseFormState>(EMPTY_FORM);
 
   const { data, isLoading } = useAllCourses({
@@ -191,9 +192,12 @@ export default function AdminCoursesPage() {
   };
 
   const handleDelete = (course: CourseItem) => {
-    if (confirm(`Are you sure you want to delete "${course.title}"?`)) {
-      deleteCourse.mutate(course.id);
-    }
+    setCourseToDelete(course);
+  };
+
+  const confirmDeleteCourse = () => {
+    if (!courseToDelete) return;
+    deleteCourse.mutate(courseToDelete.id, { onSuccess: () => setCourseToDelete(null) });
   };
 
   return (
@@ -450,6 +454,20 @@ export default function AdminCoursesPage() {
             <Button onClick={handleSubmit}>
               {modal?.type === 'edit' ? 'Save Changes' : 'Create Course'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(courseToDelete)} onOpenChange={(open) => !open && setCourseToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete course?</DialogTitle>
+            <DialogDescription>
+              This archives the course and removes its videos, attachments, and resources from storage.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCourseToDelete(null)} disabled={deleteCourse.isPending}>Cancel</Button>
+            <Button type="button" variant="destructive" onClick={confirmDeleteCourse} disabled={deleteCourse.isPending}>{deleteCourse.isPending ? 'Deleting...' : 'Delete permanently'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

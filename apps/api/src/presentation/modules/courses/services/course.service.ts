@@ -500,9 +500,32 @@ export class CourseService {
 
   async delete(id: string, user?: AuthUser) {
     await this.assertAccess(id, user);
+
+    const videos = await this.prisma.lessonVideo.findMany({
+      where: { lesson: { chapter: { courseId: id } }, deletedAt: null },
+      select: { id: true, url: true, sourceKey: true, manifestKey: true, encryptionKey: true },
+    });
+    const attachments = await this.prisma.lessonAttachment.findMany({
+      where: { lesson: { chapter: { courseId: id } }, deletedAt: null },
+      select: { fileUrl: true },
+    });
+    const resources = await this.prisma.courseResource.findMany({
+      where: { courseId: id, deletedAt: null },
+      select: { fileUrl: true },
+    });
+
+    for (const video of videos) await this.deleteVideoStorage(video);
+    for (const file of [...attachments, ...resources]) {
+      if (file.fileUrl) await this.deleteR2ObjectFromUrl(file.fileUrl);
+    }
+
     await this.prisma.course.update({
       where: { id },
       data: { deletedAt: new Date(), isPublished: false, status: 'ARCHIVED' },
+    });
+    await this.prisma.lessonVideo.updateMany({
+      where: { id: { in: videos.map((video) => video.id) } },
+      data: { deletedAt: new Date() },
     });
     return { success: true };
   }
