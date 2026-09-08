@@ -10,6 +10,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ParsePaginationPipe } from './presentation/common/pipes/parse-pagination.pipe';
 import express from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { join } from 'node:path';
 
 async function bootstrap() {
@@ -47,9 +48,19 @@ async function bootstrap() {
   // تبسيط الاستثناء لمنع تضارب الـ Regex المسبب للـ Crash
   app.setGlobalPrefix(apiPrefix);
 
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  }));
   app.use(cookieParser());
-  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+  app.use('/uploads', (request: Request, response: Response, next: NextFunction) => {
+    if (request.headers.origin && origins.has(request.headers.origin)) {
+      response.setHeader('Access-Control-Allow-Origin', request.headers.origin);
+      response.setHeader('Access-Control-Allow-Credentials', 'true');
+      response.setHeader('Vary', 'Origin');
+    }
+    next();
+  }, express.static(join(process.cwd(), 'uploads')));
 
   app.enableCors({
     origin: (requestOrigin, callback) => {

@@ -128,7 +128,7 @@ export class MediaController {
   }
 
   @Get('videos/:id/manifest')
-  async manifest(@CurrentUser() user: any, @Param('id') id: string, @Res() response: Response) {
+  async manifest(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request, @Res() response: Response) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
     if (video.transcodingStatus !== 'READY' || !video.manifestKey) {
@@ -137,13 +137,14 @@ export class MediaController {
 
     const manifest = (await this.r2Storage.getObject(video.manifestKey)).toString('utf8');
     const rewritten = this.rewriteHlsManifest(manifest, id, 'master.m3u8');
+    this.setVideoCorsHeaders(request, response);
     response.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     response.setHeader('Cache-Control', 'private, no-store');
     return response.send(rewritten);
   }
 
   @Get('videos/:id/hls/*path')
-  async hlsFile(@CurrentUser() user: any, @Param('id') id: string, @Param('path') objectPath: string, @Res() response: Response) {
+  async hlsFile(@CurrentUser() user: any, @Param('id') id: string, @Param('path') objectPath: string, @Req() request: Request, @Res() response: Response) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
     const safePath = objectPath.replace(/^\/+/, '');
@@ -153,19 +154,22 @@ export class MediaController {
     const content = await this.r2Storage.getObject(key);
     if (safePath.endsWith('.m3u8')) {
       const rewritten = this.rewriteHlsManifest(content.toString('utf8'), id, safePath);
+      this.setVideoCorsHeaders(request, response);
       response.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
       return response.send(rewritten);
     }
+    this.setVideoCorsHeaders(request, response);
     response.setHeader('Content-Type', safePath.endsWith('.ts') ? 'video/mp2t' : 'application/octet-stream');
     return response.send(content);
   }
 
   @Get('videos/:id/key')
-  async encryptionKey(@CurrentUser() user: any, @Param('id') id: string, @Res() response: Response) {
+  async encryptionKey(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request, @Res() response: Response) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
     if (!video.encryptionKey) throw new NotFoundException('Encryption key is not available');
     const key = await this.r2Storage.getObject(video.encryptionKey);
+    this.setVideoCorsHeaders(request, response);
     response.setHeader('Content-Type', 'application/octet-stream');
     response.setHeader('Cache-Control', 'private, no-store');
     return response.send(key);
@@ -223,6 +227,17 @@ export class MediaController {
     const forwardedProto = request.headers['x-forwarded-proto'];
     const protocol = typeof forwardedProto === 'string' ? forwardedProto.split(',')[0] : request.protocol;
     return `${protocol}://${request.get('host')}`;
+  }
+
+  private setVideoCorsHeaders(request: Request, response: Response): void {
+    const origin = request.headers.origin;
+    if (origin === 'https://globalmathematics.online' || origin === 'https://www.globalmathematics.online') {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+      response.setHeader('Access-Control-Allow-Credentials', 'true');
+      response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+      response.setHeader('Vary', 'Origin');
+    }
   }
 
   private async assertTeacherAccess(user: any, courseId: string) {
