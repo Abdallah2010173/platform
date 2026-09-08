@@ -305,6 +305,14 @@ export class CourseService {
           hasPdf: l.pdfs.length > 0,
           hasAttachments: l.attachments.length > 0,
           hasResources: l.resources.length > 0,
+          videos: l.videos.map((video) => ({
+            id: video.id,
+            title: video.title,
+            url: video.url,
+            source: video.source,
+            transcodingStatus: video.transcodingStatus,
+            manifestKey: video.manifestKey,
+          })),
         })),
       })),
       resources: course.resources.map((r) => ({
