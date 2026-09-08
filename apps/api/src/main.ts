@@ -24,11 +24,23 @@ async function bootstrap() {
   const corsOrigin = configService.get<string>('CORS_ORIGIN', '');
 
   const origins = new Set<string>();
-  if (frontendUrl) origins.add(frontendUrl);
+  const addOriginVariants = (value: string) => {
+    const normalized = value.replace(/\/+$/, '');
+    origins.add(normalized);
+    try {
+      const parsed = new URL(normalized);
+      const host = parsed.hostname.startsWith('www.') ? parsed.hostname.slice(4) : `www.${parsed.hostname}`;
+      origins.add(`${parsed.protocol}//${host}${parsed.port ? `:${parsed.port}` : ''}`);
+    } catch {
+      // Ignore malformed optional origin values; validation remains handled by CORS.
+    }
+  };
+
+  if (frontendUrl) addOriginVariants(frontendUrl);
   if (corsOrigin) {
     for (const o of corsOrigin.split(',')) {
       const trimmed = o.trim();
-      if (trimmed) origins.add(trimmed.replace(/\/+$/, ''));
+      if (trimmed && trimmed !== '*') addOriginVariants(trimmed);
     }
   }
 
@@ -40,7 +52,13 @@ async function bootstrap() {
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   app.enableCors({
-    origin: origins.size > 0 ? [...origins] : false,
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin || origins.size === 0 || origins.has(requestOrigin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Origin is not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
