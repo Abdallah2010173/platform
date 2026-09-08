@@ -13,7 +13,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { VideoSource } from '@prisma/client';
 import { diskStorage } from 'multer';
@@ -72,6 +72,7 @@ export class MediaController {
 
     await this.assertTeacherAccess(user, lesson.courseId);
 
+    const source = await this.r2Storage.uploadLocalFile(file.originalname, file.mimetype, file.path);
     const record = await this.prisma.lessonVideo.create({
       data: {
         lessonId,
@@ -82,6 +83,7 @@ export class MediaController {
         sizeBytes: file.size ? BigInt(file.size) : undefined,
         quality: 'AUTO',
         transcodingStatus: 'QUEUED',
+        sourceKey: source.fileKey,
       },
     });
 

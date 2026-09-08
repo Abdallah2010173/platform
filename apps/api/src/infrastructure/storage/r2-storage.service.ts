@@ -9,6 +9,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createReadStream } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 
@@ -91,6 +92,24 @@ export class R2StorageService {
       : await getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucketName, Key: fileKey }), { expiresIn: 604800 });
 
     return { fileKey, publicUrl };
+  }
+
+  async uploadLocalFile(fileName: string, contentType: string, filePath: string) {
+    const safeName = path.basename(fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const normalizedType = contentType.trim().toLowerCase();
+    if (!safeName || !normalizedType) {
+      throw new BadRequestException('A file name and content type are required');
+    }
+
+    const fileKey = `uploads/videos/${randomUUID()}-${safeName}`;
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: fileKey,
+      Body: createReadStream(filePath),
+      ContentType: normalizedType,
+    }));
+
+    return { fileKey };
   }
 
   async deleteFile(fileKey: string): Promise<void> {
