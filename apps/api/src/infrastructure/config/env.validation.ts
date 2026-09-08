@@ -58,14 +58,17 @@ export class EnvironmentVariables {
   @IsString()
   FRONTEND_CALLBACK_URL!: string;
 
+  @IsOptional()
   @IsString()
-  BUNNY_STREAM_LIBRARY_ID!: string;
+  BUNNY_STREAM_LIBRARY_ID?: string;
 
+  @IsOptional()
   @IsString()
-  BUNNY_STREAM_API_KEY!: string;
+  BUNNY_STREAM_API_KEY?: string;
 
+  @IsOptional()
   @IsString()
-  BUNNY_STREAM_CDN_HOSTNAME!: string;
+  BUNNY_STREAM_CDN_HOSTNAME?: string;
 
   @IsString()
   CLOUDFLARE_R2_ACCESS_KEY_ID!: string;
@@ -147,9 +150,6 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     'GOOGLE_CALLBACK_URL',
     'FRONTEND_URL',
     'FRONTEND_CALLBACK_URL',
-    'BUNNY_STREAM_LIBRARY_ID',
-    'BUNNY_STREAM_API_KEY',
-    'BUNNY_STREAM_CDN_HOSTNAME',
     'CLOUDFLARE_R2_ACCESS_KEY_ID',
     'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
     'CLOUDFLARE_R2_ENDPOINT',

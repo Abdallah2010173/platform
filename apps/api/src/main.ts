@@ -33,9 +33,7 @@ async function bootstrap() {
   }
 
   // تبسيط الاستثناء لمنع تضارب الـ Regex المسبب للـ Crash
-  app.setGlobalPrefix(apiPrefix, {
-    exclude: ['health'],
-  });
+  app.setGlobalPrefix(apiPrefix);
 
   app.use(helmet());
   app.use(cookieParser());
