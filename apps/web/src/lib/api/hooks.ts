@@ -595,6 +595,7 @@ export const useGrantCourseAccess = (courseId: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['course', courseId] });
       qc.invalidateQueries({ queryKey: ['teacher', 'all-students'] });
+      qc.invalidateQueries({ queryKey: ['student', 'courses'] });
       toast.success('Free access granted');
     },
     onError: (e) => toast.error(formatApiError(e)),

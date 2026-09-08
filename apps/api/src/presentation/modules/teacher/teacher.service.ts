@@ -252,6 +252,9 @@ export class TeacherService {
         accessType,
         accessGrantedBy: user.id,
         accessGrantedAt: new Date(),
+        deletedAt: null,
+        canceledAt: null,
+        cancelReason: null,
       },
     });
 
