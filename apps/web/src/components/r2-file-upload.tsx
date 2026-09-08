@@ -31,28 +31,20 @@ export function R2FileUpload({ accept, label, resourceType, onUploaded, disabled
     setIsUploading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/files/upload-url`, {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (resourceType) formData.append('resourceType', resourceType);
+      const response = await fetch(`${API_URL}/files/upload`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type || 'application/octet-stream', resourceType }),
+        body: formData,
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body?.message || 'Could not create upload URL');
+      if (!response.ok) throw new Error(body?.message || 'Could not upload file');
 
       const upload = body.data ?? body;
-      const uploadResponse = await fetch(upload.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file,
-      });
-      if (!uploadResponse.ok) {
-        throw new Error(uploadResponse.status === 403
-          ? 'R2 rejected the upload. Check the bucket CORS policy.'
-          : `Could not upload file to R2 (${uploadResponse.status})`);
-      }
 
       onUploaded({
         fileKey: upload.fileKey,
