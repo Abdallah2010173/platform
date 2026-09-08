@@ -177,10 +177,10 @@ export class CourseService {
             lessons: {
               where: { deletedAt: null },
               include: {
-                videos: true,
-                pdfs: true,
-                attachments: true,
-                resources: true,
+                videos: { where: { deletedAt: null } },
+                pdfs: { where: { deletedAt: null } },
+                attachments: { where: { deletedAt: null } },
+                resources: { where: { deletedAt: null } },
               },
               orderBy: { orderIndex: 'asc' },
             },
@@ -502,7 +502,7 @@ export class CourseService {
     await this.assertAccess(id, user);
 
     const videos = await this.prisma.lessonVideo.findMany({
-      where: { lesson: { chapter: { courseId: id } }, deletedAt: null },
+      where: { lesson: { chapter: { courseId: id } } },
       select: { id: true, url: true, sourceKey: true, manifestKey: true, encryptionKey: true },
     });
     const attachments = await this.prisma.lessonAttachment.findMany({
@@ -591,7 +591,7 @@ export class CourseService {
       include: {
         lessons: {
           where: { deletedAt: null },
-          include: { videos: true, pdfs: true, attachments: true, resources: true },
+          include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } } },
         },
       },
       orderBy: { sortOrder: 'asc' },
@@ -720,7 +720,7 @@ export class CourseService {
         course: { select: { id: true, title: true, slug: true } },
         lessons: {
           where: { deletedAt: null },
-          include: { videos: true, pdfs: true, attachments: true, resources: true },
+          include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } } },
           orderBy: { orderIndex: 'asc' },
         },
       },
@@ -841,10 +841,10 @@ export class CourseService {
       where: { id, deletedAt: null },
       include: {
         chapter: { select: { id: true, title: true, courseId: true } },
-        videos: true,
-        pdfs: true,
-        attachments: true,
-        resources: true,
+        videos: { where: { deletedAt: null } },
+        pdfs: { where: { deletedAt: null } },
+        attachments: { where: { deletedAt: null } },
+        resources: { where: { deletedAt: null } },
       },
     });
     if (!lesson) throw new NotFoundException('Lesson not found');

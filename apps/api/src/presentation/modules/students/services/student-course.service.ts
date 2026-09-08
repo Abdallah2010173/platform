@@ -87,10 +87,10 @@ export class StudentCourseService {
               include: {
                 lessons: {
                   include: {
-                    videos: true,
-                    pdfs: true,
-                    attachments: true,
-                    resources: true,
+                    videos: { where: { deletedAt: null } },
+                    pdfs: { where: { deletedAt: null } },
+                    attachments: { where: { deletedAt: null } },
+                    resources: { where: { deletedAt: null } },
                   },
                   orderBy: { orderIndex: 'asc' },
                 },
@@ -115,9 +115,9 @@ export class StudentCourseService {
         include: {
           category: true,
           subCategory: true,
-            resources: true,
+            resources: { where: { deletedAt: null } },
           chapters: {
-            include: { lessons: { include: { videos: true, pdfs: true, attachments: true, resources: true }, orderBy: { orderIndex: 'asc' } } },
+            include: { lessons: { include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } } }, orderBy: { orderIndex: 'asc' } } },
             orderBy: { sortOrder: 'asc' },
           },
           teachers: { include: { teacher: { include: { user: { include: { profile: true } } } } } },
@@ -298,10 +298,10 @@ export class StudentCourseService {
       where: { id: lessonId, chapter: { courseId } },
       include: {
         chapter: true,
-        videos: true,
-        pdfs: true,
-        attachments: true,
-        resources: true,
+        videos: { where: { deletedAt: null } },
+        pdfs: { where: { deletedAt: null } },
+        attachments: { where: { deletedAt: null } },
+        resources: { where: { deletedAt: null } },
         feedback: true,
       },
     });
