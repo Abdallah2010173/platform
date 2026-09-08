@@ -90,6 +90,22 @@ export class TeacherController {
     return this.teacherService.grantStudentAccess(user, courseId, dto.studentId, 'TEACHER_GRANTED');
   }
 
+  @Post('courses/:courseId/access-codes')
+  @ApiOperation({ summary: 'Create a course access code' })
+  createCourseAccessCode(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('courseId') courseId: string,
+    @Body() dto: { maxUses?: number; expiresAt?: string },
+  ) {
+    return this.teacherService.createCourseAccessCode(user, courseId, dto);
+  }
+
+  @Get('courses/:courseId/access-codes')
+  @ApiOperation({ summary: 'List course access codes' })
+  getCourseAccessCodes(@CurrentUser() user: AuthenticatedUser, @Param('courseId') courseId: string) {
+    return this.teacherService.getCourseAccessCodes(user, courseId);
+  }
+
   @Delete('courses/:courseId/students/:studentId/access')
   @ApiOperation({ summary: 'Revoke a granted course access' })
   revokeStudentAccess(

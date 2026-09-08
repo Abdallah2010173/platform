@@ -1,9 +1,11 @@
 'use client';
 
 import { BookOpen, MessageCircle, PlayCircle } from 'lucide-react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useEnrollCourse, usePublishedCourses, useStudentCourses } from '@/lib/api/hooks';
+import { Input } from '@/components/ui/input';
+import { useEnrollCourse, usePublishedCourses, useRedeemAccessCode, useStudentCourses } from '@/lib/api/hooks';
 import { LoadingState, EmptyState } from '@/components/dashboard/data-states';
 import { Progress } from '@/components/ui/progress';
 
@@ -26,6 +28,13 @@ interface PublishedCourse {
   discountPrice?: number | string | null;
   isFree?: boolean;
   [key: string]: unknown;
+}
+
+function AccessCodeEntry() {
+  const redeemAccessCode = useRedeemAccessCode();
+  const [code, setCode] = useState('');
+
+  return <Card><CardHeader><CardTitle className="text-base">Contact teacher to pay</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">Have an access code from your teacher? Enter it to open the course.</p><div className="flex gap-2"><Input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="Enter code" maxLength={32} /><Button type="button" disabled={!code.trim() || redeemAccessCode.isPending} onClick={() => redeemAccessCode.mutate(code, { onSuccess: () => setCode('') })}>Unlock</Button></div></CardContent></Card>;
 }
 
 export default function StudentCoursesPage() {
@@ -88,6 +97,7 @@ export default function StudentCoursesPage() {
           ))}
         </div>
       )}
+      <AccessCodeEntry />
       <div className="pt-4">
         <h2 className="text-lg font-semibold">Available Courses</h2>
         <p className="text-muted-foreground text-sm">Enroll to access course content and contact its instructors.</p>

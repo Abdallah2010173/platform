@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
+import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { TeacherHelper, AuthenticatedUser } from './teacher.helper';
 
@@ -264,6 +265,63 @@ export class TeacherService {
       accessType: enrollment.accessType,
       grantedBy: user.id,
     };
+  }
+
+  async createCourseAccessCode(
+    user: AuthenticatedUser,
+    courseId: string,
+    input: { maxUses?: number; expiresAt?: string },
+  ) {
+    if (user.role !== 'ADMIN') {
+      const teacherId = await this.teacherHelper.getTeacherId(user);
+      await this.assertCourseAccess(courseId, teacherId);
+    }
+
+    const course = await this.prisma.course.findFirst({
+      where: { id: courseId, deletedAt: null },
+      select: { id: true, title: true },
+    });
+    if (!course) throw new NotFoundException('Course not found');
+
+    const maxUses = Math.min(Math.max(Number(input.maxUses ?? 1), 1), 1000);
+    const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+    if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+      throw new ConflictException('Invalid expiration date');
+    }
+
+    const code = randomBytes(9).toString('base64url').replace(/[-_]/g, '').toUpperCase();
+    const accessCode = await this.prisma.courseAccessCode.create({
+      data: {
+        courseId,
+        createdBy: user.id,
+        codeHash: createHash('sha256').update(code).digest('hex'),
+        maxUses,
+        expiresAt,
+      },
+    });
+
+    return {
+      id: accessCode.id,
+      code,
+      courseId,
+      courseTitle: course.title,
+      maxUses: accessCode.maxUses,
+      expiresAt: accessCode.expiresAt,
+      usedCount: accessCode.usedCount,
+    };
+  }
+
+  async getCourseAccessCodes(user: AuthenticatedUser, courseId: string) {
+    if (user.role !== 'ADMIN') {
+      const teacherId = await this.teacherHelper.getTeacherId(user);
+      await this.assertCourseAccess(courseId, teacherId);
+    }
+
+    return this.prisma.courseAccessCode.findMany({
+      where: { courseId, deletedAt: null },
+      select: { id: true, maxUses: true, usedCount: true, expiresAt: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async revokeStudentAccess(user: AuthenticatedUser, courseId: string, studentUserId: string) {

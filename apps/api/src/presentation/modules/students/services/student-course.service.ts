@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { EnrollmentStatus } from '@platform/database';
+import { createHash } from 'node:crypto';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { CourseAccessService } from '../../courses/services/course-access.service';
 import { StudentHelper, AuthenticatedUser } from '../student.helper';
@@ -517,6 +518,65 @@ export class StudentCourseService {
         accessType: enrollment.accessType,
       },
     };
+  }
+
+  async redeemAccessCode(user: AuthenticatedUser, rawCode: string) {
+    const code = rawCode.trim().replace(/\s+/g, '').toUpperCase();
+    if (!code) throw new ConflictException('Enter an access code');
+
+    const studentId = await this.studentHelper.getStudentId(user);
+    const codeHash = createHash('sha256').update(code).digest('hex');
+
+    return this.prisma.$transaction(async (tx) => {
+      const accessCode = await tx.courseAccessCode.findUnique({
+        where: { codeHash },
+        include: { course: { select: { id: true, title: true, deletedAt: true } } },
+      });
+
+      if (!accessCode || accessCode.deletedAt || accessCode.course.deletedAt) {
+        throw new NotFoundException('Invalid access code');
+      }
+      if (accessCode.expiresAt && accessCode.expiresAt <= new Date()) {
+        throw new ForbiddenException('This access code has expired');
+      }
+
+      const existingRedemption = await tx.courseAccessCodeRedemption.findUnique({
+        where: { codeId_studentId: { codeId: accessCode.id, studentId } },
+      });
+      if (existingRedemption) {
+        throw new ConflictException('This code was already used by your account');
+      }
+
+      const updated = await tx.courseAccessCode.updateMany({
+        where: { id: accessCode.id, deletedAt: null, usedCount: { lt: accessCode.maxUses } },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (updated.count !== 1) throw new ConflictException('This access code has reached its usage limit');
+
+      await tx.courseAccessCodeRedemption.create({ data: { codeId: accessCode.id, studentId } });
+      const enrollment = await tx.courseStudent.upsert({
+        where: { courseId_studentId: { courseId: accessCode.courseId, studentId } },
+        create: {
+          courseId: accessCode.courseId,
+          studentId,
+          status: 'ACTIVE',
+          accessType: 'TEACHER_GRANTED',
+          accessGrantedAt: new Date(),
+          accessGrantedBy: accessCode.createdBy,
+        },
+        update: {
+          status: 'ACTIVE',
+          deletedAt: null,
+          canceledAt: null,
+          cancelReason: null,
+          accessType: 'TEACHER_GRANTED',
+          accessGrantedAt: new Date(),
+          accessGrantedBy: accessCode.createdBy,
+        },
+      });
+
+      return { success: true, courseId: enrollment.courseId, courseTitle: accessCode.course.title };
+    });
   }
 
   async unenroll(user: AuthenticatedUser, courseId: string) {

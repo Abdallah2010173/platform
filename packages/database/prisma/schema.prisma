@@ -555,6 +555,7 @@ model User {
   certificateDownloads    CertificateDownload[]    @relation("CertificateDownloader")
   courseResources         CourseResource[]         @relation("CourseResourceCreator")
   courseStudentsGranted   CourseStudent[]          @relation("CourseStudentGrantedBy")
+  accessCodes             CourseAccessCode[]       @relation("CourseAccessCodeCreator")
 
   @@index([email])
   @@index([role, isActive])
@@ -692,6 +693,7 @@ model Student {
   answers              StudentAnswer[]
   results              ExamResult[]
   submissions          AssignmentSubmission[]
+  accessCodeRedemptions CourseAccessCodeRedemption[]
   certificates         Certificate[]
   reports              StudentReport[]
   bookings             Booking[]
@@ -1111,9 +1113,45 @@ media                CourseMedia[]
   lessons              Lesson[]
   announcements        Announcement[]
   payments             Payment[]
+  accessCodes           CourseAccessCode[]
   @@index([visibility, isPublished])
   @@index([isFeatured])
   @@map("courses")
+}
+
+model CourseAccessCode {
+  id          String    @id @default(uuid())
+  courseId    String
+  createdBy   String
+  codeHash    String    @unique
+  maxUses     Int       @default(1)
+  usedCount   Int       @default(0)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator     User      @relation("CourseAccessCodeCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  redemptions CourseAccessCodeRedemption[]
+
+  @@index([courseId, deletedAt])
+  @@index([createdBy, createdAt])
+  @@map("course_access_codes")
+}
+
+model CourseAccessCodeRedemption {
+  id          String           @id @default(uuid())
+  codeId      String
+  studentId   String
+  redeemedAt  DateTime         @default(now())
+
+  code        CourseAccessCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([codeId, studentId])
+  @@index([studentId, redeemedAt])
+  @@map("course_access_code_redemptions")
 }
 
 /// Media assets attached to a course (thumbnail, cover, intro video, preview video, gallery)

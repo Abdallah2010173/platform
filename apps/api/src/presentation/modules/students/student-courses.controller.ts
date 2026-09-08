@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Body } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { AuthenticatedUser } from './student.helper';
@@ -30,6 +30,12 @@ export class StudentCoursesController {
   @ApiOperation({ summary: 'Enroll in a course' })
   enroll(@CurrentUser() user: AuthenticatedUser, @Param('courseId') courseId: string) {
     return this.courseService.enroll(user, courseId);
+  }
+
+  @Post('redeem-access-code')
+  @ApiOperation({ summary: 'Redeem a course access code' })
+  redeemAccessCode(@CurrentUser() user: AuthenticatedUser, @Body() dto: { code?: string }) {
+    return this.courseService.redeemAccessCode(user, dto.code ?? '');
   }
 
   @Delete(':courseId/enroll')

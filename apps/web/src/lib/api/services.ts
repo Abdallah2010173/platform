@@ -85,6 +85,8 @@ export const studentApi = {
   surveys: async () => getApiData(await apiClient.get('/surveys/available')),
   enroll: async (courseId: string) =>
     getApiData(await apiClient.post(`/student/courses/${courseId}/enroll`)),
+  redeemAccessCode: async (code: string) =>
+    getApiData(await apiClient.post('/student/courses/redeem-access-code', { code })),
   exams: async () => getApiData(await apiClient.get('/student/exams')),
   examResults: async () => getApiData(await apiClient.get('/student/exams/results')),
   examHistory: async () => getApiData(await apiClient.get('/student/exams/history')),
@@ -145,6 +147,10 @@ export const teacherApi = {
     getApiData(await apiClient.get('/teacher/students/all', { params: search ? { search } : undefined })),
   grantCourseAccess: async (courseId: string, studentId: string) =>
     getApiData(await apiClient.post(`/teacher/courses/${courseId}/grant-access`, { studentId })),
+  createCourseAccessCode: async (courseId: string, data: { maxUses?: number; expiresAt?: string }) =>
+    getApiData(await apiClient.post(`/teacher/courses/${courseId}/access-codes`, data)),
+  courseAccessCodes: async (courseId: string) =>
+    getApiData(await apiClient.get(`/teacher/courses/${courseId}/access-codes`)),
   revokeCourseAccess: async (courseId: string, studentId: string) =>
     getApiData(await apiClient.delete(`/teacher/courses/${courseId}/students/${studentId}/access`)),
   assignments: async (params?: Record<string, string>) =>

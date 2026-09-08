@@ -61,6 +61,19 @@ export const useEnrollCourse = () => {
   });
 };
 
+export const useRedeemAccessCode = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => studentApi.redeemAccessCode(code),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student', 'courses'] });
+      qc.invalidateQueries({ queryKey: ['courses', 'published'] });
+      toast.success('Course access granted');
+    },
+    onError: (error) => toast.error(formatApiError(error)),
+  });
+};
+
 export const useStudentTeachers = (search?: string) =>
   useQuery({
     queryKey: ['student', 'teachers', search],
@@ -599,6 +612,18 @@ export const useGrantCourseAccess = (courseId: string) => {
       toast.success('Free access granted');
     },
     onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useCreateCourseAccessCode = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { maxUses?: number; expiresAt?: string }) => teacherApi.createCourseAccessCode(courseId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teacher', 'access-codes', courseId] });
+      toast.success('Access code created');
+    },
+    onError: (error) => toast.error(formatApiError(error)),
   });
 };
 

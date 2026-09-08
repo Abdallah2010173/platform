@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { FileImage, FileText, Gift, Pencil, Plus, Save, Trash2, Video, X } from 'lucide-react';
+import { Copy, FileImage, FileText, Gift, Pencil, Plus, Save, Trash2, Video, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import {
   useDeleteCourseResource,
   useDeleteLessonVideo,
   useGrantCourseAccess,
+  useCreateCourseAccessCode,
   useRevokeCourseAccess,
   useUpdateCourseResource,
 } from '@/lib/api/hooks';
@@ -47,6 +48,7 @@ export default function TeacherCourseContentPage() {
   const updateResource = useUpdateCourseResource(courseId);
   const deleteResource = useDeleteCourseResource(courseId);
   const grantAccess = useGrantCourseAccess(courseId);
+  const createAccessCode = useCreateCourseAccessCode(courseId);
   const revokeAccess = useRevokeCourseAccess(courseId);
   const { data: studentsData } = useAllTeacherStudents();
   const [chapterTitle, setChapterTitle] = useState('');
@@ -57,6 +59,9 @@ export default function TeacherCourseContentPage() {
   const [imageTitle, setImageTitle] = useState('');
   const [editingResource, setEditingResource] = useState<{ id: string; title: string } | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
+  const [maxCodeUses, setMaxCodeUses] = useState('1');
+  const [codeExpiresAt, setCodeExpiresAt] = useState('');
+  const [createdCode, setCreatedCode] = useState('');
   const course = data as Course | undefined;
   const chapters = course?.chapters ?? [];
   const resources = course?.resources ?? [];
@@ -68,6 +73,15 @@ export default function TeacherCourseContentPage() {
     return !query || `${student.name ?? ''} ${student.email}`.toLowerCase().includes(query);
   });
   const resourceUrl = (url: string) => url.startsWith('http') ? url : `${API_URL.replace(/\/api\/v1$/, '')}${url}`;
+
+  const createAccessCodeForCourse = () => {
+    createAccessCode.mutate(
+      { maxUses: Number(maxCodeUses) || 1, ...(codeExpiresAt ? { expiresAt: new Date(codeExpiresAt).toISOString() } : {}) },
+      { onSuccess: (result) => setCreatedCode((result as { code: string }).code) },
+    );
+  };
+
+  const accessCodePanel = <Card><CardHeader><CardTitle className="text-base">Course access code</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">Create a code and send it to a student to unlock this course.</p><div className="grid gap-2 sm:grid-cols-2"><Input type="number" min="1" max="1000" value={maxCodeUses} onChange={(event) => setMaxCodeUses(event.target.value)} placeholder="Maximum uses" /><Input type="datetime-local" value={codeExpiresAt} onChange={(event) => setCodeExpiresAt(event.target.value)} /></div><Button type="button" className="w-full" disabled={createAccessCode.isPending} onClick={createAccessCodeForCourse}>Create access code</Button>{createdCode && <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3"><code className="flex-1 text-lg font-semibold tracking-widest">{createdCode}</code><Button type="button" variant="outline" size="icon" aria-label="Copy access code" onClick={() => void navigator.clipboard.writeText(createdCode)}><Copy className="h-4 w-4" /></Button></div>}</CardContent></Card>;
 
   const submitChapter = (event: FormEvent) => {
     event.preventDefault();
@@ -122,7 +136,7 @@ export default function TeacherCourseContentPage() {
   return (
     <div className="space-y-6">
       <div><h1 className="text-xl font-semibold">{course.title}</h1><p className="text-muted-foreground text-sm">Manage lessons, resources, and student access.</p></div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">{accessCodePanel}
         <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">{t('Files and resources')}</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} placeholder={t('Resource title (optional)')} /><R2FileUpload accept="application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" resourceType="FILE" label={t('Choose file from device')} onUploaded={(file) => saveUploadedResource(file, 'FILE')} /><div className="space-y-2">{fileResources.map((resource) => renderResource(resource, false))}{!fileResources.length && <p className="text-muted-foreground text-sm">{t('No files uploaded yet.')}</p>}</div></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">{t('Images')}</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={imageTitle} onChange={(event) => setImageTitle(event.target.value)} placeholder={t('Image title (optional)')} /><R2FileUpload accept="image/png,image/jpeg,image/webp,image/gif" resourceType="IMAGE" label={t('Choose image')} onUploaded={(file) => saveUploadedResource(file, 'IMAGE')} /><div className="space-y-2">{imageResources.map((resource) => renderResource(resource, true))}{!imageResources.length && <p className="text-muted-foreground text-sm">{t('No images uploaded yet.')}</p>}</div></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">{t('Lesson videos')}</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">{t('Choose a lesson, then upload its video.')}</p><select className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm" value={uploadLessonId} onChange={(event) => setUploadLessonId(event.target.value)}><option value="">{t('Choose a lesson')}</option>{chapters.flatMap((chapter) => (chapter.lessons ?? []).map((lesson) => <option key={lesson.id} value={lesson.id}>{chapter.title} / {lesson.title}</option>))}</select>{uploadLessonId ? <LessonVideoUpload lessonId={uploadLessonId} label={t('Choose video')} onUploaded={handleUploadedVideo} /> : <Button type="button" variant="outline" className="w-full" disabled><Video className="mr-2 h-4 w-4" />{t('Choose a lesson first')}</Button>}</CardContent></Card>
