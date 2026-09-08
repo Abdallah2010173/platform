@@ -958,8 +958,18 @@ export class CourseService {
       where: { id: videoId },
       data: { deletedAt: new Date() },
     });
-    await this.deleteR2ObjectFromUrl(video.url);
+    await this.deleteVideoStorage(video);
     return { success: true };
+  }
+
+  private async deleteVideoStorage(video: { id: string; url: string; sourceKey: string | null; manifestKey: string | null; encryptionKey: string | null }): Promise<void> {
+    const keys = [video.sourceKey, video.manifestKey, video.encryptionKey].filter((key): key is string => Boolean(key));
+    for (const key of keys) {
+      await this.r2Storage.deleteFile(key);
+    }
+
+    await this.r2Storage.deletePrefix(`videos/${video.id}/`);
+    await this.deleteR2ObjectFromUrl(video.url);
   }
 
   private async deleteR2ObjectFromUrl(url: string): Promise<void> {

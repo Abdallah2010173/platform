@@ -1,6 +1,8 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -96,6 +98,25 @@ export class R2StorageService {
       Bucket: this.bucketName,
       Key: fileKey,
     }));
+  }
+
+  async deletePrefix(prefix: string): Promise<void> {
+    let continuationToken: string | undefined;
+    do {
+      const page = await this.client.send(new ListObjectsV2Command({
+        Bucket: this.bucketName,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }));
+      const keys = (page.Contents ?? []).flatMap((object) => object.Key ? [{ Key: object.Key }] : []);
+      if (keys.length > 0) {
+        await this.client.send(new DeleteObjectsCommand({
+          Bucket: this.bucketName,
+          Delete: { Objects: keys, Quiet: true },
+        }));
+      }
+      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (continuationToken);
   }
 
   async putObject(fileKey: string, body: Buffer, contentType: string): Promise<void> {
