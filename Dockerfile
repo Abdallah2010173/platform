@@ -15,4 +15,4 @@ RUN pnpm --filter @platform/api build
 ENV NODE_ENV=production
 ENV FFMPEG_PATH=ffmpeg
 EXPOSE 4000
-CMD ["sh", "-c", "for attempt in 1 2 3 4 5; do pnpm --filter @platform/api db:deploy && break; echo \"Database migration attempt $attempt failed; retrying...\"; test \"$attempt\" -lt 5 || exit 1; sleep 10; done; node apps/api/dist/main.js"]
+CMD ["sh", "-c", "migration_ok=false; for attempt in 1 2 3 4 5; do if pnpm --filter @platform/api db:deploy; then migration_ok=true; break; fi; echo \"Database migration attempt $attempt failed; retrying...\"; sleep 10; done; if [ \"$migration_ok\" != \"true\" ]; then echo \"WARNING: Database migration did not complete; starting API so health checks remain available.\"; fi; exec node apps/api/dist/main.js"]
