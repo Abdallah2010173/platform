@@ -9,6 +9,7 @@ RUN corepack enable
 COPY . .
 RUN corepack prepare pnpm@9.15.4 --activate
 RUN pnpm install --frozen-lockfile
+ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 RUN pnpm --filter @platform/api build
 
 ENV NODE_ENV=production
