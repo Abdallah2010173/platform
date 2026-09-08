@@ -22,6 +22,8 @@ export class R2StorageService {
     this.client = new S3Client({
       region: 'auto',
       endpoint: config.getOrThrow<string>('CLOUDFLARE_R2_ENDPOINT'),
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
       credentials: {
         accessKeyId: config.getOrThrow<string>('CLOUDFLARE_R2_ACCESS_KEY_ID'),
         secretAccessKey: config.getOrThrow<string>('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
