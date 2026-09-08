@@ -45,8 +45,21 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
         hls.loadSource(manifestUrl);
         hls.attachMedia(element);
         hls.on(Hls.Events.MANIFEST_PARSED, () => setMessage(''));
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) setMessage('Video playback failed. Please try again.');
+        hls.on(Hls.Events.ERROR, async (_event, data) => {
+          if (!data.fatal || cancelled) return;
+          try {
+            const sourceResponse = await fetch(`${API_URL}/media/videos/${videoId}/source-url`, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            const sourceBody = await sourceResponse.json();
+            const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
+            if (!sourceResponse.ok || !sourceUrl || !videoRef.current) throw new Error('Original video is unavailable');
+            hls?.destroy();
+            videoRef.current.src = sourceUrl;
+            setMessage('');
+          } catch {
+            setMessage('Video playback failed. Please try again.');
+          }
         });
       } catch (error) {
         if (!cancelled) setMessage(error instanceof Error ? error.message : 'Video unavailable');

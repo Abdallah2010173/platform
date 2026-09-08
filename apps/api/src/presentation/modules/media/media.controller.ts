@@ -175,6 +175,14 @@ export class MediaController {
     return response.send(key);
   }
 
+  @Get('videos/:id/source-url')
+  async sourceUrl(@CurrentUser() user: any, @Param('id') id: string) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    if (!video.sourceKey) throw new NotFoundException('Original video is not available');
+    return { url: await this.r2Storage.getPresignedDownloadUrl(video.sourceKey, 300), expiresIn: 300 };
+  }
+
   @Get('videos/:id')
   async streamVideo(@CurrentUser() user: any, @Param('id') id: string, @Res() response: Response) {
     const video = await this.prisma.lessonVideo.findFirst({
