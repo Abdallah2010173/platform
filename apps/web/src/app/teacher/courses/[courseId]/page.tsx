@@ -52,6 +52,7 @@ interface VideoItem {
   title?: string;
   url?: string;
   transcodingStatus?: string | null;
+  processingError?: string | null;
 }
 interface Lesson {
   id: string;
@@ -579,14 +580,16 @@ export default function TeacherCourseContentPage() {
                       {(lesson.videos ?? []).map((video) => (
                         <div key={video.id} className="flex items-center gap-2 text-sm">
                           <Video className="text-primary h-4 w-4" />
-                          <a
-                            className="min-w-0 flex-1 truncate underline"
-                            href={video.url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {video.title || video.url}
-                          </a>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{video.title || 'Lesson video'}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {video.transcodingStatus === 'READY'
+                                ? 'Ready for students'
+                                : video.transcodingStatus === 'FAILED'
+                                  ? `Processing failed: ${video.processingError || 'check server logs'}`
+                                  : 'Processing video...'}
+                            </p>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"

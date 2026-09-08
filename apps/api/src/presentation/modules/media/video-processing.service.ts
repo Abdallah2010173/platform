@@ -33,6 +33,7 @@ export class VideoProcessingService {
 
     try {
       await mkdir(outputDir, { recursive: true });
+      await Promise.all(this.variants.map((_, index) => mkdir(join(outputDir, String(index)), { recursive: true })));
       const encryptionKey = randomBytes(16);
       await writeFile(keyPath, encryptionKey);
       const apiUrl = this.config.get<string>('API_PUBLIC_URL') ?? `http://localhost:${this.config.get<number>('PORT', 4000)}`;
@@ -114,7 +115,7 @@ export class VideoProcessingService {
 
   private hasAudioStream(sourcePath: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      const probe = spawn('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=index', '-of', 'csv=p=0', sourcePath], {
+      const probe = spawn(this.config.get<string>('FFPROBE_PATH', 'ffprobe'), ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=index', '-of', 'csv=p=0', sourcePath], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       let output = '';
