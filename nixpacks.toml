@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs_22", "corepack", "python3"]
+nixPkgs = ["nodejs_22", "corepack", "python3", "ffmpeg"]
 
 [phases.prepare]
 cmds = ["corepack enable", "corepack prepare pnpm@9.15.4 --activate"]

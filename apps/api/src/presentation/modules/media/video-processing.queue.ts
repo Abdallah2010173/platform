@@ -15,12 +15,21 @@ export class VideoProcessingQueue implements OnModuleDestroy {
     this.connection = new IORedis(config.get<string>('REDIS_URL') ?? 'redis://localhost:6379', {
       maxRetriesPerRequest: null,
     });
+    this.connection.on('error', (error) => {
+      console.error(`[VideoProcessingQueue] Redis error: ${error.message}`);
+    });
     this.queue = new Queue<VideoProcessingJob>(VIDEO_PROCESSING_QUEUE, { connection: this.connection });
     this.worker = new Worker<VideoProcessingJob>(
       VIDEO_PROCESSING_QUEUE,
       async (job: Job<VideoProcessingJob>) => processor.process(job.data),
       { connection: this.connection, concurrency: 1 },
     );
+    this.worker.on('completed', (job) => {
+      console.log(`[VideoProcessingQueue] Completed video ${job.data.videoId}`);
+    });
+    this.worker.on('failed', (job, error) => {
+      console.error(`[VideoProcessingQueue] Failed video ${job?.data.videoId ?? 'unknown'}: ${error.message}`);
+    });
   }
 
   async enqueue(data: VideoProcessingJob) {
