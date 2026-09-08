@@ -82,6 +82,23 @@ const swaggerConfig = new DocumentBuilder()
   await app.listen(port, '0.0.0.0');
   logger.log(`API running on http://localhost:${port}/${apiPrefix}`);
   logger.log(`Swagger docs at http://localhost:${port}/${apiPrefix}/docs`);
+
+  const keepAliveUrl = configService.get<string>('KEEP_ALIVE_URL')?.trim();
+  if (keepAliveUrl) {
+    const intervalMs = configService.get<number>('KEEP_ALIVE_INTERVAL_MS', 10 * 60 * 1000);
+    const ping = async () => {
+      try {
+        const response = await fetch(keepAliveUrl, { signal: AbortSignal.timeout(10_000) });
+        if (!response.ok) logger.warn(`Keep-alive request failed with status ${response.status}`);
+      } catch (error) {
+        logger.warn(`Keep-alive request failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      }
+    };
+
+    void ping();
+    setInterval(() => void ping(), intervalMs);
+    logger.log(`Keep-alive enabled every ${Math.round(intervalMs / 1000)} seconds`);
+  }
 }
 
 void bootstrap();
