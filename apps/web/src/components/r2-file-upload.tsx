@@ -14,11 +14,12 @@ interface UploadedFile {
 interface R2FileUploadProps {
   accept?: string;
   label: string;
+  resourceType?: 'IMAGE' | 'VIDEO' | 'FILE';
   onUploaded: (file: UploadedFile) => void;
   disabled?: boolean;
 }
 
-export function R2FileUpload({ accept, label, onUploaded, disabled = false }: R2FileUploadProps) {
+export function R2FileUpload({ accept, label, resourceType, onUploaded, disabled = false }: R2FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -36,7 +37,7 @@ export function R2FileUpload({ accept, label, onUploaded, disabled = false }: R2
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type || 'application/octet-stream' }),
+        body: JSON.stringify({ fileName: file.name, contentType: file.type || 'application/octet-stream', resourceType }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.message || 'Could not create upload URL');
@@ -47,7 +48,11 @@ export function R2FileUpload({ accept, label, onUploaded, disabled = false }: R2
         headers: { 'Content-Type': file.type || 'application/octet-stream' },
         body: file,
       });
-      if (!uploadResponse.ok) throw new Error('Could not upload file to R2');
+      if (!uploadResponse.ok) {
+        throw new Error(uploadResponse.status === 403
+          ? 'R2 rejected the upload. Check the bucket CORS policy.'
+          : `Could not upload file to R2 (${uploadResponse.status})`);
+      }
 
       onUploaded({
         fileKey: upload.fileKey,

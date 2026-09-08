@@ -17,6 +17,7 @@ import { Roles } from '../../decorators/roles.decorator';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { CourseService } from './services/course.service';
 import { CategoryService } from './services/category.service';
+import { R2StorageService } from '../../../infrastructure/storage/r2-storage.service';
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
@@ -45,9 +46,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { BadRequestException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
 import { UseInterceptors, UploadedFile } from '@nestjs/common';
 import { memoryStorage } from 'multer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -66,6 +64,7 @@ export class CoursesController {
   constructor(
     private readonly courseService: CourseService,
     private readonly categoryService: CategoryService,
+    private readonly r2Storage: R2StorageService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -595,16 +594,16 @@ export class CoursesController {
 
     await this.courseService.assertAccess(courseId, user);
 
-    const extension = extname(file.originalname).toLowerCase();
-    const relativePath = join('course-resources', `${randomUUID()}${extension}`);
-    const uploadRoot = join(process.cwd(), 'uploads');
-    await mkdir(join(uploadRoot, 'course-resources'), { recursive: true });
-    await writeFile(join(uploadRoot, relativePath), file.buffer);
+    const uploaded = await this.r2Storage.uploadBuffer(
+      file.originalname,
+      file.mimetype,
+      file.buffer,
+    );
 
     return this.courseService.addCourseResource(courseId, {
       title: title.trim(),
       type: file.mimetype.startsWith('video/') ? 'VIDEO' : file.mimetype.startsWith('image/') ? 'IMAGE' : 'FILE',
-      fileUrl: `/uploads/${relativePath.replaceAll('\\', '/')}`,
+      fileUrl: uploaded.publicUrl,
       fileName: file.originalname,
       fileSize: file.size,
       mimeType: file.mimetype,

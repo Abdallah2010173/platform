@@ -3,24 +3,28 @@ import {
   Get,
   Param,
   Post,
+  HttpCode,
+  HttpStatus,
   Res,
   UploadedFile,
   UseInterceptors,
   BadRequestException,
   ForbiddenException,
   NotFoundException,
-  Req,
-  Headers,
-  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Response, Request } from 'express';
+import type { Response } from 'express';
 import { VideoSource } from '@prisma/client';
+import { diskStorage } from 'multer';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { BunnyStreamService } from '../../../infrastructure/bunny/bunny-stream.service';
+import { R2StorageService } from '../../../infrastructure/storage/r2-storage.service';
 import { CourseAccessService } from '../courses/services/course-access.service';
+import { VideoProcessingQueue } from './video-processing.queue';
 
 const allowedVideoTypes = new Set(['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']);
 
@@ -31,13 +35,23 @@ export class MediaController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly courseAccessService: CourseAccessService,
-    private readonly bunnyStreamService: BunnyStreamService,
+    private readonly r2Storage: R2StorageService,
+    private readonly videoQueue: VideoProcessingQueue,
   ) {}
 
   @Post('lessons/:lessonId/videos')
   @ApiConsumes('multipart/form-data')
+  @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
     FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, callback) => {
+          const directory = join(process.cwd(), 'uploads', 'video-tmp');
+          mkdirSync(directory, { recursive: true });
+          callback(null, directory);
+        },
+        filename: (_req, file, callback) => callback(null, `${randomUUID()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`),
+      }),
       limits: { fileSize: 1024 * 1024 * 1024 },
       fileFilter: (_req, file, callback) => callback(null, allowedVideoTypes.has(file.mimetype)),
     }),
@@ -58,27 +72,64 @@ export class MediaController {
 
     await this.assertTeacherAccess(user, lesson.courseId);
 
-    const created = await this.bunnyStreamService.createVideo(file.originalname || `lesson-${lessonId}`);
-    const uploaded = await this.bunnyStreamService.uploadVideoFile(created.videoId, file);
-
     const record = await this.prisma.lessonVideo.create({
       data: {
         lessonId,
-        title: uploaded.title,
-        description: `Bunny Stream upload: ${uploaded.title}`,
-        url: uploaded.playbackUrl,
-        source: VideoSource.BUNNY,
-        durationSeconds: uploaded.durationSeconds ?? null,
-        thumbnailUrl: uploaded.thumbnailUrl ?? undefined,
+        title: file.originalname || `lesson-${lessonId}`,
+        description: 'Queued for HLS processing',
+        url: '',
+        source: VideoSource.UPLOAD,
         sizeBytes: file.size ? BigInt(file.size) : undefined,
-        resolution: uploaded.resolution ?? undefined,
         quality: 'AUTO',
-        uploadId: uploaded.videoId,
-        transcodingStatus: uploaded.status ?? 'READY',
+        transcodingStatus: 'QUEUED',
       },
     });
 
-    return record;
+    const job = await this.videoQueue.enqueue({
+      videoId: record.id,
+      lessonId,
+      sourcePath: file.path,
+      originalName: file.originalname,
+      contentType: file.mimetype,
+    });
+    const queued = await this.prisma.lessonVideo.update({
+      where: { id: record.id },
+      data: { uploadId: job.id },
+    });
+    return { id: queued.id, status: queued.transcodingStatus, jobId: job.id };
+  }
+
+  @Get('videos/:id/status')
+  async videoStatus(@CurrentUser() user: any, @Param('id') id: string) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    return {
+      id: video.id,
+      status: video.transcodingStatus ?? 'UNKNOWN',
+      error: video.processingError,
+      ready: video.transcodingStatus === 'READY',
+    };
+  }
+
+  @Get('videos/:id/manifest-url')
+  async manifestUrl(@CurrentUser() user: any, @Param('id') id: string) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    if (video.transcodingStatus !== 'READY' || !video.manifestKey) {
+      throw new NotFoundException('Video is still being processed');
+    }
+    return { url: await this.r2Storage.getPresignedDownloadUrl(video.manifestKey, 300), expiresIn: 300 };
+  }
+
+  @Get('videos/:id/key')
+  async encryptionKey(@CurrentUser() user: any, @Param('id') id: string, @Res() response: Response) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    if (!video.encryptionKey) throw new NotFoundException('Encryption key is not available');
+    const key = await this.r2Storage.getObject(video.encryptionKey);
+    response.setHeader('Content-Type', 'application/octet-stream');
+    response.setHeader('Cache-Control', 'private, no-store');
+    return response.send(key);
   }
 
   @Get('videos/:id')
@@ -88,41 +139,21 @@ export class MediaController {
       include: { lesson: true },
     });
 
-    if (!video?.uploadId) {
+    if (!video?.manifestKey) {
       throw new NotFoundException('Video not found');
     }
 
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
-    return response.redirect(302, this.bunnyStreamService.getPlaybackUrl(video.uploadId));
+    return response.redirect(302, await this.r2Storage.getPresignedDownloadUrl(video.manifestKey, 300));
   }
 
-  @Post('webhooks/bunny')
-  @ApiOperation({ summary: 'Bunny Stream webhook endpoint' })
-  async bunnyWebhook(
-    @Req() req: Request,
-    @Body() body: Record<string, any>,
-    @Headers('x-bunny-signature') signature: string,
-    @Headers('x-bunny-event') eventName: string,
-  ) {
-    const rawBody = (req as any).rawBody ? String((req as any).rawBody) : JSON.stringify(body ?? {});
-
-    if (!this.bunnyStreamService.verifyWebhookSignature(rawBody, signature)) {
-      throw new ForbiddenException('Invalid Bunny Stream webhook signature');
-    }
-
-    const videoId = body?.videoId ?? body?.video?.id ?? body?.guid ?? body?.Id;
-    const status = body?.status ?? body?.video?.status ?? eventName ?? 'UNKNOWN';
-
-    if (videoId) {
-      await this.prisma.lessonVideo.updateMany({
-        where: { uploadId: String(videoId) },
-        data: {
-          transcodingStatus: String(status),
-        },
-      });
-    }
-
-    return { success: true };
+  private async findVideo(id: string) {
+    const video = await this.prisma.lessonVideo.findFirst({
+      where: { id, deletedAt: null },
+      include: { lesson: { include: { chapter: true } } },
+    });
+    if (!video) throw new NotFoundException('Video not found');
+    return video;
   }
 
   private async assertTeacherAccess(user: any, courseId: string) {

@@ -43,6 +43,14 @@ export class EnvironmentVariables {
   @IsString()
   REDIS_URL?: string;
 
+  @IsOptional()
+  @IsString()
+  API_PUBLIC_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  FFMPEG_PATH?: string;
+
   @IsString()
   GOOGLE_CLIENT_ID!: string;
 

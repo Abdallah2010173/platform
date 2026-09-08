@@ -1337,6 +1337,10 @@ model LessonVideo {
   hasWatermark      Boolean      @default(false)
   transcodingStatus String?
   uploadId          String?
+  sourceKey         String?
+  manifestKey       String?
+  encryptionKey     String?
+  processingError   String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   deletedAt         DateTime?

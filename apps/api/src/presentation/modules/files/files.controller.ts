@@ -12,6 +12,6 @@ export class FilesController {
   @Post('upload-url')
   @ApiOperation({ summary: 'Create a presigned R2 upload URL' })
   getUploadUrl(@Body() dto: UploadUrlDto) {
-    return this.storage.getPresignedUploadUrl(dto.fileName, dto.contentType);
+    return this.storage.getPresignedUploadUrl(dto.fileName, dto.contentType, dto.resourceType);
   }
 }
