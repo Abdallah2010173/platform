@@ -8,16 +8,9 @@ import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { R2StorageService } from '../../../infrastructure/storage/r2-storage.service';
 import { VideoProcessingJob } from './video-processing.constants';
 
-type Variant = { name: string; width: number; height: number; bandwidth: number };
-
 @Injectable()
 export class VideoProcessingService {
   private readonly logger = new Logger(VideoProcessingService.name);
-  private readonly variants: Variant[] = [
-    { name: '1080p', width: 1920, height: 1080, bandwidth: 5500000 },
-    { name: '720p', width: 1280, height: 720, bandwidth: 3000000 },
-    { name: '480p', width: 854, height: 480, bandwidth: 1400000 },
-  ];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -33,7 +26,7 @@ export class VideoProcessingService {
 
     try {
       await mkdir(outputDir, { recursive: true });
-      await Promise.all(this.variants.map((_, index) => mkdir(join(outputDir, String(index)), { recursive: true })));
+      await mkdir(join(outputDir, '0'), { recursive: true });
       const encryptionKey = randomBytes(16);
       await writeFile(keyPath, encryptionKey);
       const apiUrl = this.config.get<string>('API_PUBLIC_URL') ?? `http://localhost:${this.config.get<number>('PORT', 4000)}`;
@@ -42,6 +35,10 @@ export class VideoProcessingService {
 
       const hasAudio = await this.hasAudioStream(job.sourcePath);
       await this.runFfmpeg(job.sourcePath, outputDir, keyInfoPath, hasAudio);
+      await writeFile(
+        join(outputDir, 'master.m3u8'),
+        '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=3000000,RESOLUTION=1280x720\n0/index.m3u8\n',
+      );
       const files = await this.collectFiles(outputDir);
       const prefix = `videos/${job.videoId}/hls`;
       for (const filePath of files) {
@@ -83,33 +80,27 @@ export class VideoProcessingService {
   }
 
   private runFfmpeg(sourcePath: string, outputDir: string, keyInfoPath: string, hasAudio: boolean): Promise<void> {
-    const filter = [
-      '[0:v]split=3[v0][v1][v2]',
-      ...this.variants.map((variant, index) =>
-        `[v${index}]scale=w=${variant.width}:h=${variant.height}:force_original_aspect_ratio=decrease,pad=${variant.width}:${variant.height}:(ow-iw)/2:(oh-ih)/2[v${index}out]`,
-      ),
-    ].join(';');
+    const filter = 'scale=w=1280:h=720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2';
     const args = [
-      '-y', '-i', sourcePath, '-filter_complex', filter,
-      ...this.variants.flatMap((_, index) => [
-        '-map', `[v${index}out]`,
-        ...(hasAudio ? ['-map', '0:a:0'] : []),
-      ]),
+      '-y', '-i', sourcePath, '-vf', filter,
+      '-map', '0:v:0',
+      ...(hasAudio ? ['-map', '0:a:0'] : []),
       '-c:v', 'libx264', '-preset', 'veryfast', '-profile:v', 'main', '-crf', '22',
-      '-c:a', 'aac', '-ar', '48000', '-b:a', '128k',
+      ...(hasAudio ? ['-c:a', 'aac', '-ar', '48000', '-b:a', '128k'] : []),
       '-f', 'hls', '-hls_time', '6', '-hls_playlist_type', 'vod',
       '-hls_flags', 'independent_segments', '-hls_key_info_file', keyInfoPath,
-      '-hls_segment_filename', join(outputDir, '%v', 'segment_%05d.ts'),
-      '-master_pl_name', 'master.m3u8',
-      '-var_stream_map', hasAudio ? 'v:0,a:0 v:1,a:1 v:2,a:2' : 'v:0 v:1 v:2',
-      join(outputDir, '%v', 'index.m3u8'),
+      '-hls_segment_filename', join(outputDir, '0', 'segment_%05d.ts'),
+      join(outputDir, '0', 'index.m3u8'),
     ];
     return new Promise((resolve, reject) => {
       const process = spawn(this.config.get<string>('FFMPEG_PATH', 'ffmpeg'), args, { stdio: ['ignore', 'ignore', 'pipe'] });
       let stderr = '';
       process.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
       process.once('error', (error) => reject(new Error(`FFmpeg is unavailable: ${error.message}`)));
-      process.once('close', (code) => code === 0 ? resolve() : reject(new Error(`FFmpeg exited with ${code}: ${stderr.slice(-2000)}`)));
+      process.once('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`FFmpeg exited with ${code}: ${stderr.trim().slice(-4000)}`));
+      });
     });
   }
 
