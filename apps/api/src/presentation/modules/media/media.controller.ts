@@ -20,6 +20,7 @@ import { diskStorage } from 'multer';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { posix } from 'node:path';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { R2StorageService } from '../../../infrastructure/storage/r2-storage.service';
@@ -121,7 +122,41 @@ export class MediaController {
     if (video.transcodingStatus !== 'READY' || !video.manifestKey) {
       throw new NotFoundException('Video is still being processed');
     }
-    return { url: await this.r2Storage.getPresignedDownloadUrl(video.manifestKey, 300), expiresIn: 300 };
+    const apiUrl = process.env.API_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 4000}`;
+    return { url: `${apiUrl.replace(/\/+$/, '')}/api/v1/media/videos/${id}/manifest`, expiresIn: 300 };
+  }
+
+  @Get('videos/:id/manifest')
+  async manifest(@CurrentUser() user: any, @Param('id') id: string, @Res() response: Response) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    if (video.transcodingStatus !== 'READY' || !video.manifestKey) {
+      throw new NotFoundException('Video is still being processed');
+    }
+
+    const manifest = (await this.r2Storage.getObject(video.manifestKey)).toString('utf8');
+    const rewritten = this.rewriteHlsManifest(manifest, id, 'master.m3u8');
+    response.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    response.setHeader('Cache-Control', 'private, no-store');
+    return response.send(rewritten);
+  }
+
+  @Get('videos/:id/hls/*path')
+  async hlsFile(@CurrentUser() user: any, @Param('id') id: string, @Param('path') objectPath: string, @Res() response: Response) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    const safePath = objectPath.replace(/^\/+/, '');
+    if (!safePath || safePath.includes('..')) throw new NotFoundException('HLS file not found');
+
+    const key = `videos/${id}/hls/${safePath}`;
+    const content = await this.r2Storage.getObject(key);
+    if (safePath.endsWith('.m3u8')) {
+      const rewritten = this.rewriteHlsManifest(content.toString('utf8'), id, safePath);
+      response.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      return response.send(rewritten);
+    }
+    response.setHeader('Content-Type', safePath.endsWith('.ts') ? 'video/mp2t' : 'application/octet-stream');
+    return response.send(content);
   }
 
   @Get('videos/:id/key')
@@ -157,6 +192,25 @@ export class MediaController {
     });
     if (!video) throw new NotFoundException('Video not found');
     return video;
+  }
+
+  private rewriteHlsManifest(manifest: string, videoId: string, currentPath: string): string {
+    const currentDirectory = posix.dirname(currentPath);
+    const hlsUrl = (relativePath: string) => {
+      const target = posix.normalize(posix.join(currentDirectory, relativePath));
+      return `/api/v1/media/videos/${videoId}/hls/${encodeURI(target)}`;
+    };
+
+    return manifest
+      .split(/\r?\n/)
+      .map((line) => {
+        if (line.startsWith('#EXT-X-KEY:') && line.includes('URI="')) {
+          return line.replace(/URI="([^"]+)"/, (_match, uri: string) => `URI="${uri.startsWith('http') ? uri : hlsUrl(uri)}"`);
+        }
+        if (!line || line.startsWith('#')) return line;
+        return hlsUrl(line.trim());
+      })
+      .join('\n');
   }
 
   private async assertTeacherAccess(user: any, courseId: string) {
