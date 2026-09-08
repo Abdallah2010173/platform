@@ -3,8 +3,10 @@ import { CoursesController } from './courses.controller';
 import { CourseService } from './services/course.service';
 import { CategoryService } from './services/category.service';
 import { CourseAccessService } from './services/course-access.service';
+import { FilesModule } from '../files/files.module';
 
 @Module({
+  imports: [FilesModule],
   controllers: [CoursesController],
   providers: [CourseService, CategoryService, CourseAccessService],
   exports: [CourseService, CategoryService, CourseAccessService],

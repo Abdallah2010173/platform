@@ -17,6 +17,7 @@ import { MediaModule } from './presentation/modules/media/media.module';
 import { PaymentsModule } from './presentation/modules/payments/payments.module';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 import { RolesGuard } from './presentation/guards/roles.guard';
+import { FilesModule } from './presentation/modules/files/files.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { RolesGuard } from './presentation/guards/roles.guard';
     SurveysModule,
     MediaModule,
     PaymentsModule,
+    FilesModule,
   ],
   providers: [
     {

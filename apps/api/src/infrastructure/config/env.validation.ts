@@ -67,6 +67,22 @@ export class EnvironmentVariables {
   @IsString()
   BUNNY_STREAM_CDN_HOSTNAME!: string;
 
+  @IsString()
+  CLOUDFLARE_R2_ACCESS_KEY_ID!: string;
+
+  @IsString()
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY!: string;
+
+  @IsString()
+  CLOUDFLARE_R2_ENDPOINT!: string;
+
+  @IsString()
+  CLOUDFLARE_R2_BUCKET_NAME!: string;
+
+  @IsOptional()
+  @IsString()
+  CLOUDFLARE_R2_PUBLIC_URL?: string;
+
   @IsOptional()
   @IsString()
   BUNNY_STREAM_WEBHOOK_SECRET?: string;
@@ -134,6 +150,10 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     'BUNNY_STREAM_LIBRARY_ID',
     'BUNNY_STREAM_API_KEY',
     'BUNNY_STREAM_CDN_HOSTNAME',
+    'CLOUDFLARE_R2_ACCESS_KEY_ID',
+    'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
+    'CLOUDFLARE_R2_ENDPOINT',
+    'CLOUDFLARE_R2_BUCKET_NAME',
   ];
 
   for (const key of required) {

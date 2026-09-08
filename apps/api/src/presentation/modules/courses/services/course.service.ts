@@ -22,6 +22,7 @@ import {
   CreateCourseReviewDto,
 } from '../dto/courses.dto';
 import { PaginatedResult } from '../../../common/dto/pagination.dto';
+import { R2StorageService } from '../../../../infrastructure/storage/r2-storage.service';
 
 interface AuthUser {
   id: string;
@@ -31,7 +32,10 @@ interface AuthUser {
 
 @Injectable()
 export class CourseService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2Storage: R2StorageService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // COURSES
@@ -946,7 +950,17 @@ export class CourseService {
       where: { id: videoId },
       data: { deletedAt: new Date() },
     });
+    await this.deleteR2ObjectFromUrl(video.url);
     return { success: true };
+  }
+
+  private async deleteR2ObjectFromUrl(url: string): Promise<void> {
+    const marker = '/uploads/';
+    const pathname = url.startsWith('http') ? new URL(url).pathname : url;
+    const markerIndex = pathname.indexOf(marker);
+    if (markerIndex >= 0) {
+      await this.r2Storage.deleteFile(decodeURIComponent(pathname.slice(markerIndex + 1)));
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

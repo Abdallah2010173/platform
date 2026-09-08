@@ -606,6 +606,7 @@ export const useRevokeCourseAccess = (courseId: string) => {
   return useMutation({
     mutationFn: (studentId: string) => teacherApi.revokeCourseAccess(courseId, studentId),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
       qc.invalidateQueries({ queryKey: ['teacher', 'all-students'] });
       toast.success('Free access canceled');
     },
