@@ -15,4 +15,4 @@ RUN pnpm --filter @platform/api build
 ENV NODE_ENV=production
 ENV FFMPEG_PATH=ffmpeg
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm --filter @platform/api db:deploy && pnpm --filter @platform/api start:prod"]
+CMD ["sh", "-c", "for attempt in 1 2 3 4 5; do pnpm --filter @platform/api db:deploy && break; echo \"Database migration attempt $attempt failed; retrying...\"; test \"$attempt\" -lt 5 || exit 1; sleep 10; done; node apps/api/dist/main.js"]
