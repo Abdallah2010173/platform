@@ -2,12 +2,31 @@
 
 import { FormEvent, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Copy, FileImage, FileText, Gift, Pencil, Plus, Save, Trash2, Video, X } from 'lucide-react';
+import {
+  Copy,
+  FileImage,
+  FileText,
+  Gift,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  Video,
+  X,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState, LoadingState } from '@/components/dashboard/data-states';
 import { API_URL } from '@/lib/api/client';
 import { useLocale } from '@/lib/i18n';
@@ -28,12 +47,42 @@ import {
   useUpdateCourseResource,
 } from '@/lib/api/hooks';
 
-interface VideoItem { id: string; title?: string; url?: string; transcodingStatus?: string | null }
-interface Lesson { id: string; title: string; videos?: VideoItem[] }
-interface Chapter { id: string; title: string; lessons?: Lesson[] }
-interface Resource { id: string; title: string; type?: string | null; mimeType?: string | null; fileUrl?: string | null }
-interface Student { userId: string; name?: string; email: string; avatarUrl?: string | null; enrolledCourses?: { id?: string; courseId?: string; accessType?: string; status?: string }[] }
-interface Course { id: string; title: string; chapters?: Chapter[]; resources?: Resource[] }
+interface VideoItem {
+  id: string;
+  title?: string;
+  url?: string;
+  transcodingStatus?: string | null;
+}
+interface Lesson {
+  id: string;
+  title: string;
+  videos?: VideoItem[];
+}
+interface Chapter {
+  id: string;
+  title: string;
+  lessons?: Lesson[];
+}
+interface Resource {
+  id: string;
+  title: string;
+  type?: string | null;
+  mimeType?: string | null;
+  fileUrl?: string | null;
+}
+interface Student {
+  userId: string;
+  name?: string;
+  email: string;
+  avatarUrl?: string | null;
+  enrolledCourses?: { id?: string; courseId?: string; accessType?: string; status?: string }[];
+}
+interface Course {
+  id: string;
+  title: string;
+  chapters?: Chapter[];
+  resources?: Resource[];
+}
 
 export default function TeacherCourseContentPage() {
   const params = useParams<{ courseId: string }>();
@@ -57,31 +106,91 @@ export default function TeacherCourseContentPage() {
   const [uploadLessonId, setUploadLessonId] = useState('');
   const [resourceTitle, setResourceTitle] = useState('');
   const [imageTitle, setImageTitle] = useState('');
-  const [editingResource, setEditingResource] = useState<{ id: string; title: string } | null>(null);
+  const [editingResource, setEditingResource] = useState<{ id: string; title: string } | null>(
+    null,
+  );
   const [studentSearch, setStudentSearch] = useState('');
   const [maxCodeUses, setMaxCodeUses] = useState('1');
   const [codeExpiresAt, setCodeExpiresAt] = useState('');
   const [createdCode, setCreatedCode] = useState('');
+  const [videoToDelete, setVideoToDelete] = useState<VideoItem | null>(null);
   const course = data as Course | undefined;
   const chapters = course?.chapters ?? [];
   const resources = course?.resources ?? [];
-  const imageResources = resources.filter((resource) => resource.type === 'IMAGE' || resource.mimeType?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(resource.fileUrl ?? resource.title));
+  const imageResources = resources.filter(
+    (resource) =>
+      resource.type === 'IMAGE' ||
+      resource.mimeType?.startsWith('image/') ||
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(resource.fileUrl ?? resource.title),
+  );
   const fileResources = resources.filter((resource) => !imageResources.includes(resource));
   const students = (Array.isArray(studentsData) ? studentsData : []) as Student[];
   const visibleStudents = students.filter((student) => {
     const query = studentSearch.trim().toLowerCase();
     return !query || `${student.name ?? ''} ${student.email}`.toLowerCase().includes(query);
   });
-  const resourceUrl = (url: string) => url.startsWith('http') ? url : `${API_URL.replace(/\/api\/v1$/, '')}${url}`;
+  const resourceUrl = (url: string) =>
+    url.startsWith('http') ? url : `${API_URL.replace(/\/api\/v1$/, '')}${url}`;
 
   const createAccessCodeForCourse = () => {
     createAccessCode.mutate(
-      { maxUses: Number(maxCodeUses) || 1, ...(codeExpiresAt ? { expiresAt: new Date(codeExpiresAt).toISOString() } : {}) },
+      {
+        maxUses: Number(maxCodeUses) || 1,
+        ...(codeExpiresAt ? { expiresAt: new Date(codeExpiresAt).toISOString() } : {}),
+      },
       { onSuccess: (result) => setCreatedCode((result as { code: string }).code) },
     );
   };
 
-  const accessCodePanel = <Card><CardHeader><CardTitle className="text-base">Course access code</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">Create a code and send it to a student to unlock this course.</p><div className="grid gap-2 sm:grid-cols-2"><Input type="number" min="1" max="1000" value={maxCodeUses} onChange={(event) => setMaxCodeUses(event.target.value)} placeholder="Maximum uses" /><Input type="datetime-local" value={codeExpiresAt} onChange={(event) => setCodeExpiresAt(event.target.value)} /></div><Button type="button" className="w-full" disabled={createAccessCode.isPending} onClick={createAccessCodeForCourse}>Create access code</Button>{createdCode && <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3"><code className="flex-1 text-lg font-semibold tracking-widest">{createdCode}</code><Button type="button" variant="outline" size="icon" aria-label="Copy access code" onClick={() => void navigator.clipboard.writeText(createdCode)}><Copy className="h-4 w-4" /></Button></div>}</CardContent></Card>;
+  const accessCodePanel = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Course access code</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-muted-foreground text-sm">
+          Create a code and send it to a student to unlock this course.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input
+            type="number"
+            min="1"
+            max="1000"
+            value={maxCodeUses}
+            onChange={(event) => setMaxCodeUses(event.target.value)}
+            placeholder="Maximum uses"
+          />
+          <Input
+            type="datetime-local"
+            value={codeExpiresAt}
+            onChange={(event) => setCodeExpiresAt(event.target.value)}
+          />
+        </div>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={createAccessCode.isPending}
+          onClick={createAccessCodeForCourse}
+        >
+          Create access code
+        </Button>
+        {createdCode && (
+          <div className="bg-muted/40 flex items-center gap-2 rounded-md border p-3">
+            <code className="flex-1 text-lg font-semibold tracking-widest">{createdCode}</code>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Copy access code"
+              onClick={() => void navigator.clipboard.writeText(createdCode)}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   const submitChapter = (event: FormEvent) => {
     event.preventDefault();
@@ -93,41 +202,147 @@ export default function TeacherCourseContentPage() {
     event.preventDefault();
     const title = lessonTitles[chapterId]?.trim();
     if (!title) return;
-    addLesson.mutate({ chapterId, data: { title } }, { onSuccess: () => setLessonTitles({ ...lessonTitles, [chapterId]: '' }) });
+    addLesson.mutate(
+      { chapterId, data: { title } },
+      { onSuccess: () => setLessonTitles({ ...lessonTitles, [chapterId]: '' }) },
+    );
   };
 
   const submitVideo = (event: FormEvent, lessonId: string) => {
     event.preventDefault();
     const form = videoForms[lessonId];
     if (!form?.url.trim()) return;
-    addVideo.mutate({ lessonId, data: { title: form.title.trim() || undefined, url: form.url.trim() } }, { onSuccess: () => setVideoForms({ ...videoForms, [lessonId]: { title: '', url: '' } }) });
+    addVideo.mutate(
+      { lessonId, data: { title: form.title.trim() || undefined, url: form.url.trim() } },
+      { onSuccess: () => setVideoForms({ ...videoForms, [lessonId]: { title: '', url: '' } }) },
+    );
   };
 
   const handleUploadedVideo = (uploaded: { id: string; status?: string; jobId?: string }) => {
     if (!uploaded) return;
   };
 
-  const saveUploadedResource = (uploaded: { fileKey: string; publicUrl?: string; fileName: string }, type: 'FILE' | 'IMAGE') => {
+  const saveUploadedResource = (
+    uploaded: { fileKey: string; publicUrl?: string; fileName: string },
+    type: 'FILE' | 'IMAGE',
+  ) => {
     if (!uploaded) return;
-    const title = (type === 'IMAGE' ? imageTitle : resourceTitle).trim() || uploaded.fileName.replace(/\.[^/.]+$/, '') || 'Course resource';
-    addResource.mutate({ title, type, fileUrl: uploaded.publicUrl ?? uploaded.fileKey, fileName: uploaded.fileName, isExternal: true }, {
-      onSuccess: () => type === 'IMAGE' ? setImageTitle('') : setResourceTitle(''),
-    });
+    const title =
+      (type === 'IMAGE' ? imageTitle : resourceTitle).trim() ||
+      uploaded.fileName.replace(/\.[^/.]+$/, '') ||
+      'Course resource';
+    addResource.mutate(
+      {
+        title,
+        type,
+        fileUrl: uploaded.publicUrl ?? uploaded.fileKey,
+        fileName: uploaded.fileName,
+        isExternal: true,
+      },
+      {
+        onSuccess: () => (type === 'IMAGE' ? setImageTitle('') : setResourceTitle('')),
+      },
+    );
   };
 
   const saveResourceTitle = () => {
     if (!editingResource?.title.trim()) return;
-    updateResource.mutate({ id: editingResource.id, data: { title: editingResource.title.trim() } }, { onSuccess: () => setEditingResource(null) });
+    updateResource.mutate(
+      { id: editingResource.id, data: { title: editingResource.title.trim() } },
+      { onSuccess: () => setEditingResource(null) },
+    );
+  };
+
+  const confirmDeleteVideo = () => {
+    if (!videoToDelete) return;
+    deleteVideo.mutate(videoToDelete.id, { onSuccess: () => setVideoToDelete(null) });
   };
 
   const renderResource = (resource: Resource, isImage: boolean) => {
     const editing = editingResource?.id === resource.id;
-    return <div key={resource.id} className="flex items-center gap-2 rounded-md border p-2 text-sm">
-      {isImage ? <FileImage className="text-primary h-4 w-4 shrink-0" /> : <FileText className="h-4 w-4 shrink-0" />}
-      {editing ? <Input autoFocus value={editingResource.title} onChange={(event) => setEditingResource({ ...editingResource, title: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter') saveResourceTitle(); if (event.key === 'Escape') setEditingResource(null); }} className="h-8 min-w-0 flex-1" /> : <span className="min-w-0 flex-1 truncate">{resource.title}</span>}
-      {!editing && resource.fileUrl && <a className="text-primary underline" href={resourceUrl(resource.fileUrl)} target="_blank" rel="noreferrer">Open</a>}
-      {editing ? <><Button type="button" variant="ghost" size="icon" aria-label="Save resource title" disabled={updateResource.isPending} onClick={saveResourceTitle}><Save className="h-4 w-4" /></Button><Button type="button" variant="ghost" size="icon" aria-label="Cancel editing resource" onClick={() => setEditingResource(null)}><X className="h-4 w-4" /></Button></> : <><Button type="button" variant="ghost" size="icon" aria-label={`Edit ${resource.title}`} onClick={() => setEditingResource({ id: resource.id, title: resource.title })}><Pencil className="h-4 w-4" /></Button><Button type="button" variant="ghost" size="icon" aria-label={`Delete ${resource.title}`} disabled={deleteResource.isPending} onClick={() => { if (window.confirm(`Delete resource "${resource.title}"?`)) deleteResource.mutate(resource.id); }}><Trash2 className="text-destructive h-4 w-4" /></Button></>}
-    </div>;
+    return (
+      <div key={resource.id} className="flex items-center gap-2 rounded-md border p-2 text-sm">
+        {isImage ? (
+          <FileImage className="text-primary h-4 w-4 shrink-0" />
+        ) : (
+          <FileText className="h-4 w-4 shrink-0" />
+        )}
+        {editing ? (
+          <Input
+            autoFocus
+            value={editingResource.title}
+            onChange={(event) =>
+              setEditingResource({ ...editingResource, title: event.target.value })
+            }
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') saveResourceTitle();
+              if (event.key === 'Escape') setEditingResource(null);
+            }}
+            className="h-8 min-w-0 flex-1"
+          />
+        ) : (
+          <span className="min-w-0 flex-1 truncate">{resource.title}</span>
+        )}
+        {!editing && resource.fileUrl && (
+          <a
+            className="text-primary underline"
+            href={resourceUrl(resource.fileUrl)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open
+          </a>
+        )}
+        {editing ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Save resource title"
+              disabled={updateResource.isPending}
+              onClick={saveResourceTitle}
+            >
+              <Save className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Cancel editing resource"
+              onClick={() => setEditingResource(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={`Edit ${resource.title}`}
+              onClick={() => setEditingResource({ id: resource.id, title: resource.title })}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={`Delete ${resource.title}`}
+              disabled={deleteResource.isPending}
+              onClick={() => {
+                if (window.confirm(`Delete resource "${resource.title}"?`))
+                  deleteResource.mutate(resource.id);
+              }}
+            >
+              <Trash2 className="text-destructive h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
+    );
   };
 
   if (isLoading) return <LoadingState label="Loading course content..." />;
@@ -135,15 +350,310 @@ export default function TeacherCourseContentPage() {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-xl font-semibold">{course.title}</h1><p className="text-muted-foreground text-sm">Manage lessons, resources, and student access.</p></div>
-      <div className="grid gap-4 lg:grid-cols-3">{accessCodePanel}
-        <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">{t('Files and resources')}</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={resourceTitle} onChange={(event) => setResourceTitle(event.target.value)} placeholder={t('Resource title (optional)')} /><R2FileUpload accept="application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" resourceType="FILE" label={t('Choose file from device')} onUploaded={(file) => saveUploadedResource(file, 'FILE')} /><div className="space-y-2">{fileResources.map((resource) => renderResource(resource, false))}{!fileResources.length && <p className="text-muted-foreground text-sm">{t('No files uploaded yet.')}</p>}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-base">{t('Images')}</CardTitle></CardHeader><CardContent className="space-y-3"><Input value={imageTitle} onChange={(event) => setImageTitle(event.target.value)} placeholder={t('Image title (optional)')} /><R2FileUpload accept="image/png,image/jpeg,image/webp,image/gif" resourceType="IMAGE" label={t('Choose image')} onUploaded={(file) => saveUploadedResource(file, 'IMAGE')} /><div className="space-y-2">{imageResources.map((resource) => renderResource(resource, true))}{!imageResources.length && <p className="text-muted-foreground text-sm">{t('No images uploaded yet.')}</p>}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-base">{t('Lesson videos')}</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">{t('Choose a lesson, then upload its video.')}</p><select className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm" value={uploadLessonId} onChange={(event) => setUploadLessonId(event.target.value)}><option value="">{t('Choose a lesson')}</option>{chapters.flatMap((chapter) => (chapter.lessons ?? []).map((lesson) => <option key={lesson.id} value={lesson.id}>{chapter.title} / {lesson.title}</option>))}</select>{uploadLessonId ? <LessonVideoUpload lessonId={uploadLessonId} label={t('Choose video')} onUploaded={handleUploadedVideo} /> : <Button type="button" variant="outline" className="w-full" disabled><Video className="mr-2 h-4 w-4" />{t('Choose a lesson first')}</Button>}</CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-base">Free student access</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground text-sm">All platform students are shown here. Choose one to access this paid course without payment.</p><Input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Search students by name or email" /><div className="max-h-64 space-y-2 overflow-y-auto pr-1">{visibleStudents.map((student) => { const enrollment = student.enrolledCourses?.find((item) => (item.courseId ?? item.id) === courseId); const hasGift = enrollment?.status === 'ACTIVE' && (enrollment.accessType === 'TEACHER_GRANTED' || enrollment.accessType === 'ADMIN_GRANTED'); return <div key={student.userId} className="flex items-center gap-3 rounded-md border p-2"><Avatar className="h-8 w-8"><AvatarImage src={student.avatarUrl ?? ''} alt={student.name ?? student.email} /><AvatarFallback>{(student.name ?? student.email).slice(0, 1).toUpperCase()}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{student.name || 'Unnamed student'}</p><p className="text-muted-foreground truncate text-xs">{student.email}</p></div>{hasGift ? <Button type="button" size="sm" variant="outline" disabled={revokeAccess.isPending} onClick={() => revokeAccess.mutate(student.userId)}><Gift className="mr-1.5 h-4 w-4" />Cancel gift</Button> : <Button type="button" size="sm" disabled={grantAccess.isPending} onClick={() => grantAccess.mutate(student.userId)}><Gift className="mr-1.5 h-4 w-4" />Free access</Button>}</div>; })}{visibleStudents.length === 0 && <p className="text-muted-foreground py-4 text-center text-sm">No platform students found.</p>}</div></CardContent></Card>
+      <div>
+        <h1 className="text-xl font-semibold">{course.title}</h1>
+        <p className="text-muted-foreground text-sm">
+          Manage lessons, resources, and student access.
+        </p>
       </div>
-      <Card><CardHeader><CardTitle className="text-base">Add chapter</CardTitle></CardHeader><CardContent><form onSubmit={submitChapter} className="flex gap-2"><Input value={chapterTitle} onChange={(event) => setChapterTitle(event.target.value)} placeholder="Chapter title" /><Button type="submit" disabled={addChapter.isPending}><Plus className="mr-2 h-4 w-4" />Add chapter</Button></form></CardContent></Card>
-      {chapters.length === 0 ? <EmptyState title="No chapters yet" description="Add a chapter to start building this course." /> : chapters.map((chapter) => <Card key={chapter.id}><CardHeader><CardTitle className="text-base">{chapter.title}</CardTitle></CardHeader><CardContent className="space-y-4"><form onSubmit={(event) => submitLesson(event, chapter.id)} className="flex gap-2"><Input value={lessonTitles[chapter.id] ?? ''} onChange={(event) => setLessonTitles({ ...lessonTitles, [chapter.id]: event.target.value })} placeholder="Lesson title" /><Button type="submit" variant="outline" disabled={addLesson.isPending}><Plus className="mr-2 h-4 w-4" />Add lesson</Button></form>{(chapter.lessons ?? []).map((lesson) => { const form = videoForms[lesson.id] ?? { title: '', url: '' }; return <div key={lesson.id} className="rounded-md border p-3"><div className="flex items-center justify-between gap-3"><div><p className="font-medium">{lesson.title}</p><p className="text-muted-foreground text-xs">{lesson.videos?.length ?? 0} video(s)</p></div><Badge variant="secondary">Lesson</Badge></div><div className="mt-3 space-y-2">{(lesson.videos ?? []).map((video) => <div key={video.id} className="flex items-center gap-2 text-sm"><Video className="text-primary h-4 w-4" /><a className="min-w-0 flex-1 truncate underline" href={video.url} target="_blank" rel="noreferrer">{video.title || video.url}</a><Button type="button" variant="ghost" size="icon" aria-label="Delete video" onClick={() => { if (window.confirm('Delete this video?')) deleteVideo.mutate(video.id); }}><Trash2 className="text-destructive h-4 w-4" /></Button></div>)}<form onSubmit={(event) => submitVideo(event, lesson.id)} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><Input value={form.title} onChange={(event) => setVideoForms({ ...videoForms, [lesson.id]: { ...form, title: event.target.value } })} placeholder="Video title" /><Input type="url" required value={form.url} onChange={(event) => setVideoForms({ ...videoForms, [lesson.id]: { ...form, url: event.target.value } })} placeholder="Video URL" /><Button type="submit" variant="outline" disabled={addVideo.isPending}><Plus className="h-4 w-4" /></Button></form></div></div>; })}</CardContent></Card>)}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {accessCodePanel}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">{t('Files and resources')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Input
+              value={resourceTitle}
+              onChange={(event) => setResourceTitle(event.target.value)}
+              placeholder={t('Resource title (optional)')}
+            />
+            <R2FileUpload
+              accept="application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              resourceType="FILE"
+              label={t('Choose file from device')}
+              onUploaded={(file) => saveUploadedResource(file, 'FILE')}
+            />
+            <div className="space-y-2">
+              {fileResources.map((resource) => renderResource(resource, false))}
+              {!fileResources.length && (
+                <p className="text-muted-foreground text-sm">{t('No files uploaded yet.')}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('Images')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Input
+              value={imageTitle}
+              onChange={(event) => setImageTitle(event.target.value)}
+              placeholder={t('Image title (optional)')}
+            />
+            <R2FileUpload
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              resourceType="IMAGE"
+              label={t('Choose image')}
+              onUploaded={(file) => saveUploadedResource(file, 'IMAGE')}
+            />
+            <div className="space-y-2">
+              {imageResources.map((resource) => renderResource(resource, true))}
+              {!imageResources.length && (
+                <p className="text-muted-foreground text-sm">{t('No images uploaded yet.')}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t('Lesson videos')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-sm">
+              {t('Choose a lesson, then upload its video.')}
+            </p>
+            <select
+              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+              value={uploadLessonId}
+              onChange={(event) => setUploadLessonId(event.target.value)}
+            >
+              <option value="">{t('Choose a lesson')}</option>
+              {chapters.flatMap((chapter) =>
+                (chapter.lessons ?? []).map((lesson) => (
+                  <option key={lesson.id} value={lesson.id}>
+                    {chapter.title} / {lesson.title}
+                  </option>
+                )),
+              )}
+            </select>
+            {uploadLessonId ? (
+              <LessonVideoUpload
+                lessonId={uploadLessonId}
+                label={t('Choose video')}
+                onUploaded={handleUploadedVideo}
+              />
+            ) : (
+              <Button type="button" variant="outline" className="w-full" disabled>
+                <Video className="mr-2 h-4 w-4" />
+                {t('Choose a lesson first')}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Free student access</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-sm">
+              All platform students are shown here. Choose one to access this paid course without
+              payment.
+            </p>
+            <Input
+              value={studentSearch}
+              onChange={(event) => setStudentSearch(event.target.value)}
+              placeholder="Search students by name or email"
+            />
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {visibleStudents.map((student) => {
+                const enrollment = student.enrolledCourses?.find(
+                  (item) => (item.courseId ?? item.id) === courseId,
+                );
+                const hasGift =
+                  enrollment?.status === 'ACTIVE' &&
+                  (enrollment.accessType === 'TEACHER_GRANTED' ||
+                    enrollment.accessType === 'ADMIN_GRANTED');
+                return (
+                  <div
+                    key={student.userId}
+                    className="flex items-center gap-3 rounded-md border p-2"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={student.avatarUrl ?? ''}
+                        alt={student.name ?? student.email}
+                      />
+                      <AvatarFallback>
+                        {(student.name ?? student.email).slice(0, 1).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {student.name || 'Unnamed student'}
+                      </p>
+                      <p className="text-muted-foreground truncate text-xs">{student.email}</p>
+                    </div>
+                    {hasGift ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={revokeAccess.isPending}
+                        onClick={() => revokeAccess.mutate(student.userId)}
+                      >
+                        <Gift className="mr-1.5 h-4 w-4" />
+                        Cancel gift
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={grantAccess.isPending}
+                        onClick={() => grantAccess.mutate(student.userId)}
+                      >
+                        <Gift className="mr-1.5 h-4 w-4" />
+                        Free access
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+              {visibleStudents.length === 0 && (
+                <p className="text-muted-foreground py-4 text-center text-sm">
+                  No platform students found.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Add chapter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submitChapter} className="flex gap-2">
+            <Input
+              value={chapterTitle}
+              onChange={(event) => setChapterTitle(event.target.value)}
+              placeholder="Chapter title"
+            />
+            <Button type="submit" disabled={addChapter.isPending}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add chapter
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      {chapters.length === 0 ? (
+        <EmptyState
+          title="No chapters yet"
+          description="Add a chapter to start building this course."
+        />
+      ) : (
+        chapters.map((chapter) => (
+          <Card key={chapter.id}>
+            <CardHeader>
+              <CardTitle className="text-base">{chapter.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form onSubmit={(event) => submitLesson(event, chapter.id)} className="flex gap-2">
+                <Input
+                  value={lessonTitles[chapter.id] ?? ''}
+                  onChange={(event) =>
+                    setLessonTitles({ ...lessonTitles, [chapter.id]: event.target.value })
+                  }
+                  placeholder="Lesson title"
+                />
+                <Button type="submit" variant="outline" disabled={addLesson.isPending}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add lesson
+                </Button>
+              </form>
+              {(chapter.lessons ?? []).map((lesson) => {
+                const form = videoForms[lesson.id] ?? { title: '', url: '' };
+                return (
+                  <div key={lesson.id} className="rounded-md border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{lesson.title}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {lesson.videos?.length ?? 0} video(s)
+                        </p>
+                      </div>
+                      <Badge variant="secondary">Lesson</Badge>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {(lesson.videos ?? []).map((video) => (
+                        <div key={video.id} className="flex items-center gap-2 text-sm">
+                          <Video className="text-primary h-4 w-4" />
+                          <a
+                            className="min-w-0 flex-1 truncate underline"
+                            href={video.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {video.title || video.url}
+                          </a>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Delete video"
+                            onClick={() => setVideoToDelete(video)}
+                          >
+                            <Trash2 className="text-destructive h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <form
+                        onSubmit={(event) => submitVideo(event, lesson.id)}
+                        className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]"
+                      >
+                        <Input
+                          value={form.title}
+                          onChange={(event) =>
+                            setVideoForms({
+                              ...videoForms,
+                              [lesson.id]: { ...form, title: event.target.value },
+                            })
+                          }
+                          placeholder="Video title"
+                        />
+                        <Input
+                          type="url"
+                          required
+                          value={form.url}
+                          onChange={(event) =>
+                            setVideoForms({
+                              ...videoForms,
+                              [lesson.id]: { ...form, url: event.target.value },
+                            })
+                          }
+                          placeholder="Video URL"
+                        />
+                        <Button type="submit" variant="outline" disabled={addVideo.isPending}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </form>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        ))
+      )}
+      <Dialog open={Boolean(videoToDelete)} onOpenChange={(open) => !open && setVideoToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete video?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes the original video and all processed HLS files from storage.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setVideoToDelete(null)} disabled={deleteVideo.isPending}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmDeleteVideo} disabled={deleteVideo.isPending}>
+              {deleteVideo.isPending ? 'Deleting...' : 'Delete permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
