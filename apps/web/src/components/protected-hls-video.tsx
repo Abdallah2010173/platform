@@ -17,6 +17,7 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
   useEffect(() => {
     let hls: Hls | undefined;
     let cancelled = false;
+    let objectUrl: string | undefined;
     const token = localStorage.getItem('accessToken');
 
     const load = async () => {
@@ -31,7 +32,13 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
         // support and still uses a short-lived, access-checked R2 URL.
         const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
         if (sourceResponse.ok && sourceUrl) {
-          element.src = sourceUrl;
+          setMessage('Loading video...');
+          const videoResponse = await fetch(sourceUrl, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!videoResponse.ok) throw new Error('Video file could not be loaded');
+          objectUrl = URL.createObjectURL(await videoResponse.blob());
+          element.src = objectUrl;
           setMessage('');
           return;
         }
@@ -69,7 +76,10 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
             const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
             if (!sourceResponse.ok || !sourceUrl || !videoRef.current) throw new Error('Original video is unavailable');
             hls?.destroy();
-            videoRef.current.src = sourceUrl;
+            objectUrl = URL.createObjectURL(await (await fetch(sourceUrl, {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })).blob());
+            videoRef.current.src = objectUrl;
             setMessage('');
           } catch {
             setMessage('Video playback failed. Please try again.');
@@ -83,6 +93,7 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
     return () => {
       cancelled = true;
       hls?.destroy();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [fallbackUrl, videoId]);
 
