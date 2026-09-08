@@ -19,6 +19,7 @@ import type { Request, Response } from 'express';
 import { VideoSource } from '@prisma/client';
 import { diskStorage } from 'multer';
 import { mkdirSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { posix } from 'node:path';
@@ -26,7 +27,6 @@ import { CurrentUser } from '../../decorators/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { R2StorageService } from '../../../infrastructure/storage/r2-storage.service';
 import { CourseAccessService } from '../courses/services/course-access.service';
-import { VideoProcessingQueue } from './video-processing.queue';
 
 const allowedVideoTypes = new Set(['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']);
 
@@ -38,7 +38,6 @@ export class MediaController {
     private readonly prisma: PrismaService,
     private readonly courseAccessService: CourseAccessService,
     private readonly r2Storage: R2StorageService,
-    private readonly videoQueue: VideoProcessingQueue,
   ) {}
 
   @Post('lessons/:lessonId/videos')
@@ -76,32 +75,21 @@ export class MediaController {
 
     const source = await this.r2Storage.uploadLocalFile(file.originalname, file.mimetype, file.path);
     console.log(`[Media] Stored original video in R2: ${source.fileKey}`);
+    await unlink(file.path).catch(() => undefined);
     const record = await this.prisma.lessonVideo.create({
       data: {
         lessonId,
         title: file.originalname || `lesson-${lessonId}`,
-        description: 'Queued for HLS processing',
-        url: '',
+        description: 'Uploaded video',
+        url: source.fileKey,
         source: VideoSource.UPLOAD,
         sizeBytes: file.size ? BigInt(file.size) : undefined,
         quality: 'AUTO',
-        transcodingStatus: 'QUEUED',
+        transcodingStatus: 'READY',
         sourceKey: source.fileKey,
       },
     });
-
-    const job = await this.videoQueue.enqueue({
-      videoId: record.id,
-      lessonId,
-      sourcePath: file.path,
-      originalName: file.originalname,
-      contentType: file.mimetype,
-    });
-    const queued = await this.prisma.lessonVideo.update({
-      where: { id: record.id },
-      data: { uploadId: job.id },
-    });
-    return { id: queued.id, status: queued.transcodingStatus, jobId: job.id };
+    return { id: record.id, status: record.transcodingStatus, sourceKey: source.fileKey };
   }
 
   @Get('videos/:id/status')
