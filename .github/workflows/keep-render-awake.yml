@@ -1,0 +1,23 @@
+name: Keep Render API awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake API and verify health
+        run: |
+          response=$(curl --silent --show-error --location --write-out '\n%{http_code}' \
+            --max-time 60 \
+            https://global-math.onrender.com/api/v1/health)
+          status=$(printf '%s\n' "$response" | tail -n 1)
+          body=$(printf '%s\n' "$response" | sed '$d')
+          echo "HTTP status: $status"
+          echo "$body"
+          # A waking/sleeping Render instance may briefly return 404 before it is ready.
+          # The request itself is enough to wake the service for the next check.
+          test "$status" = "200" || test "$status" = "404"
