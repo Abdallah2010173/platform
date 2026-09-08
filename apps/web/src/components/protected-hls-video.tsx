@@ -21,27 +21,28 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
 
     const load = async () => {
       try {
-        const response = await fetch(`${API_URL}/media/videos/${videoId}/manifest-url`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const body = await response.json();
-        if (!response.ok) throw new Error(body?.message || 'Video is still processing');
-        if (cancelled || !videoRef.current) return;
-        const manifestUrl = body.data?.url ?? body.url ?? fallbackUrl;
-        if (!manifestUrl) throw new Error('Video manifest is unavailable');
-        const element = videoRef.current;
-        // Use the protected original MP4 first. It avoids browser-specific HLS
-        // support and still uses a short-lived, access-checked R2 URL.
         const sourceResponse = await fetch(`${API_URL}/media/videos/${videoId}/source-url`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const sourceBody = await sourceResponse.json();
+        if (cancelled || !videoRef.current) return;
+        const element = videoRef.current;
+        // Use the protected original MP4 first. It avoids browser-specific HLS
+        // support and still uses a short-lived, access-checked R2 URL.
         const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
         if (sourceResponse.ok && sourceUrl) {
           element.src = sourceUrl;
           setMessage('');
           return;
         }
+
+        const response = await fetch(`${API_URL}/media/videos/${videoId}/manifest-url`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body?.message || 'Video is still processing');
+        const manifestUrl = body.data?.url ?? body.url ?? fallbackUrl;
+        if (!manifestUrl) throw new Error('Video manifest is unavailable');
 
         if (element.canPlayType('application/vnd.apple.mpegurl')) {
           element.src = manifestUrl;
