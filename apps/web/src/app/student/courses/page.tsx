@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, PlayCircle } from 'lucide-react';
+import { BookOpen, MessageCircle, PlayCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEnrollCourse, usePublishedCourses, useStudentCourses } from '@/lib/api/hooks';
@@ -18,7 +18,15 @@ interface CourseItem {
   [key: string]: unknown;
 }
 
-interface PublishedCourse { id: string; title: string; description?: string | null; [key: string]: unknown }
+interface PublishedCourse {
+  id: string;
+  title: string;
+  description?: string | null;
+  price?: number | string | null;
+  discountPrice?: number | string | null;
+  isFree?: boolean;
+  [key: string]: unknown;
+}
 
 export default function StudentCoursesPage() {
   const { data, isLoading, isError } = useStudentCourses();
@@ -84,7 +92,7 @@ export default function StudentCoursesPage() {
         <h2 className="text-lg font-semibold">Available Courses</h2>
         <p className="text-muted-foreground text-sm">Enroll to access course content and contact its instructors.</p>
       </div>
-      {isLoadingPublished ? <LoadingState label="Loading available courses..." /> : availableCourses.length === 0 ? <EmptyState title="No additional courses available" description="New published courses will appear here." /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{availableCourses.map((course) => <Card key={course.id}><CardHeader><CardTitle className="text-base">{course.title}</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground line-clamp-2 text-sm">{course.description || 'Course content is available after enrollment.'}</p><Button className="w-full" disabled={enrollCourse.isPending} onClick={() => enrollCourse.mutate(course.id)}>Enroll</Button></CardContent></Card>)}</div>}
+      {isLoadingPublished ? <LoadingState label="Loading available courses..." /> : availableCourses.length === 0 ? <EmptyState title="No additional courses available" description="New published courses will appear here." /> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{availableCourses.map((course) => { const price = Number(course.discountPrice ?? course.price ?? 0); const isPaid = !course.isFree && price > 0; return <Card key={course.id}><CardHeader><CardTitle className="text-base">{course.title}</CardTitle></CardHeader><CardContent className="space-y-3"><p className="text-muted-foreground line-clamp-2 text-sm">{course.description || 'Course content is available after enrollment.'}</p><p className="font-semibold">{isPaid ? `Price: ${price} ${String(course.currency ?? 'USD')}` : 'Free'}</p>{isPaid ? <Button asChild className="w-full"><a href="/student/messages"><MessageCircle className="mr-2 h-4 w-4" />Contact teacher to pay</a></Button> : <Button className="w-full" disabled={enrollCourse.isPending} onClick={() => enrollCourse.mutate(course.id)}>Enroll free</Button>}</CardContent></Card>; })}</div>}
     </div>
   );
 }

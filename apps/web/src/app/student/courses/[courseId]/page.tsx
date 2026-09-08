@@ -229,7 +229,9 @@ export default function StudentCourseDetailPage() {
                       </div>
                     </div>
                     {lesson.videos?.map((video) => {
-                      const youtubeUrl = getYouTubeEmbedUrl(video.url);
+                      const youtubeUrl = video.source === 'YOUTUBE' || video.source === 'EXTERNAL'
+                        ? getYouTubeEmbedUrl(video.url)
+                        : null;
                       return (
                         <div key={video.id} className="mt-3 space-y-2">
                           <p className="text-sm font-medium">{video.title || 'Lesson video'}</p>
