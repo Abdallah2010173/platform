@@ -23,6 +23,7 @@ export class StudentCourseService {
 
     const where = {
       studentId,
+      deletedAt: null,
       ...statusFilter,
       ...(search ? { course: { title: { contains: search, mode: 'insensitive' as const } } } : {}),
     };
@@ -103,7 +104,7 @@ export class StudentCourseService {
       },
     });
 
-    if (!enrollment) {
+    if (!enrollment || enrollment.deletedAt || enrollment.status === 'CANCELED') {
       const access = await this.courseAccessService.canAccessCourse(user.id, courseId);
       if (!access.hasAccess) {
         throw new NotFoundException('You are not enrolled in this course');
@@ -285,7 +286,7 @@ export class StudentCourseService {
     const enrollment = await this.prisma.courseStudent.findUnique({
       where: { courseId_studentId: { courseId, studentId } },
     });
-    if (!enrollment) {
+    if (!enrollment || enrollment.deletedAt || enrollment.status === 'CANCELED') {
       const access = await this.courseAccessService.canAccessCourse(user.id, courseId);
       if (!access.hasAccess) {
         throw new ForbiddenException('You do not have access to this course');
@@ -425,13 +426,6 @@ export class StudentCourseService {
       throw new NotFoundException('Course not found or not published');
     }
 
-    const existing = await this.prisma.courseStudent.findUnique({
-      where: { courseId_studentId: { courseId, studentId } },
-    });
-    if (existing) {
-      throw new ConflictException('You are already enrolled in this course');
-    }
-
     const requiresPayment = !course.isFree && Number(course.price ?? 0) > 0;
     if (requiresPayment) {
       const completedPayment = await this.prisma.payment.findFirst({
@@ -447,6 +441,42 @@ export class StudentCourseService {
       if (!completedPayment) {
         throw new ForbiddenException('Payment is required before enrolling in this paid course');
       }
+    }
+
+    const existing = await this.prisma.courseStudent.findUnique({
+      where: { courseId_studentId: { courseId, studentId } },
+    });
+    if (existing) {
+      if (existing.deletedAt || existing.status === 'CANCELED') {
+        const enrollment = await this.prisma.courseStudent.update({
+          where: { id: existing.id },
+          data: {
+            deletedAt: null,
+            canceledAt: null,
+            cancelReason: null,
+            status: 'ACTIVE',
+            enrolledAt: new Date(),
+            accessType: requiresPayment ? 'PAID' : 'FREE',
+            accessGrantedBy: requiresPayment ? user.id : null,
+            accessGrantedAt: new Date(),
+          },
+          include: { course: { select: { id: true, title: true, slug: true } } },
+        });
+
+        return {
+          success: true,
+          enrollment: {
+            id: enrollment.id,
+            courseId: enrollment.courseId,
+            title: enrollment.course.title,
+            slug: enrollment.course.slug,
+            status: enrollment.status,
+            enrolledAt: enrollment.enrolledAt,
+            accessType: enrollment.accessType,
+          },
+        };
+      }
+      throw new ConflictException('You are already enrolled in this course');
     }
 
     const enrollment = await this.prisma.courseStudent.create({
