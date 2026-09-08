@@ -168,7 +168,8 @@ export class MediaController {
   async sourceUrl(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
-    if (!video.sourceKey) throw new NotFoundException('Original video is not available');
+    const sourceKey = video.sourceKey || (video.url.startsWith('uploads/videos/') ? video.url : null);
+    if (!sourceKey) throw new NotFoundException('Original video is not available');
     return { url: `${this.publicApiUrl(request)}/api/v1/media/videos/${id}/source`, expiresIn: 300 };
   }
 
@@ -176,9 +177,10 @@ export class MediaController {
   async source(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request, @Res() response: Response) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
-    if (!video.sourceKey) throw new NotFoundException('Original video is not available');
+    const sourceKey = video.sourceKey || (video.url.startsWith('uploads/videos/') ? video.url : null);
+    if (!sourceKey) throw new NotFoundException('Original video is not available');
 
-    const result = await this.r2Storage.getObjectStream(video.sourceKey, request.headers.range);
+    const result = await this.r2Storage.getObjectStream(sourceKey, request.headers.range);
     if (!result.Body) throw new NotFoundException('Original video is not available');
     this.setVideoCorsHeaders(request, response);
     response.setHeader('Content-Type', 'video/mp4');
