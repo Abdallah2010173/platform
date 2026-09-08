@@ -230,12 +230,30 @@ export default function StudentCourseDetailPage() {
                         </Button>
                       </div>
                     </div>
-                    {lesson.videos?.map((video) => {
+                    {(() => {
+                      const video = (lesson.videos ?? []).find((item) => {
+                        if (item.source === 'YOUTUBE' || item.source === 'EXTERNAL') {
+                          return Boolean(item.url);
+                        }
+                        return item.source === 'UPLOAD' && item.transcodingStatus === 'READY' && Boolean(item.url);
+                      });
+                      const hasProcessingUpload = (lesson.videos ?? []).some(
+                        (item) => item.source === 'UPLOAD' && item.transcodingStatus !== 'FAILED',
+                      );
+
+                      if (!video) {
+                        return hasProcessingUpload ? (
+                          <p className="text-muted-foreground mt-3 text-sm">Video is still being processed...</p>
+                        ) : (
+                          <p className="text-destructive mt-3 text-sm">No playable video is available.</p>
+                        );
+                      }
+
                       const youtubeUrl = video.source === 'YOUTUBE' || video.source === 'EXTERNAL'
                         ? getYouTubeEmbedUrl(video.url)
                         : null;
                       return (
-                        <div key={video.id} className="mt-3 space-y-2">
+                        <div className="mt-3 space-y-2">
                           <p className="text-sm font-medium">{video.title || 'Lesson video'}</p>
                           {youtubeUrl ? (
                             <iframe
@@ -245,14 +263,12 @@ export default function StudentCourseDetailPage() {
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                             />
-                          ) : video.source === 'UPLOAD' && video.transcodingStatus !== 'FAILED' ? (
+                          ) : video.source === 'UPLOAD' ? (
                             <ProtectedHlsVideo
                               videoId={video.id}
                               fallbackUrl={video.url}
                               title={video.title || 'Lesson video'}
                             />
-                          ) : video.transcodingStatus === 'FAILED' ? (
-                            <p className="text-destructive text-sm">Video processing failed. Please upload it again.</p>
                           ) : (
                             <video controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={video.url}>
                               Your browser does not support video playback.
@@ -260,7 +276,7 @@ export default function StudentCourseDetailPage() {
                           )}
                         </div>
                       );
-                    })}
+                    })()}
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {lesson.pdfs?.map(
                         (pdf) =>
