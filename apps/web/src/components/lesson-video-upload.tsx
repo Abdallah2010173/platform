@@ -22,6 +22,8 @@ export function LessonVideoUpload({ lessonId, label, onUploaded }: LessonVideoUp
   const [progress, setProgress] = useState(0);
   const [uploadedBytes, setUploadedBytes] = useState(0);
   const [totalBytes, setTotalBytes] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -31,6 +33,8 @@ export function LessonVideoUpload({ lessonId, label, onUploaded }: LessonVideoUp
     setProgress(0);
     setUploadedBytes(0);
     setTotalBytes(file.size);
+    setStatusMessage('');
+    setErrorMessage('');
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -56,9 +60,10 @@ export function LessonVideoUpload({ lessonId, label, onUploaded }: LessonVideoUp
         request.send(formData);
       });
       setProgress(100);
+      setStatusMessage('Uploaded 100% - Processing video...');
       onUploaded(result as { id: string; status?: string; jobId?: string });
     } catch (error) {
-      window.alert(`Video upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorMessage(error instanceof Error ? error.message : 'Video upload failed');
     } finally {
       setIsUploading(false);
     }
@@ -81,6 +86,8 @@ export function LessonVideoUpload({ lessonId, label, onUploaded }: LessonVideoUp
           </p>
         </div>
       )}
+      {statusMessage && <p className="text-muted-foreground text-xs" aria-live="polite">{statusMessage}</p>}
+      {errorMessage && <p className="text-destructive text-xs" role="alert">{errorMessage}</p>}
     </>
   );
 }

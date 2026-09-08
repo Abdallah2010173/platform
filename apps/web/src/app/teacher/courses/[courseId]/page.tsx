@@ -91,7 +91,6 @@ export default function TeacherCourseContentPage() {
 
   const handleUploadedVideo = (uploaded: { id: string; status?: string; jobId?: string }) => {
     if (!uploaded) return;
-    window.alert(`Video upload started (${uploaded.status ?? 'QUEUED'}). Processing may take a few minutes.`);
   };
 
   const saveUploadedResource = (uploaded: { fileKey: string; publicUrl?: string; fileName: string }, type: 'FILE' | 'IMAGE') => {
