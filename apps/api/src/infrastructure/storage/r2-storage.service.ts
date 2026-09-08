@@ -17,16 +17,19 @@ export class R2StorageService {
   private readonly publicUrl?: string;
 
   constructor(config: ConfigService) {
-    this.bucketName = config.getOrThrow<string>('CLOUDFLARE_R2_BUCKET_NAME');
-    this.publicUrl = config.get<string>('CLOUDFLARE_R2_PUBLIC_URL')?.replace(/\/+$/, '');
+    const endpoint = config.getOrThrow<string>('CLOUDFLARE_R2_ENDPOINT').trim().replace(/\/+$/, '');
+    const accessKeyId = config.getOrThrow<string>('CLOUDFLARE_R2_ACCESS_KEY_ID').trim();
+    const secretAccessKey = config.getOrThrow<string>('CLOUDFLARE_R2_SECRET_ACCESS_KEY').trim();
+    this.bucketName = config.getOrThrow<string>('CLOUDFLARE_R2_BUCKET_NAME').trim();
+    this.publicUrl = config.get<string>('CLOUDFLARE_R2_PUBLIC_URL')?.trim().replace(/\/+$/, '');
     this.client = new S3Client({
       region: 'auto',
-      endpoint: config.getOrThrow<string>('CLOUDFLARE_R2_ENDPOINT'),
+      endpoint,
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
       credentials: {
-        accessKeyId: config.getOrThrow<string>('CLOUDFLARE_R2_ACCESS_KEY_ID'),
-        secretAccessKey: config.getOrThrow<string>('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+        accessKeyId,
+        secretAccessKey,
       },
     });
   }
