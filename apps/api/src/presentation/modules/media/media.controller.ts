@@ -73,6 +73,7 @@ export class MediaController {
     await this.assertTeacherAccess(user, lesson.courseId);
 
     const source = await this.r2Storage.uploadLocalFile(file.originalname, file.mimetype, file.path);
+    console.log(`[Media] Stored original video in R2: ${source.fileKey}`);
     const record = await this.prisma.lessonVideo.create({
       data: {
         lessonId,

@@ -112,6 +112,15 @@ export class R2StorageService {
     return { fileKey };
   }
 
+  async ensurePrefix(prefix: string): Promise<void> {
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: `${prefix.replace(/\/+$/, '')}/.keep`,
+      Body: Buffer.alloc(0),
+      ContentType: 'application/octet-stream',
+    }));
+  }
+
   async deleteFile(fileKey: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({
       Bucket: this.bucketName,
