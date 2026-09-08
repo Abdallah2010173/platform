@@ -23,6 +23,7 @@ import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { posix } from 'node:path';
+import { Readable } from 'node:stream';
 import { CurrentUser } from '../../decorators/current-user.decorator';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { R2StorageService } from '../../../infrastructure/storage/r2-storage.service';
@@ -164,11 +165,30 @@ export class MediaController {
   }
 
   @Get('videos/:id/source-url')
-  async sourceUrl(@CurrentUser() user: any, @Param('id') id: string) {
+  async sourceUrl(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
     if (!video.sourceKey) throw new NotFoundException('Original video is not available');
-    return { url: await this.r2Storage.getPresignedDownloadUrl(video.sourceKey, 300), expiresIn: 300 };
+    return { url: `${this.publicApiUrl(request)}/api/v1/media/videos/${id}/source`, expiresIn: 300 };
+  }
+
+  @Get('videos/:id/source')
+  async source(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request, @Res() response: Response) {
+    const video = await this.findVideo(id);
+    await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
+    if (!video.sourceKey) throw new NotFoundException('Original video is not available');
+
+    const result = await this.r2Storage.getObjectStream(video.sourceKey, request.headers.range);
+    if (!result.Body) throw new NotFoundException('Original video is not available');
+    this.setVideoCorsHeaders(request, response);
+    response.setHeader('Content-Type', 'video/mp4');
+    response.setHeader('Accept-Ranges', 'bytes');
+    if (result.ContentLength != null) response.setHeader('Content-Length', String(result.ContentLength));
+    if (result.ContentRange) {
+      response.status(206);
+      response.setHeader('Content-Range', result.ContentRange);
+    }
+    return (result.Body as Readable).pipe(response);
   }
 
   @Get('videos/:id')

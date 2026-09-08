@@ -165,6 +165,14 @@ export class R2StorageService {
     return Buffer.from(await response.Body.transformToByteArray());
   }
 
+  async getObjectStream(fileKey: string, range?: string) {
+    return this.client.send(new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: fileKey,
+      ...(range ? { Range: range } : {}),
+    }));
+  }
+
   async getPresignedDownloadUrl(fileKey: string, expiresIn = 300): Promise<string> {
     return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucketName, Key: fileKey }), { expiresIn });
   }
