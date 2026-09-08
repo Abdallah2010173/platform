@@ -11,10 +11,11 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { VideoSource } from '@prisma/client';
 import { diskStorage } from 'multer';
 import { mkdirSync } from 'node:fs';
@@ -116,13 +117,13 @@ export class MediaController {
   }
 
   @Get('videos/:id/manifest-url')
-  async manifestUrl(@CurrentUser() user: any, @Param('id') id: string) {
+  async manifestUrl(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
     if (video.transcodingStatus !== 'READY' || !video.manifestKey) {
       throw new NotFoundException('Video is still being processed');
     }
-    const apiUrl = process.env.API_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 4000}`;
+    const apiUrl = this.publicApiUrl(request);
     return { url: `${apiUrl.replace(/\/+$/, '')}/api/v1/media/videos/${id}/manifest`, expiresIn: 300 };
   }
 
@@ -205,12 +206,23 @@ export class MediaController {
       .split(/\r?\n/)
       .map((line) => {
         if (line.startsWith('#EXT-X-KEY:') && line.includes('URI="')) {
-          return line.replace(/URI="([^"]+)"/, (_match, uri: string) => `URI="${uri.startsWith('http') ? uri : hlsUrl(uri)}"`);
+          return line.replace(/URI="([^"]+)"/, (_match, uri: string) => {
+            const keyId = uri.match(/\/media\/videos\/([^/]+)\/key/)?.[1] ?? videoId;
+            return `URI="/api/v1/media/videos/${keyId}/key"`;
+          });
         }
         if (!line || line.startsWith('#')) return line;
         return hlsUrl(line.trim());
       })
       .join('\n');
+  }
+
+  private publicApiUrl(request: Request): string {
+    const configured = process.env.API_PUBLIC_URL?.trim().replace(/\/+$/, '');
+    if (configured && !configured.includes('localhost')) return configured;
+    const forwardedProto = request.headers['x-forwarded-proto'];
+    const protocol = typeof forwardedProto === 'string' ? forwardedProto.split(',')[0] : request.protocol;
+    return `${protocol}://${request.get('host')}`;
   }
 
   private async assertTeacherAccess(user: any, courseId: string) {

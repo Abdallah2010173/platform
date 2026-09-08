@@ -25,6 +25,8 @@ interface Lesson {
     url: string;
     source?: string | null;
     manifestKey?: string | null;
+    transcodingStatus?: string | null;
+    processingError?: string | null;
   }[];
   isCompleted?: boolean;
   pdfs?: { id: string; title: string; url?: string | null }[];
@@ -243,12 +245,14 @@ export default function StudentCourseDetailPage() {
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                             />
-                          ) : video.source === 'UPLOAD' ? (
+                          ) : video.source === 'UPLOAD' && video.transcodingStatus !== 'FAILED' ? (
                             <ProtectedHlsVideo
                               videoId={video.id}
                               fallbackUrl={video.url}
                               title={video.title || 'Lesson video'}
                             />
+                          ) : video.transcodingStatus === 'FAILED' ? (
+                            <p className="text-destructive text-sm">Video processing failed. Please upload it again.</p>
                           ) : (
                             <video controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={video.url}>
                               Your browser does not support video playback.

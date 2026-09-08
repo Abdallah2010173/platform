@@ -39,7 +39,8 @@ export class VideoProcessingService {
       const keyUri = `${apiUrl.replace(/\/+$/, '')}/api/v1/media/videos/${job.videoId}/key`;
       await writeFile(keyInfoPath, `${keyUri}\n${keyPath}\n`);
 
-      await this.runFfmpeg(job.sourcePath, outputDir, keyInfoPath);
+      const hasAudio = await this.hasAudioStream(job.sourcePath);
+      await this.runFfmpeg(job.sourcePath, outputDir, keyInfoPath, hasAudio);
       const files = await this.collectFiles(outputDir);
       const prefix = `videos/${job.videoId}/hls`;
       for (const filePath of files) {
@@ -80,7 +81,7 @@ export class VideoProcessingService {
     }
   }
 
-  private runFfmpeg(sourcePath: string, outputDir: string, keyInfoPath: string): Promise<void> {
+  private runFfmpeg(sourcePath: string, outputDir: string, keyInfoPath: string, hasAudio: boolean): Promise<void> {
     const filter = [
       '[0:v]split=3[v0][v1][v2]',
       ...this.variants.map((variant, index) =>
@@ -89,13 +90,17 @@ export class VideoProcessingService {
     ].join(';');
     const args = [
       '-y', '-i', sourcePath, '-filter_complex', filter,
-      ...this.variants.flatMap((_, index) => ['-map', `[v${index}out]`, '-map', '0:a:0?']),
+      ...this.variants.flatMap((_, index) => [
+        '-map', `[v${index}out]`,
+        ...(hasAudio ? ['-map', '0:a:0'] : []),
+      ]),
       '-c:v', 'libx264', '-preset', 'veryfast', '-profile:v', 'main', '-crf', '22',
       '-c:a', 'aac', '-ar', '48000', '-b:a', '128k',
       '-f', 'hls', '-hls_time', '6', '-hls_playlist_type', 'vod',
       '-hls_flags', 'independent_segments', '-hls_key_info_file', keyInfoPath,
       '-hls_segment_filename', join(outputDir, '%v', 'segment_%05d.ts'),
-      '-master_pl_name', 'master.m3u8', '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2',
+      '-master_pl_name', 'master.m3u8',
+      '-var_stream_map', hasAudio ? 'v:0,a:0 v:1,a:1 v:2,a:2' : 'v:0 v:1 v:2',
       join(outputDir, '%v', 'index.m3u8'),
     ];
     return new Promise((resolve, reject) => {
@@ -104,6 +109,23 @@ export class VideoProcessingService {
       process.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
       process.once('error', (error) => reject(new Error(`FFmpeg is unavailable: ${error.message}`)));
       process.once('close', (code) => code === 0 ? resolve() : reject(new Error(`FFmpeg exited with ${code}: ${stderr.slice(-2000)}`)));
+    });
+  }
+
+  private hasAudioStream(sourcePath: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const probe = spawn('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=index', '-of', 'csv=p=0', sourcePath], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let output = '';
+      let errorOutput = '';
+      probe.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+      probe.stderr.on('data', (chunk: Buffer) => { errorOutput += chunk.toString(); });
+      probe.once('error', (error) => reject(new Error(`FFprobe is unavailable: ${error.message}`)));
+      probe.once('close', (code) => {
+        if (code !== 0) reject(new Error(`FFprobe exited with ${code}: ${errorOutput.slice(-1000)}`));
+        else resolve(output.trim().length > 0);
+      });
     });
   }
 
