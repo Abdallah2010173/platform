@@ -932,6 +932,7 @@ export class CourseService {
         sizeBytes: dto.sizeBytes ? BigInt(dto.sizeBytes) : undefined,
         resolution: dto.resolution,
         quality: dto.quality ?? 'AUTO',
+        transcodingStatus: 'READY',
         captions: dto.captions as Prisma.InputJsonValue | undefined,
         watermarkUrl: dto.watermarkUrl,
         isPreview: dto.isPreview ?? false,

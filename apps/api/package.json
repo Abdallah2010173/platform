@@ -9,6 +9,7 @@
     "start": "nest start",
     "prestart:prod": "pnpm --filter @platform/database generate",
     "start:prod": "node dist/main.js",
+    "clear:course-uploads": "node scripts/clear-course-uploads.mjs",
     "db:deploy": "prisma migrate deploy --schema ../../packages/database/prisma/schema.prisma --config ../../packages/database/prisma.config.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "typecheck": "tsc --noEmit"

@@ -235,7 +235,7 @@ export default function StudentCourseDetailPage() {
                         if (item.source === 'YOUTUBE' || item.source === 'EXTERNAL') {
                           return Boolean(item.url);
                         }
-                        return item.source === 'UPLOAD' && item.transcodingStatus === 'READY' && Boolean(item.url);
+                        return item.source === 'UPLOAD' && item.transcodingStatus !== 'FAILED' && Boolean(item.url);
                       });
                       const hasProcessingUpload = (lesson.videos ?? []).some(
                         (item) => item.source === 'UPLOAD' && item.transcodingStatus !== 'FAILED',
