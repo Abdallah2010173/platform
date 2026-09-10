@@ -165,12 +165,12 @@ export class MediaController {
   }
 
   @Get('videos/:id/source-url')
-  async sourceUrl(@CurrentUser() user: any, @Param('id') id: string, @Req() request: Request) {
+  async sourceUrl(@CurrentUser() user: any, @Param('id') id: string) {
     const video = await this.findVideo(id);
     await this.assertViewerAccess(user, video.lesson.courseId, video.lesson.isPublished);
     const sourceKey = video.sourceKey || (video.url.startsWith('uploads/videos/') ? video.url : null);
     if (!sourceKey) throw new NotFoundException('Original video is not available');
-    return { url: `${this.publicApiUrl(request)}/api/v1/media/videos/${id}/source`, expiresIn: 300 };
+    return { url: await this.r2Storage.getPresignedDownloadUrl(sourceKey, 300), expiresIn: 300 };
   }
 
   @Get('videos/:id/source')

@@ -28,7 +28,17 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
         const body = await response.json();
         if (cancelled || !videoRef.current) return;
         const element = videoRef.current;
-        if (!response.ok) throw new Error(body?.message || 'Video is still processing');
+        if (!response.ok) {
+          const sourceResponse = await fetch(`${API_URL}/media/videos/${videoId}/source-url`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const sourceBody = await sourceResponse.json();
+          const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
+          if (!sourceResponse.ok || !sourceUrl) throw new Error(body?.message || 'Video is still processing');
+          element.src = sourceUrl;
+          setMessage('');
+          return;
+        }
         const manifestUrl = body.data?.url ?? body.url ?? fallbackUrl;
         if (!manifestUrl) throw new Error('Video manifest is unavailable');
 
@@ -39,12 +49,7 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
           const sourceBody = await sourceResponse.json();
           const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
           if (!sourceResponse.ok || !sourceUrl) throw new Error('Original video is unavailable');
-          const sourceFileResponse = await fetch(sourceUrl, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
-          if (!sourceFileResponse.ok) throw new Error('Original video is unavailable');
-          objectUrl = URL.createObjectURL(await sourceFileResponse.blob());
-          element.src = objectUrl;
+          element.src = sourceUrl;
           setMessage('');
           return;
         }
@@ -68,12 +73,7 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
             const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
             if (!sourceResponse.ok || !sourceUrl || !videoRef.current) throw new Error('Original video is unavailable');
             hls?.destroy();
-            const sourceFileResponse = await fetch(sourceUrl, {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            });
-            if (!sourceFileResponse.ok) throw new Error('Original video is unavailable');
-            objectUrl = URL.createObjectURL(await sourceFileResponse.blob());
-            videoRef.current.src = objectUrl;
+            videoRef.current.src = sourceUrl;
             setMessage('');
           } catch {
             setMessage('Video playback failed. Please try again.');
