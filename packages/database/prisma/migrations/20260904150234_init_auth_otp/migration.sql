@@ -1,4 +1,4 @@
--- CreateEnum
+;;-- CreateEnum
 CREATE TYPE "AuthProvider" AS ENUM ('EMAIL', 'GOOGLE', 'BOTH');
 
 -- CreateEnum
