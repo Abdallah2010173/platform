@@ -231,12 +231,12 @@ export default function StudentCourseDetailPage() {
                       </div>
                     </div>
                     {(() => {
-                      const video = (lesson.videos ?? []).find((item) => Boolean(item.url));
+                      const videos = (lesson.videos ?? []).filter((item) => Boolean(item.url));
                       const hasProcessingUpload = (lesson.videos ?? []).some(
                         (item) => item.source === 'UPLOAD' && item.transcodingStatus !== 'FAILED',
                       );
 
-                      if (!video) {
+                      if (!videos.length) {
                         return hasProcessingUpload ? (
                           <p className="text-muted-foreground mt-3 text-sm">Video is still being processed...</p>
                         ) : (
@@ -244,31 +244,37 @@ export default function StudentCourseDetailPage() {
                         );
                       }
 
-                      const youtubeUrl = video.source === 'YOUTUBE' || video.source === 'EXTERNAL'
-                        ? getYouTubeEmbedUrl(video.url)
-                        : null;
                       return (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-sm font-medium">{video.title || 'Lesson video'}</p>
-                          {youtubeUrl ? (
-                            <iframe
-                              title={video.title || 'Lesson video'}
-                              src={youtubeUrl}
-                              className="aspect-video w-full rounded-md"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          ) : video.source === 'UPLOAD' || video.url.startsWith('uploads/') || video.url.startsWith('videos/') ? (
-                            <ProtectedHlsVideo
-                              videoId={video.id}
-                              fallbackUrl={video.url}
-                              title={video.title || 'Lesson video'}
-                            />
-                          ) : (
-                            <video controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={video.url}>
-                              Your browser does not support video playback.
-                            </video>
-                          )}
+                        <div className="mt-3 space-y-4">
+                          {videos.map((video) => {
+                            const youtubeUrl = video.source === 'YOUTUBE' || video.source === 'EXTERNAL'
+                              ? getYouTubeEmbedUrl(video.url)
+                              : null;
+                            return (
+                              <div key={video.id} className="space-y-2">
+                                <p className="text-sm font-medium">{video.title || 'Lesson video'}</p>
+                                {youtubeUrl ? (
+                                  <iframe
+                                    title={video.title || 'Lesson video'}
+                                    src={youtubeUrl}
+                                    className="aspect-video w-full rounded-md"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                ) : video.source === 'UPLOAD' || video.url.startsWith('uploads/') || video.url.startsWith('videos/') ? (
+                                  <ProtectedHlsVideo
+                                    videoId={video.id}
+                                    fallbackUrl={video.url}
+                                    title={video.title || 'Lesson video'}
+                                  />
+                                ) : (
+                                  <video controls preload="metadata" className="aspect-video w-full rounded-md bg-black" src={video.url}>
+                                    Your browser does not support video playback.
+                                  </video>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })()}
