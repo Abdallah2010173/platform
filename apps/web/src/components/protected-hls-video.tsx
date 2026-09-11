@@ -22,6 +22,22 @@ export function ProtectedHlsVideo({ videoId, fallbackUrl, title }: ProtectedHlsV
 
     const load = async () => {
       try {
+        const isRawUpload = Boolean(fallbackUrl && /(^|\/)uploads\/videos\/|\.mp4(?:$|\?)/i.test(fallbackUrl));
+        if (isRawUpload) {
+          const sourceResponse = await fetch(`${API_URL}/media/videos/${videoId}/source-url`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const sourceBody = await sourceResponse.json();
+          if (!sourceResponse.ok || !videoRef.current) {
+            throw new Error(sourceBody?.message || 'Original video is unavailable');
+          }
+          const sourceUrl = sourceBody.data?.url ?? sourceBody.url;
+          if (!sourceUrl) throw new Error('Original video is unavailable');
+          videoRef.current.src = sourceUrl;
+          setMessage('');
+          return;
+        }
+
         const response = await fetch(`${API_URL}/media/videos/${videoId}/manifest-url`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
