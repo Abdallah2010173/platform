@@ -71,7 +71,14 @@ export default function MessagesWorkspace() {
         <CardHeader><CardTitle className="text-base">{selected?.name ?? 'Select a conversation'}</CardTitle></CardHeader>
         <CardContent className="flex min-h-85 flex-col">
           {!selectedChat ? <EmptyState title="Choose a conversation" description="Select a permitted contact or an existing conversation." /> : historyQuery.isLoading ? <LoadingState /> : <>
-            <div className="flex-1 space-y-3 overflow-y-auto py-2">{messages.map((message) => <div key={message.id} className="rounded-md border p-2 text-sm"><p>{message.content}</p><p className="text-muted-foreground mt-1 text-xs">{message.senderName ?? 'User'} · {new Date(message.createdAt).toLocaleString()}</p></div>)}</div>
+            <div className="flex-1 space-y-2 overflow-y-auto py-2">
+              {messages.map((message) => (
+                <div key={message.id} className="bg-muted/50 max-w-[85%] rounded-lg border p-2 text-sm">
+                  <p>{message.content}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">{message.senderName ?? 'User'} · {new Date(message.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
             <form onSubmit={submit} className="mt-4 flex gap-2"><Input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message" maxLength={5000} /><Button type="submit" disabled={!draft.trim() || sendMessage.isPending} aria-label="Send message"><Send className="h-4 w-4" /></Button></form>
           </>}
         </CardContent>

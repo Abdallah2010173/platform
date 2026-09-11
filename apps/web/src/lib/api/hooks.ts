@@ -129,13 +129,20 @@ export const useMessageContacts = (search?: string) =>
   useQuery({ queryKey: ['messages', 'contacts', search], queryFn: () => messagingApi.contacts(search) });
 
 export const useMessageConversations = () =>
-  useQuery({ queryKey: ['messages', 'conversations'], queryFn: messagingApi.conversations });
+  useQuery({
+    queryKey: ['messages', 'conversations'],
+    queryFn: messagingApi.conversations,
+    refetchInterval: 5000,
+    staleTime: 3000,
+  });
 
 export const useMessageHistory = (chatId: string | null) =>
   useQuery({
     queryKey: ['messages', 'history', chatId],
     queryFn: () => messagingApi.messages(chatId as string),
     enabled: Boolean(chatId),
+    refetchInterval: 2000,
+    staleTime: 1000,
   });
 
 export const useStartDirectChat = () => {
@@ -151,7 +158,10 @@ export const useSendMessage = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ chatId, content }: { chatId: string; content: string }) => messagingApi.send(chatId, content),
-    onSuccess: (_data, variables) => qc.invalidateQueries({ queryKey: ['messages', 'history', variables.chatId] }),
+    onSuccess: (_data, variables) => {
+      void qc.invalidateQueries({ queryKey: ['messages', 'history', variables.chatId] });
+      void qc.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+    },
     onError: (e) => toast.error(formatApiError(e)),
   });
 };

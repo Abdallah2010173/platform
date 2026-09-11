@@ -31,6 +31,15 @@ export class MessagingService {
           isActive: true,
           deletedAt: null,
           user: { isActive: true, deletedAt: null, profile: profileFilter },
+          courses: {
+            some: {
+              deletedAt: null,
+              course: {
+                deletedAt: null,
+                teachers: { some: { teacherId: teacher.id, deletedAt: null } },
+              },
+            },
+          },
         },
         include: { user: { select: { id: true, email: true, profile: true } } },
         orderBy: { user: { email: 'asc' } },
