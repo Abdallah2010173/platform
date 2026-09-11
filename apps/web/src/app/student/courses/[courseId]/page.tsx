@@ -231,12 +231,7 @@ export default function StudentCourseDetailPage() {
                       </div>
                     </div>
                     {(() => {
-                      const video = (lesson.videos ?? []).find((item) => {
-                        if (item.source === 'YOUTUBE' || item.source === 'EXTERNAL') {
-                          return Boolean(item.url);
-                        }
-                        return item.source === 'UPLOAD' && item.transcodingStatus !== 'FAILED' && Boolean(item.url);
-                      });
+                      const video = (lesson.videos ?? []).find((item) => Boolean(item.url));
                       const hasProcessingUpload = (lesson.videos ?? []).some(
                         (item) => item.source === 'UPLOAD' && item.transcodingStatus !== 'FAILED',
                       );
@@ -263,7 +258,7 @@ export default function StudentCourseDetailPage() {
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                             />
-                          ) : video.source === 'UPLOAD' ? (
+                          ) : video.source === 'UPLOAD' || video.url.startsWith('uploads/') || video.url.startsWith('videos/') ? (
                             <ProtectedHlsVideo
                               videoId={video.id}
                               fallbackUrl={video.url}
