@@ -847,6 +847,28 @@ export class CourseService {
     return this.findLessonById(lesson.id);
   }
 
+  async addCourseLesson(courseId: string, dto: CreateLessonDto, user: AuthUser) {
+    await this.assertAccess(courseId, user);
+    let chapter = await this.prisma.courseChapter.findFirst({
+      where: { courseId, deletedAt: null },
+      orderBy: { sortOrder: 'asc' },
+    });
+    if (!chapter) {
+      chapter = await this.prisma.courseChapter.create({
+        data: {
+          courseId,
+          title: 'Lessons',
+          slug: `lessons-${courseId.slice(0, 8)}`,
+          chapterNumber: 1,
+          sortOrder: 0,
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+        },
+      });
+    }
+    return this.addLesson(chapter.id, dto, user);
+  }
+
   async findLessonById(id: string) {
     const lesson = await this.prisma.lesson.findFirst({
       where: { id, deletedAt: null },
@@ -924,6 +946,18 @@ export class CourseService {
   async deleteLesson(id: string, user: AuthUser) {
     const existing = await this.findLessonById(id);
     await this.assertAccess(existing.courseId, user);
+    const [videos, pdfs, attachments, resources, blocks] = await Promise.all([
+      this.prisma.lessonVideo.findMany({ where: { lessonId: id, deletedAt: null } }),
+      this.prisma.lessonPDF.findMany({ where: { lessonId: id, deletedAt: null } }),
+      this.prisma.lessonAttachment.findMany({ where: { lessonId: id, deletedAt: null } }),
+      this.prisma.lessonResource.findMany({ where: { lessonId: id, deletedAt: null } }),
+      this.prisma.lessonContentBlock.findMany({ where: { lessonId: id, deletedAt: null } }),
+    ]);
+    for (const video of videos) await this.deleteVideoStorage(video);
+    for (const file of pdfs) await this.deleteR2ObjectFromUrl(file.url);
+    for (const file of attachments) await this.deleteR2ObjectFromUrl(file.fileUrl);
+    for (const file of resources) await this.deleteR2ObjectFromUrl(file.url ?? '');
+    for (const block of blocks) await this.deleteR2ObjectFromUrl(this.getBlockFileUrl(block.data));
     await this.prisma.lesson.update({
       where: { id },
       data: { deletedAt: new Date(), status: 'ARCHIVED', isPublished: false },
@@ -978,7 +1012,14 @@ export class CourseService {
     if (!block) throw new NotFoundException('Content block not found');
     await this.assertAccess(block.lesson.courseId, user);
     await this.prisma.lessonContentBlock.update({ where: { id: blockId }, data: { deletedAt: new Date() } });
+    await this.deleteR2ObjectFromUrl(this.getBlockFileUrl(block.data));
     return { success: true };
+  }
+
+  private getBlockFileUrl(data: Prisma.JsonValue): string {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return '';
+    const value = data as Record<string, unknown>;
+    return typeof value.url === 'string' ? value.url : '';
   }
 
   async reorderLessonContentBlocks(lessonId: string, dto: ReorderLessonContentBlocksDto, user: AuthUser) {
@@ -1138,6 +1179,7 @@ export class CourseService {
     if (!pdf) throw new NotFoundException('PDF not found');
     await this.assertAccess(pdf.lesson.courseId, user);
     await this.prisma.lessonPDF.update({ where: { id: pdfId }, data: { deletedAt: new Date() } });
+    await this.deleteR2ObjectFromUrl(pdf.url);
     return { success: true };
   }
 
@@ -1174,6 +1216,7 @@ export class CourseService {
       where: { id: attachmentId },
       data: { deletedAt: new Date() },
     });
+    await this.deleteR2ObjectFromUrl(file.fileUrl);
     return { success: true };
   }
 
@@ -1210,6 +1253,7 @@ export class CourseService {
       where: { id: resourceId },
       data: { deletedAt: new Date() },
     });
+    await this.deleteR2ObjectFromUrl(resource.url ?? '');
     return { success: true };
   }
 
@@ -1292,6 +1336,7 @@ export class CourseService {
     await this.assertAccess(resource.courseId, user);
     if (!resource.deletedAt) {
       await this.prisma.courseResource.update({ where: { id }, data: { deletedAt: new Date() } });
+      await this.deleteR2ObjectFromUrl(resource.fileUrl ?? resource.url ?? '');
     }
     return { success: true };
   }

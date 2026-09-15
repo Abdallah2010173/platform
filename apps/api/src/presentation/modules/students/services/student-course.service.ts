@@ -86,6 +86,7 @@ export class StudentCourseService {
             chapters: {
               include: {
                 lessons: {
+                  where: { deletedAt: null },
                   include: {
                     videos: { where: { deletedAt: null } },
                     pdfs: { where: { deletedAt: null } },
@@ -118,7 +119,7 @@ export class StudentCourseService {
           subCategory: true,
           resources: { where: { deletedAt: null } },
           chapters: {
-            include: { lessons: { include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } }, contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } } }, orderBy: { orderIndex: 'asc' } } },
+            include: { lessons: { where: { deletedAt: null }, include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } }, contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } } }, orderBy: { orderIndex: 'asc' } } },
             orderBy: { sortOrder: 'asc' },
           },
           teachers: { include: { teacher: { include: { user: { include: { profile: true } } } } } },

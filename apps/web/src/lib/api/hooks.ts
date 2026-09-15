@@ -541,6 +541,24 @@ export const useAddLesson = (courseId: string) => {
   });
 };
 
+export const useAddCourseLesson = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => courseApi.addCourseLesson(courseId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Lesson added'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteLesson = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (lessonId: string) => courseApi.deleteLesson(lessonId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Lesson deleted'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useAddLessonContentBlock = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({

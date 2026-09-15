@@ -401,6 +401,17 @@ export class CoursesController {
     return this.courseService.addLesson(chapterId, dto, user);
   }
 
+  @Post('courses/:courseId/lessons')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Add a lesson directly to a course' })
+  addCourseLesson(
+    @Param('courseId') courseId: string,
+    @Body() dto: CreateLessonDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.courseService.addCourseLesson(courseId, dto, user);
+  }
+
   @Patch('lessons/:id')
   @Roles(Role.ADMIN, Role.TEACHER)
   @ApiOperation({ summary: 'Update a lesson' })

@@ -263,6 +263,8 @@ export const courseApi = {
     getApiData(await apiClient.post(`/courses/${courseId}/chapters`, data)),
   addLesson: async (chapterId: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.post(`/chapters/${chapterId}/lessons`, data)),
+  addCourseLesson: async (courseId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/courses/${courseId}/lessons`, data)),
   addLessonContentBlock: async (lessonId: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.post(`/lessons/${lessonId}/content-blocks`, data)),
   updateLessonContentBlock: async (id: string, data: Record<string, unknown>) =>
@@ -305,6 +307,8 @@ export const courseApi = {
     })),
   deleteLessonVideo: async (videoId: string) =>
     getApiData(await apiClient.delete(`/videos/${videoId}`)),
+  deleteLesson: async (lessonId: string) =>
+    getApiData(await apiClient.delete(`/lessons/${lessonId}`)),
   createCourse: async (data: Record<string, unknown>) =>
     getApiData(await apiClient.post('/courses', data)),
   updateCourse: async (id: string, data: Record<string, unknown>) =>

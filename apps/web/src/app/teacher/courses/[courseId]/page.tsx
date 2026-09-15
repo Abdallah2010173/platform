@@ -33,15 +33,14 @@ import { useLocale } from '@/lib/i18n';
 import { R2FileUpload } from '@/components/r2-file-upload';
 import { LessonVideoUpload } from '@/components/lesson-video-upload';
 import {
-  useAddChapter,
   useAddCourseResource,
-  useAddLesson,
+  useAddCourseLesson,
   useAddLessonContentBlock,
-  useAddLessonVideo,
   useAllTeacherStudents,
   useCourseDetail,
   useDeleteCourseResource,
   useDeleteLessonVideo,
+  useDeleteLesson,
   useDeleteLessonContentBlock,
   useGrantCourseAccess,
   useCreateCourseAccessCode,
@@ -102,11 +101,10 @@ export default function TeacherCourseContentPage() {
   const courseId = params.courseId;
   const { t } = useLocale();
   const { data, isLoading } = useCourseDetail(courseId);
-  const addChapter = useAddChapter(courseId);
-  const addLesson = useAddLesson(courseId);
+  const addLesson = useAddCourseLesson(courseId);
   const addContentBlock = useAddLessonContentBlock(courseId);
-  const addVideo = useAddLessonVideo(courseId);
   const deleteVideo = useDeleteLessonVideo(courseId);
+  const deleteLesson = useDeleteLesson(courseId);
   const deleteContentBlock = useDeleteLessonContentBlock(courseId);
   const updateContentBlock = useUpdateLessonContentBlock(courseId);
   const reorderContentBlocks = useReorderLessonContentBlocks(courseId);
@@ -117,10 +115,11 @@ export default function TeacherCourseContentPage() {
   const createAccessCode = useCreateCourseAccessCode(courseId);
   const revokeAccess = useRevokeCourseAccess(courseId);
   const { data: studentsData } = useAllTeacherStudents();
-  const [chapterTitle, setChapterTitle] = useState('');
-  const [lessonTitles, setLessonTitles] = useState<Record<string, string>>({});
-  const [videoForms, setVideoForms] = useState<Record<string, { title: string; url: string }>>({});
-  const [blockForms, setBlockForms] = useState<Record<string, { type: string; title: string; value: string }>>({});
+  const [lessonTitle, setLessonTitle] = useState('');
+  const [contentLessonId, setContentLessonId] = useState('');
+  const [contentType, setContentType] = useState('TEXT');
+  const [contentTitle, setContentTitle] = useState('');
+  const [contentValue, setContentValue] = useState('');
   const [uploadLessonId, setUploadLessonId] = useState('');
   const [resourceTitle, setResourceTitle] = useState('');
   const [imageTitle, setImageTitle] = useState('');
@@ -134,6 +133,7 @@ export default function TeacherCourseContentPage() {
   const [videoToDelete, setVideoToDelete] = useState<VideoItem | null>(null);
   const course = data as Course | undefined;
   const chapters = course?.chapters ?? [];
+  const lessons = chapters.flatMap((chapter) => chapter.lessons ?? []);
   const resources = course?.resources ?? [];
   const imageResources = resources.filter(
     (resource) =>
@@ -210,40 +210,20 @@ export default function TeacherCourseContentPage() {
     </Card>
   );
 
-  const submitChapter = (event: FormEvent) => {
+  const submitLesson = (event: FormEvent) => {
     event.preventDefault();
-    if (!chapterTitle.trim()) return;
-    addChapter.mutate({ title: chapterTitle.trim() }, { onSuccess: () => setChapterTitle('') });
-  };
-
-  const submitLesson = (event: FormEvent, chapterId: string) => {
-    event.preventDefault();
-    const title = lessonTitles[chapterId]?.trim();
+    const title = lessonTitle.trim();
     if (!title) return;
-    addLesson.mutate(
-      { chapterId, data: { title } },
-      { onSuccess: () => setLessonTitles({ ...lessonTitles, [chapterId]: '' }) },
-    );
+    addLesson.mutate({ title }, { onSuccess: () => setLessonTitle('') });
   };
 
-  const submitVideo = (event: FormEvent, lessonId: string) => {
+  const submitSelectedContentBlock = (event: FormEvent) => {
     event.preventDefault();
-    const form = videoForms[lessonId];
-    if (!form?.url.trim()) return;
-    addVideo.mutate(
-      { lessonId, data: { title: form.title.trim() || undefined, url: form.url.trim() } },
-      { onSuccess: () => setVideoForms({ ...videoForms, [lessonId]: { title: '', url: '' } }) },
-    );
-  };
-
-  const submitContentBlock = (event: FormEvent, lessonId: string) => {
-    event.preventDefault();
-    const form = blockForms[lessonId];
-    if (!form?.value.trim()) return;
-    const data = form.type === 'TEXT' ? { text: form.value.trim() } : { url: form.value.trim() };
+    if (!contentLessonId || !contentValue.trim()) return;
+    const data = contentType === 'TEXT' ? { text: contentValue.trim() } : { url: contentValue.trim() };
     addContentBlock.mutate(
-      { lessonId, data: { type: form.type, title: form.title.trim() || undefined, data } },
-      { onSuccess: () => setBlockForms({ ...blockForms, [lessonId]: { type: 'TEXT', title: '', value: '' } }) },
+      { lessonId: contentLessonId, data: { type: contentType, title: contentTitle.trim() || undefined, data } },
+      { onSuccess: () => { setContentTitle(''); setContentValue(''); } },
     );
   };
 
@@ -570,50 +550,42 @@ export default function TeacherCourseContentPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Add chapter</CardTitle>
+          <CardTitle className="text-base">Add lesson to this course</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submitChapter} className="flex gap-2">
-            <Input
-              value={chapterTitle}
-              onChange={(event) => setChapterTitle(event.target.value)}
-              placeholder="Chapter title"
-            />
-            <Button type="submit" disabled={addChapter.isPending}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add chapter
-            </Button>
+          <form onSubmit={submitLesson} className="flex gap-2">
+            <Input value={lessonTitle} onChange={(event) => setLessonTitle(event.target.value)} placeholder="Lesson title" />
+            <Button type="submit" disabled={addLesson.isPending}><Plus className="mr-2 h-4 w-4" />Add lesson</Button>
           </form>
         </CardContent>
       </Card>
-      {chapters.length === 0 ? (
+      <Card>
+        <CardHeader><CardTitle className="text-base">Add content to a lesson</CardTitle></CardHeader>
+        <CardContent>
+          <form onSubmit={submitSelectedContentBlock} className="space-y-3">
+            <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" value={contentLessonId} onChange={(event) => setContentLessonId(event.target.value)}>
+              <option value="">Choose a lesson</option>
+              {lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
+            </select>
+            <div className="flex flex-wrap gap-2">
+              {['TEXT', 'IMAGE', 'VIDEO', 'PDF', 'FILE', 'EMBED'].map((type) => <Button key={type} type="button" size="sm" variant={contentType === type ? 'default' : 'outline'} onClick={() => setContentType(type)}>{type}</Button>)}
+            </div>
+            <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto]"><Input value={contentTitle} onChange={(event) => setContentTitle(event.target.value)} placeholder="Content title" /><Input value={contentValue} onChange={(event) => setContentValue(event.target.value)} placeholder={contentType === 'TEXT' ? 'Explanation text' : 'URL or uploaded file link'} /><Button type="submit" disabled={!contentLessonId || !contentValue.trim() || addContentBlock.isPending}><Plus className="mr-2 h-4 w-4" />Add</Button></div>
+          </form>
+        </CardContent>
+      </Card>
+      {lessons.length === 0 ? (
         <EmptyState
-          title="No chapters yet"
-          description="Add a chapter to start building this course."
+          title="No lessons yet"
+          description="Add a lesson to start building this course."
         />
       ) : (
-        chapters.map((chapter) => (
-          <Card key={chapter.id}>
+        <Card>
             <CardHeader>
-              <CardTitle className="text-base">{chapter.title}</CardTitle>
+              <CardTitle className="text-base">Lessons</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form onSubmit={(event) => submitLesson(event, chapter.id)} className="flex gap-2">
-                <Input
-                  value={lessonTitles[chapter.id] ?? ''}
-                  onChange={(event) =>
-                    setLessonTitles({ ...lessonTitles, [chapter.id]: event.target.value })
-                  }
-                  placeholder="Lesson title"
-                />
-                <Button type="submit" variant="outline" disabled={addLesson.isPending}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add lesson
-                </Button>
-              </form>
-              {(chapter.lessons ?? []).map((lesson) => {
-                const form = videoForms[lesson.id] ?? { title: '', url: '' };
-                const blockForm = blockForms[lesson.id] ?? { type: 'TEXT', title: '', value: '' };
+              {lessons.map((lesson) => {
                 const blocks = [...(lesson.contentBlocks ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
                 return (
                   <div key={lesson.id} className="rounded-md border p-3">
@@ -624,7 +596,7 @@ export default function TeacherCourseContentPage() {
                           {blocks.length} content block(s) · {lesson.videos?.length ?? 0} legacy video(s)
                         </p>
                       </div>
-                      <Badge variant="secondary">Lesson</Badge>
+                      <div className="flex items-center gap-2"><Badge variant="secondary">Lesson</Badge><Button type="button" variant="ghost" size="icon" aria-label={`Delete lesson ${lesson.title}`} disabled={deleteLesson.isPending} onClick={() => { if (window.confirm(`Delete lesson "${lesson.title}"?`)) deleteLesson.mutate(lesson.id); }}><Trash2 className="text-destructive h-4 w-4" /></Button></div>
                     </div>
                     <div className="mt-4 space-y-2 rounded-md bg-muted/30 p-3">
                       <p className="text-sm font-medium">Lesson content</p>
@@ -638,14 +610,6 @@ export default function TeacherCourseContentPage() {
                           <Button type="button" variant="ghost" size="icon" aria-label="Delete content block" disabled={deleteContentBlock.isPending} onClick={() => deleteContentBlock.mutate(block.id)}><Trash2 className="text-destructive h-4 w-4" /></Button>
                         </div>
                       ))}
-                      <form onSubmit={(event) => submitContentBlock(event, lesson.id)} className="grid gap-2 sm:grid-cols-[8rem_1fr_2fr_auto]">
-                        <select className="border-input bg-background h-9 rounded-md border px-2 text-sm" value={blockForm.type} onChange={(event) => setBlockForms({ ...blockForms, [lesson.id]: { ...blockForm, type: event.target.value } })}>
-                          <option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="PDF">PDF</option><option value="FILE">File</option><option value="EMBED">Embed</option>
-                        </select>
-                        <Input value={blockForm.title} onChange={(event) => setBlockForms({ ...blockForms, [lesson.id]: { ...blockForm, title: event.target.value } })} placeholder="Block title" />
-                        <Input value={blockForm.value} onChange={(event) => setBlockForms({ ...blockForms, [lesson.id]: { ...blockForm, value: event.target.value } })} placeholder={blockForm.type === 'TEXT' ? 'Explanation text' : 'URL or file link'} />
-                        <Button type="submit" variant="outline" disabled={addContentBlock.isPending}><Plus className="h-4 w-4" /></Button>
-                      </form>
                     </div>
                     <div className="mt-3 space-y-2">
                       {(lesson.videos ?? []).map((video) => (
@@ -672,43 +636,12 @@ export default function TeacherCourseContentPage() {
                           </Button>
                         </div>
                       ))}
-                      <form
-                        onSubmit={(event) => submitVideo(event, lesson.id)}
-                        className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]"
-                      >
-                        <Input
-                          value={form.title}
-                          onChange={(event) =>
-                            setVideoForms({
-                              ...videoForms,
-                              [lesson.id]: { ...form, title: event.target.value },
-                            })
-                          }
-                          placeholder="Video title"
-                        />
-                        <Input
-                          type="url"
-                          required
-                          value={form.url}
-                          onChange={(event) =>
-                            setVideoForms({
-                              ...videoForms,
-                              [lesson.id]: { ...form, url: event.target.value },
-                            })
-                          }
-                          placeholder="Video URL"
-                        />
-                        <Button type="submit" variant="outline" disabled={addVideo.isPending}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </form>
                     </div>
                   </div>
                 );
               })}
             </CardContent>
           </Card>
-        ))
       )}
       <Dialog open={Boolean(videoToDelete)} onOpenChange={(open) => !open && setVideoToDelete(null)}>
         <DialogContent>
