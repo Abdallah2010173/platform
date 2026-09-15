@@ -5,6 +5,7 @@ import {
   IsInt,
   IsNumber,
   IsArray,
+  IsObject,
   Min,
   Max,
   MinLength,
@@ -339,6 +340,7 @@ export class CreateLessonContentBlockDto {
   title?: string;
 
   @ApiProperty({ description: 'Type-specific block payload, such as text, url, or videoId' })
+  @IsObject()
   data!: Record<string, unknown>;
 
   @ApiPropertyOptional()
@@ -361,6 +363,7 @@ export class UpdateLessonContentBlockDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsObject()
   data?: Record<string, unknown>;
 
   @ApiPropertyOptional()
