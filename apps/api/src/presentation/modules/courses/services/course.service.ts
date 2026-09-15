@@ -992,14 +992,19 @@ export class CourseService {
     });
     if (!block) throw new NotFoundException('Content block not found');
     await this.assertAccess(block.lesson.courseId, user);
-    await this.prisma.lessonContentBlock.update({
-      where: { id: blockId },
-      data: {
-        type: dto.type,
-        title: dto.title,
-        orderIndex: dto.orderIndex,
-        data: dto.data as Prisma.InputJsonValue | undefined,
-      },
+    await this.prisma.$transaction(async (transaction) => {
+      if (dto.orderIndex !== undefined && dto.orderIndex !== block.orderIndex) {
+        await transaction.lessonContentBlock.update({ where: { id: blockId }, data: { orderIndex: -Date.now() } });
+      }
+      await transaction.lessonContentBlock.update({
+        where: { id: blockId },
+        data: {
+          type: dto.type,
+          title: dto.title,
+          orderIndex: dto.orderIndex,
+          data: dto.data as Prisma.InputJsonValue | undefined,
+        },
+      });
     });
     return this.findLessonById(block.lesson.id);
   }
@@ -1030,9 +1035,18 @@ export class CourseService {
     if (dto.blockIds.length !== blocks.length || dto.blockIds.some((id) => !knownIds.has(id))) {
       throw new NotFoundException('Content block order does not match this lesson');
     }
-    await this.prisma.$transaction(
-      dto.blockIds.map((id, index) => this.prisma.lessonContentBlock.update({ where: { id }, data: { orderIndex: index } })),
-    );
+    await this.prisma.$transaction(async (transaction) => {
+      await Promise.all(
+        dto.blockIds.map((id, index) =>
+          transaction.lessonContentBlock.update({ where: { id }, data: { orderIndex: -(index + 1) } }),
+        ),
+      );
+      await Promise.all(
+        dto.blockIds.map((id, index) =>
+          transaction.lessonContentBlock.update({ where: { id }, data: { orderIndex: index } }),
+        ),
+      );
+    });
     return this.findLessonById(lessonId);
   }
 
@@ -1106,6 +1120,20 @@ export class CourseService {
       where: { id: videoId },
       data: { deletedAt: new Date() },
     });
+    const videoBlocks = await this.prisma.lessonContentBlock.findMany({
+      where: { lessonId: video.lessonId, deletedAt: null },
+      select: { id: true, data: true },
+    });
+    const linkedBlocks = videoBlocks.filter((block) => {
+      if (!block.data || typeof block.data !== 'object' || Array.isArray(block.data)) return false;
+      return (block.data as Record<string, unknown>).videoId === videoId;
+    });
+    if (linkedBlocks.length) {
+      await this.prisma.lessonContentBlock.updateMany({
+        where: { id: { in: linkedBlocks.map((block) => block.id) } },
+        data: { deletedAt: new Date() },
+      });
+    }
     await this.deleteVideoStorage(video);
     return { success: true };
   }
