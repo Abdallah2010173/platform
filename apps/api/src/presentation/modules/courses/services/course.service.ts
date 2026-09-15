@@ -513,32 +513,46 @@ export class CourseService {
     await this.assertAccess(id, user);
 
     const videos = await this.prisma.lessonVideo.findMany({
-      where: { lesson: { chapter: { courseId: id } } },
+      where: { lesson: { courseId: id } },
       select: { id: true, url: true, sourceKey: true, manifestKey: true, encryptionKey: true },
     });
     const attachments = await this.prisma.lessonAttachment.findMany({
-      where: { lesson: { chapter: { courseId: id } }, deletedAt: null },
+      where: { lesson: { courseId: id } },
       select: { fileUrl: true },
     });
+    const pdfs = await this.prisma.lessonPDF.findMany({
+      where: { lesson: { courseId: id } },
+      select: { url: true },
+    });
+    const lessonResources = await this.prisma.lessonResource.findMany({
+      where: { lesson: { courseId: id } },
+      select: { url: true },
+    });
+    const contentBlocks = await this.prisma.lessonContentBlock.findMany({
+      where: { lesson: { courseId: id } },
+      select: { data: true },
+    });
     const resources = await this.prisma.courseResource.findMany({
-      where: { courseId: id, deletedAt: null },
-      select: { fileUrl: true },
+      where: { courseId: id },
+      select: { fileUrl: true, url: true },
+    });
+    const media = await this.prisma.courseMedia.findMany({
+      where: { courseId: id },
+      select: { url: true },
     });
 
     for (const video of videos) await this.deleteVideoStorage(video);
-    for (const file of [...attachments, ...resources]) {
-      if (file.fileUrl) await this.deleteR2ObjectFromUrl(file.fileUrl);
+    for (const file of attachments) await this.deleteR2ObjectFromUrl(file.fileUrl);
+    for (const file of pdfs) await this.deleteR2ObjectFromUrl(file.url);
+    for (const file of lessonResources) await this.deleteR2ObjectFromUrl(file.url ?? '');
+    for (const block of contentBlocks) await this.deleteR2ObjectFromUrl(this.getBlockFileUrl(block.data));
+    for (const file of resources) {
+      await this.deleteR2ObjectFromUrl(file.fileUrl ?? file.url ?? '');
     }
+    for (const file of media) await this.deleteR2ObjectFromUrl(file.url);
 
-    await this.prisma.course.update({
-      where: { id },
-      data: { deletedAt: new Date(), isPublished: false, status: 'ARCHIVED' },
-    });
-    await this.prisma.lessonVideo.updateMany({
-      where: { id: { in: videos.map((video) => video.id) } },
-      data: { deletedAt: new Date() },
-    });
-    return { success: true };
+    await this.prisma.course.delete({ where: { id } });
+    return { success: true, permanentlyDeleted: true };
   }
 
   async restore(id: string) {
