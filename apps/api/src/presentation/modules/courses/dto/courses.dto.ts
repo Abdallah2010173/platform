@@ -17,6 +17,7 @@ import {
   CourseStatus,
   CourseVisibility,
   LessonType,
+  LessonContentBlockType,
   VideoSource,
   VideoQuality,
   CategoryStatus,
@@ -325,6 +326,55 @@ export class UpdateLessonDto {
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isPreview?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isLocked?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isPublished?: boolean;
+}
+
+export class CreateLessonContentBlockDto {
+  @ApiProperty({ enum: LessonContentBlockType })
+  @IsEnum(LessonContentBlockType)
+  type!: LessonContentBlockType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiProperty({ description: 'Type-specific block payload, such as text, url, or videoId' })
+  data!: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  orderIndex?: number;
+}
+
+export class UpdateLessonContentBlockDto {
+  @ApiPropertyOptional({ enum: LessonContentBlockType })
+  @IsOptional()
+  @IsEnum(LessonContentBlockType)
+  type?: LessonContentBlockType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  data?: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  orderIndex?: number;
+}
+
+export class ReorderLessonContentBlocksDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  blockIds!: string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

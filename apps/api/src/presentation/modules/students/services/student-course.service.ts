@@ -91,6 +91,7 @@ export class StudentCourseService {
                     pdfs: { where: { deletedAt: null } },
                     attachments: { where: { deletedAt: null } },
                     resources: { where: { deletedAt: null } },
+                    contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } },
                   },
                   orderBy: { orderIndex: 'asc' },
                 },
@@ -115,9 +116,9 @@ export class StudentCourseService {
         include: {
           category: true,
           subCategory: true,
-            resources: { where: { deletedAt: null } },
+          resources: { where: { deletedAt: null } },
           chapters: {
-            include: { lessons: { include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } } }, orderBy: { orderIndex: 'asc' } } },
+            include: { lessons: { include: { videos: { where: { deletedAt: null } }, pdfs: { where: { deletedAt: null } }, attachments: { where: { deletedAt: null } }, resources: { where: { deletedAt: null } }, contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } } }, orderBy: { orderIndex: 'asc' } } },
             orderBy: { sortOrder: 'asc' },
           },
           teachers: { include: { teacher: { include: { user: { include: { profile: true } } } } } },
@@ -182,6 +183,7 @@ export class StudentCourseService {
             isFree: l.isFree,
             isPublished: l.isPublished,
             hasVideo: l.videos.length > 0,
+            contentBlocks: l.contentBlocks.map((block) => ({ id: block.id, type: block.type, orderIndex: block.orderIndex, title: block.title, data: block.data })),
             isCompleted: false,
             videos: l.videos.map((video) => ({
               id: video.id,
@@ -261,6 +263,7 @@ export class StudentCourseService {
           isFree: l.isFree,
           isPublished: l.isPublished,
           hasVideo: l.videos.length > 0,
+          contentBlocks: l.contentBlocks.map((block) => ({ id: block.id, type: block.type, orderIndex: block.orderIndex, title: block.title, data: block.data })),
           isCompleted: enrollment.lessonProgress.some((progress) => progress.lessonId === l.id && progress.isCompleted),
           videos: l.videos.map((video) => ({
             id: video.id,
@@ -306,6 +309,7 @@ export class StudentCourseService {
         pdfs: { where: { deletedAt: null } },
         attachments: { where: { deletedAt: null } },
         resources: { where: { deletedAt: null } },
+        contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } },
         feedback: true,
       },
     });
@@ -320,6 +324,7 @@ export class StudentCourseService {
       description: lesson.description,
       type: lesson.type,
       content: lesson.content,
+      contentBlocks: lesson.contentBlocks.map((block) => ({ id: block.id, type: block.type, orderIndex: block.orderIndex, title: block.title, data: block.data })),
       durationMinutes: lesson.durationMinutes,
       isFree: lesson.isFree,
       videos: lesson.videos.map((v) => ({

@@ -11,6 +11,9 @@ import {
   ReorderChaptersDto,
   CreateLessonDto,
   UpdateLessonDto,
+  CreateLessonContentBlockDto,
+  UpdateLessonContentBlockDto,
+  ReorderLessonContentBlocksDto,
   CreateLessonVideoDto,
   UpdateLessonVideoDto,
   CreateLessonPdfDto,
@@ -181,6 +184,7 @@ export class CourseService {
                 pdfs: { where: { deletedAt: null } },
                 attachments: { where: { deletedAt: null } },
                 resources: { where: { deletedAt: null } },
+                contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } },
               },
               orderBy: { orderIndex: 'asc' },
             },
@@ -305,6 +309,13 @@ export class CourseService {
           hasPdf: l.pdfs.length > 0,
           hasAttachments: l.attachments.length > 0,
           hasResources: l.resources.length > 0,
+          contentBlocks: l.contentBlocks.map((block) => ({
+            id: block.id,
+            type: block.type,
+            orderIndex: block.orderIndex,
+            title: block.title,
+            data: block.data,
+          })),
           videos: l.videos.map((video) => ({
             id: video.id,
             title: video.title,
@@ -845,6 +856,7 @@ export class CourseService {
         pdfs: { where: { deletedAt: null } },
         attachments: { where: { deletedAt: null } },
         resources: { where: { deletedAt: null } },
+        contentBlocks: { where: { deletedAt: null }, orderBy: { orderIndex: 'asc' } },
       },
     });
     if (!lesson) throw new NotFoundException('Lesson not found');
@@ -874,6 +886,13 @@ export class CourseService {
       pdfs: lesson.pdfs,
       attachments: lesson.attachments,
       resources: lesson.resources,
+      contentBlocks: lesson.contentBlocks.map((block) => ({
+        id: block.id,
+        type: block.type,
+        orderIndex: block.orderIndex,
+        title: block.title,
+        data: block.data,
+      })),
     };
   }
 
@@ -910,6 +929,70 @@ export class CourseService {
       data: { deletedAt: new Date(), status: 'ARCHIVED', isPublished: false },
     });
     return { success: true };
+  }
+
+  async addLessonContentBlock(lessonId: string, dto: CreateLessonContentBlockDto, user: AuthUser) {
+    const lesson = await this.findLessonById(lessonId);
+    await this.assertAccess(lesson.courseId, user);
+    const nextOrder = await this.prisma.lessonContentBlock.aggregate({
+      where: { lessonId, deletedAt: null },
+      _max: { orderIndex: true },
+    });
+    const orderIndex = dto.orderIndex ?? (nextOrder._max.orderIndex ?? -1) + 1;
+    await this.prisma.lessonContentBlock.create({
+      data: {
+        lessonId,
+        type: dto.type,
+        title: dto.title,
+        orderIndex,
+        data: dto.data as Prisma.InputJsonValue,
+      },
+    });
+    return this.findLessonById(lessonId);
+  }
+
+  async updateLessonContentBlock(blockId: string, dto: UpdateLessonContentBlockDto, user: AuthUser) {
+    const block = await this.prisma.lessonContentBlock.findFirst({
+      where: { id: blockId, deletedAt: null },
+      include: { lesson: { select: { id: true, courseId: true } } },
+    });
+    if (!block) throw new NotFoundException('Content block not found');
+    await this.assertAccess(block.lesson.courseId, user);
+    await this.prisma.lessonContentBlock.update({
+      where: { id: blockId },
+      data: {
+        type: dto.type,
+        title: dto.title,
+        orderIndex: dto.orderIndex,
+        data: dto.data as Prisma.InputJsonValue | undefined,
+      },
+    });
+    return this.findLessonById(block.lesson.id);
+  }
+
+  async deleteLessonContentBlock(blockId: string, user: AuthUser) {
+    const block = await this.prisma.lessonContentBlock.findFirst({
+      where: { id: blockId, deletedAt: null },
+      include: { lesson: { select: { id: true, courseId: true } } },
+    });
+    if (!block) throw new NotFoundException('Content block not found');
+    await this.assertAccess(block.lesson.courseId, user);
+    await this.prisma.lessonContentBlock.update({ where: { id: blockId }, data: { deletedAt: new Date() } });
+    return { success: true };
+  }
+
+  async reorderLessonContentBlocks(lessonId: string, dto: ReorderLessonContentBlocksDto, user: AuthUser) {
+    const lesson = await this.findLessonById(lessonId);
+    await this.assertAccess(lesson.courseId, user);
+    const blocks = await this.prisma.lessonContentBlock.findMany({ where: { lessonId, deletedAt: null }, select: { id: true } });
+    const knownIds = new Set(blocks.map((block) => block.id));
+    if (dto.blockIds.length !== blocks.length || dto.blockIds.some((id) => !knownIds.has(id))) {
+      throw new NotFoundException('Content block order does not match this lesson');
+    }
+    await this.prisma.$transaction(
+      dto.blockIds.map((id, index) => this.prisma.lessonContentBlock.update({ where: { id }, data: { orderIndex: index } })),
+    );
+    return this.findLessonById(lessonId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

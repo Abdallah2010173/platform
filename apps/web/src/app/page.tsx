@@ -119,11 +119,6 @@ export default function HomePage() {
                 </Link>
               </Button>
             )}
-            <Button asChild variant="outline" size="lg">
-              <Link href={`${process.env.NEXT_PUBLIC_API_URL}/docs`} target="_blank">
-                API Docs
-              </Link>
-            </Button>
           </div>
         </section>
 

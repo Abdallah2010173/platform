@@ -541,6 +541,42 @@ export const useAddLesson = (courseId: string) => {
   });
 };
 
+export const useAddLessonContentBlock = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lessonId, data }: { lessonId: string; data: Record<string, unknown> }) => courseApi.addLessonContentBlock(lessonId, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Content block added'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useUpdateLessonContentBlock = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => courseApi.updateLessonContentBlock(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Content block updated'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useDeleteLessonContentBlock = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => courseApi.deleteLessonContentBlock(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); toast.success('Content block deleted'); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
+export const useReorderLessonContentBlocks = (courseId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lessonId, blockIds }: { lessonId: string; blockIds: string[] }) => courseApi.reorderLessonContentBlocks(lessonId, blockIds),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['course', courseId] }); },
+    onError: (e) => toast.error(formatApiError(e)),
+  });
+};
+
 export const useAddLessonVideo = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({

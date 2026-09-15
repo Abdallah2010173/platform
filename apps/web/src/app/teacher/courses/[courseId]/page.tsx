@@ -36,15 +36,19 @@ import {
   useAddChapter,
   useAddCourseResource,
   useAddLesson,
+  useAddLessonContentBlock,
   useAddLessonVideo,
   useAllTeacherStudents,
   useCourseDetail,
   useDeleteCourseResource,
   useDeleteLessonVideo,
+  useDeleteLessonContentBlock,
   useGrantCourseAccess,
   useCreateCourseAccessCode,
   useRevokeCourseAccess,
   useUpdateCourseResource,
+  useUpdateLessonContentBlock,
+  useReorderLessonContentBlocks,
 } from '@/lib/api/hooks';
 
 interface VideoItem {
@@ -58,6 +62,14 @@ interface Lesson {
   id: string;
   title: string;
   videos?: VideoItem[];
+  contentBlocks?: ContentBlock[];
+}
+interface ContentBlock {
+  id: string;
+  type: string;
+  title?: string | null;
+  orderIndex: number;
+  data: { text?: string; url?: string; videoId?: string };
 }
 interface Chapter {
   id: string;
@@ -92,8 +104,12 @@ export default function TeacherCourseContentPage() {
   const { data, isLoading } = useCourseDetail(courseId);
   const addChapter = useAddChapter(courseId);
   const addLesson = useAddLesson(courseId);
+  const addContentBlock = useAddLessonContentBlock(courseId);
   const addVideo = useAddLessonVideo(courseId);
   const deleteVideo = useDeleteLessonVideo(courseId);
+  const deleteContentBlock = useDeleteLessonContentBlock(courseId);
+  const updateContentBlock = useUpdateLessonContentBlock(courseId);
+  const reorderContentBlocks = useReorderLessonContentBlocks(courseId);
   const addResource = useAddCourseResource(courseId);
   const updateResource = useUpdateCourseResource(courseId);
   const deleteResource = useDeleteCourseResource(courseId);
@@ -104,6 +120,7 @@ export default function TeacherCourseContentPage() {
   const [chapterTitle, setChapterTitle] = useState('');
   const [lessonTitles, setLessonTitles] = useState<Record<string, string>>({});
   const [videoForms, setVideoForms] = useState<Record<string, { title: string; url: string }>>({});
+  const [blockForms, setBlockForms] = useState<Record<string, { type: string; title: string; value: string }>>({});
   const [uploadLessonId, setUploadLessonId] = useState('');
   const [resourceTitle, setResourceTitle] = useState('');
   const [imageTitle, setImageTitle] = useState('');
@@ -217,6 +234,37 @@ export default function TeacherCourseContentPage() {
       { lessonId, data: { title: form.title.trim() || undefined, url: form.url.trim() } },
       { onSuccess: () => setVideoForms({ ...videoForms, [lessonId]: { title: '', url: '' } }) },
     );
+  };
+
+  const submitContentBlock = (event: FormEvent, lessonId: string) => {
+    event.preventDefault();
+    const form = blockForms[lessonId];
+    if (!form?.value.trim()) return;
+    const data = form.type === 'TEXT' ? { text: form.value.trim() } : { url: form.value.trim() };
+    addContentBlock.mutate(
+      { lessonId, data: { type: form.type, title: form.title.trim() || undefined, data } },
+      { onSuccess: () => setBlockForms({ ...blockForms, [lessonId]: { type: 'TEXT', title: '', value: '' } }) },
+    );
+  };
+
+  const editContentBlock = (lessonId: string, block: ContentBlock) => {
+    const value = block.type === 'TEXT' ? block.data.text : block.data.url;
+    const nextValue = window.prompt('Content value', value ?? '');
+    if (nextValue === null || !nextValue.trim()) return;
+    const data = block.type === 'TEXT' ? { text: nextValue.trim() } : { url: nextValue.trim() };
+    updateContentBlock.mutate({ id: block.id, data: { data } });
+  };
+
+  const moveContentBlock = (lessonId: string, blocks: ContentBlock[], index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= blocks.length) return;
+    const next = [...blocks];
+    const currentBlock = next[index];
+    const targetBlock = next[nextIndex];
+    if (!currentBlock || !targetBlock) return;
+    next[index] = targetBlock;
+    next[nextIndex] = currentBlock;
+    reorderContentBlocks.mutate({ lessonId, blockIds: next.map((block) => block.id) });
   };
 
   const handleUploadedVideo = (uploaded: { id: string; status?: string; jobId?: string }) => {
@@ -565,16 +613,39 @@ export default function TeacherCourseContentPage() {
               </form>
               {(chapter.lessons ?? []).map((lesson) => {
                 const form = videoForms[lesson.id] ?? { title: '', url: '' };
+                const blockForm = blockForms[lesson.id] ?? { type: 'TEXT', title: '', value: '' };
+                const blocks = [...(lesson.contentBlocks ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
                 return (
                   <div key={lesson.id} className="rounded-md border p-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium">{lesson.title}</p>
                         <p className="text-muted-foreground text-xs">
-                          {lesson.videos?.length ?? 0} video(s)
+                          {blocks.length} content block(s) · {lesson.videos?.length ?? 0} legacy video(s)
                         </p>
                       </div>
                       <Badge variant="secondary">Lesson</Badge>
+                    </div>
+                    <div className="mt-4 space-y-2 rounded-md bg-muted/30 p-3">
+                      <p className="text-sm font-medium">Lesson content</p>
+                      {blocks.map((block, index) => (
+                        <div key={block.id} className="flex items-center gap-2 rounded-md border bg-background p-2 text-sm">
+                          <Badge variant="outline">{block.type}</Badge>
+                          <span className="min-w-0 flex-1 truncate">{block.title || (block.type === 'TEXT' ? block.data.text : block.data.url) || 'Untitled block'}</span>
+                          <Button type="button" variant="ghost" size="icon" aria-label="Move block up" disabled={index === 0 || reorderContentBlocks.isPending} onClick={() => moveContentBlock(lesson.id, blocks, index, -1)}>↑</Button>
+                          <Button type="button" variant="ghost" size="icon" aria-label="Move block down" disabled={index === blocks.length - 1 || reorderContentBlocks.isPending} onClick={() => moveContentBlock(lesson.id, blocks, index, 1)}>↓</Button>
+                          <Button type="button" variant="ghost" size="icon" aria-label="Edit content block" onClick={() => editContentBlock(lesson.id, block)}><Pencil className="h-4 w-4" /></Button>
+                          <Button type="button" variant="ghost" size="icon" aria-label="Delete content block" disabled={deleteContentBlock.isPending} onClick={() => deleteContentBlock.mutate(block.id)}><Trash2 className="text-destructive h-4 w-4" /></Button>
+                        </div>
+                      ))}
+                      <form onSubmit={(event) => submitContentBlock(event, lesson.id)} className="grid gap-2 sm:grid-cols-[8rem_1fr_2fr_auto]">
+                        <select className="border-input bg-background h-9 rounded-md border px-2 text-sm" value={blockForm.type} onChange={(event) => setBlockForms({ ...blockForms, [lesson.id]: { ...blockForm, type: event.target.value } })}>
+                          <option value="TEXT">Text</option><option value="IMAGE">Image</option><option value="VIDEO">Video</option><option value="PDF">PDF</option><option value="FILE">File</option><option value="EMBED">Embed</option>
+                        </select>
+                        <Input value={blockForm.title} onChange={(event) => setBlockForms({ ...blockForms, [lesson.id]: { ...blockForm, title: event.target.value } })} placeholder="Block title" />
+                        <Input value={blockForm.value} onChange={(event) => setBlockForms({ ...blockForms, [lesson.id]: { ...blockForm, value: event.target.value } })} placeholder={blockForm.type === 'TEXT' ? 'Explanation text' : 'URL or file link'} />
+                        <Button type="submit" variant="outline" disabled={addContentBlock.isPending}><Plus className="h-4 w-4" /></Button>
+                      </form>
                     </div>
                     <div className="mt-3 space-y-2">
                       {(lesson.videos ?? []).map((video) => (

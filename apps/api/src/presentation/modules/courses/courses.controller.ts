@@ -33,6 +33,9 @@ import {
   ReorderChaptersDto,
   CreateLessonDto,
   UpdateLessonDto,
+  CreateLessonContentBlockDto,
+  UpdateLessonContentBlockDto,
+  ReorderLessonContentBlocksDto,
   CreateLessonVideoDto,
   UpdateLessonVideoDto,
   CreateLessonPdfDto,
@@ -414,6 +417,46 @@ export class CoursesController {
   @ApiOperation({ summary: 'Soft-delete a lesson' })
   deleteLesson(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.courseService.deleteLesson(id, user);
+  }
+
+  @Post('lessons/:lessonId/content-blocks')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Add an ordered content block to a lesson' })
+  addLessonContentBlock(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: CreateLessonContentBlockDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.courseService.addLessonContentBlock(lessonId, dto, user);
+  }
+
+  @Patch('lessons/content-blocks/:id')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Update a lesson content block' })
+  updateLessonContentBlock(
+    @Param('id') id: string,
+    @Body() dto: UpdateLessonContentBlockDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.courseService.updateLessonContentBlock(id, dto, user);
+  }
+
+  @Delete('lessons/content-blocks/:id')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Delete a lesson content block' })
+  deleteLessonContentBlock(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.courseService.deleteLessonContentBlock(id, user);
+  }
+
+  @Post('lessons/:lessonId/content-blocks/reorder')
+  @Roles(Role.ADMIN, Role.TEACHER)
+  @ApiOperation({ summary: 'Reorder lesson content blocks' })
+  reorderLessonContentBlocks(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: ReorderLessonContentBlocksDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.courseService.reorderLessonContentBlocks(lessonId, dto, user);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

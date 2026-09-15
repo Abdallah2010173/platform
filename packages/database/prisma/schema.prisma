@@ -163,6 +163,15 @@ enum LessonType {
   RESOURCE
 }
 
+enum LessonContentBlockType {
+  TEXT
+  IMAGE
+  VIDEO
+  PDF
+  FILE
+  EMBED
+}
+
 enum VideoSource {
   UPLOAD
   HLS
@@ -1344,6 +1353,7 @@ model Lesson {
   pdfs                 LessonPDF[]
   attachments          LessonAttachment[]
   resources            LessonResource[]
+  contentBlocks        LessonContentBlock[]
   feedback             LessonFeedback[]
   progress             LessonProgress[]
   enrollmentActivities EnrollmentActivity[]
@@ -1355,6 +1365,24 @@ model Lesson {
   @@index([type])
   @@index([status])
   @@map("lessons")
+}
+
+model LessonContentBlock {
+  id         String                   @id @default(uuid())
+  lessonId   String
+  type       LessonContentBlockType
+  orderIndex Int
+  title      String?
+  data       Json
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+  deletedAt  DateTime?
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, orderIndex])
+  @@index([lessonId, deletedAt])
+  @@map("lesson_content_blocks")
 }
 
 model LessonVideo {

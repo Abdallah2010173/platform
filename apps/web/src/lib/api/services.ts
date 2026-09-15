@@ -263,6 +263,14 @@ export const courseApi = {
     getApiData(await apiClient.post(`/courses/${courseId}/chapters`, data)),
   addLesson: async (chapterId: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.post(`/chapters/${chapterId}/lessons`, data)),
+  addLessonContentBlock: async (lessonId: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.post(`/lessons/${lessonId}/content-blocks`, data)),
+  updateLessonContentBlock: async (id: string, data: Record<string, unknown>) =>
+    getApiData(await apiClient.patch(`/lessons/content-blocks/${id}`, data)),
+  deleteLessonContentBlock: async (id: string) =>
+    getApiData(await apiClient.delete(`/lessons/content-blocks/${id}`)),
+  reorderLessonContentBlocks: async (lessonId: string, blockIds: string[]) =>
+    getApiData(await apiClient.post(`/lessons/${lessonId}/content-blocks/reorder`, { blockIds })),
   addLessonVideo: async (lessonId: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.post(`/lessons/${lessonId}/videos`, data)),
   uploadLessonVideo: async (lessonId: string, file: File, onUploadProgress?: (progress: number) => void) => {
