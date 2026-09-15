@@ -8,7 +8,7 @@ import { MobileNav } from './mobile-nav';
 import { NotificationCenter } from './notification-center';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/components/auth/protected-route';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useTheme } from '@/components/providers/theme-provider';
 import { ROLE_LABELS } from '@platform/shared';
@@ -34,6 +34,8 @@ export function Header({ title, description, actions }: HeaderProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const { locale, setLocale, t } = useLocale();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const pathname = usePathname();
+  const isCoursePlayer = /^\/student\/courses\/[^/]+$/.test(pathname);
 
   const handleLogout = () => {
     setLogoutOpen(true);
@@ -53,7 +55,7 @@ export function Header({ title, description, actions }: HeaderProps) {
     <header className="animate-slide-in-up space-y-3 md:space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2">
-          <MobileNav />
+          {!isCoursePlayer && <MobileNav />}
 
           <Image
             src="/logo.png"

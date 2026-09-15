@@ -4,15 +4,11 @@ import { FormEvent, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Copy,
-  FileImage,
-  FileText,
   Gift,
   Pencil,
   Plus,
-  Save,
   Trash2,
   Video,
-  X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,24 +24,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmptyState, LoadingState } from '@/components/dashboard/data-states';
-import { API_URL } from '@/lib/api/client';
-import { useLocale } from '@/lib/i18n';
 import { R2FileUpload } from '@/components/r2-file-upload';
 import { LessonVideoUpload } from '@/components/lesson-video-upload';
 import {
-  useAddCourseResource,
   useAddCourseLesson,
   useAddLessonContentBlock,
   useAllTeacherStudents,
   useCourseDetail,
-  useDeleteCourseResource,
   useDeleteLessonVideo,
   useDeleteLesson,
   useDeleteLessonContentBlock,
   useGrantCourseAccess,
   useCreateCourseAccessCode,
   useRevokeCourseAccess,
-  useUpdateCourseResource,
   useUpdateLessonContentBlock,
   useReorderLessonContentBlocks,
 } from '@/lib/api/hooks';
@@ -75,13 +66,6 @@ interface Chapter {
   title: string;
   lessons?: Lesson[];
 }
-interface Resource {
-  id: string;
-  title: string;
-  type?: string | null;
-  mimeType?: string | null;
-  fileUrl?: string | null;
-}
 interface Student {
   userId: string;
   name?: string;
@@ -93,13 +77,11 @@ interface Course {
   id: string;
   title: string;
   chapters?: Chapter[];
-  resources?: Resource[];
 }
 
 export default function TeacherCourseContentPage() {
   const params = useParams<{ courseId: string }>();
   const courseId = params.courseId;
-  const { t } = useLocale();
   const { data, isLoading } = useCourseDetail(courseId);
   const addLesson = useAddCourseLesson(courseId);
   const addContentBlock = useAddLessonContentBlock(courseId);
@@ -108,9 +90,6 @@ export default function TeacherCourseContentPage() {
   const deleteContentBlock = useDeleteLessonContentBlock(courseId);
   const updateContentBlock = useUpdateLessonContentBlock(courseId);
   const reorderContentBlocks = useReorderLessonContentBlocks(courseId);
-  const addResource = useAddCourseResource(courseId);
-  const updateResource = useUpdateCourseResource(courseId);
-  const deleteResource = useDeleteCourseResource(courseId);
   const grantAccess = useGrantCourseAccess(courseId);
   const createAccessCode = useCreateCourseAccessCode(courseId);
   const revokeAccess = useRevokeCourseAccess(courseId);
@@ -120,12 +99,6 @@ export default function TeacherCourseContentPage() {
   const [contentType, setContentType] = useState('TEXT');
   const [contentTitle, setContentTitle] = useState('');
   const [contentValue, setContentValue] = useState('');
-  const [uploadLessonId, setUploadLessonId] = useState('');
-  const [resourceTitle, setResourceTitle] = useState('');
-  const [imageTitle, setImageTitle] = useState('');
-  const [editingResource, setEditingResource] = useState<{ id: string; title: string } | null>(
-    null,
-  );
   const [studentSearch, setStudentSearch] = useState('');
   const [maxCodeUses, setMaxCodeUses] = useState('1');
   const [codeExpiresAt, setCodeExpiresAt] = useState('');
@@ -134,22 +107,11 @@ export default function TeacherCourseContentPage() {
   const course = data as Course | undefined;
   const chapters = course?.chapters ?? [];
   const lessons = chapters.flatMap((chapter) => chapter.lessons ?? []);
-  const resources = course?.resources ?? [];
-  const imageResources = resources.filter(
-    (resource) =>
-      resource.type === 'IMAGE' ||
-      resource.mimeType?.startsWith('image/') ||
-      /\.(png|jpe?g|webp|gif|svg)$/i.test(resource.fileUrl ?? resource.title),
-  );
-  const fileResources = resources.filter((resource) => !imageResources.includes(resource));
   const students = (Array.isArray(studentsData) ? studentsData : []) as Student[];
   const visibleStudents = students.filter((student) => {
     const query = studentSearch.trim().toLowerCase();
     return !query || `${student.name ?? ''} ${student.email}`.toLowerCase().includes(query);
   });
-  const resourceUrl = (url: string) =>
-    url.startsWith('http') ? url : `${API_URL.replace(/\/api\/v1$/, '')}${url}`;
-
   const createAccessCodeForCourse = () => {
     createAccessCode.mutate(
       {
@@ -227,6 +189,26 @@ export default function TeacherCourseContentPage() {
     );
   };
 
+  const addUploadedContentBlock = (uploaded: { fileKey: string; publicUrl?: string; fileName: string }) => {
+    if (!contentLessonId) return;
+    addContentBlock.mutate({
+      lessonId: contentLessonId,
+      data: {
+        type: contentType,
+        title: contentTitle.trim() || uploaded.fileName,
+        data: { url: uploaded.publicUrl ?? uploaded.fileKey },
+      },
+    }, { onSuccess: () => { setContentTitle(''); setContentValue(''); } });
+  };
+
+  const addUploadedVideoBlock = (uploaded: { id: string }) => {
+    if (!contentLessonId) return;
+    addContentBlock.mutate({
+      lessonId: contentLessonId,
+      data: { type: 'VIDEO', title: contentTitle.trim() || 'Lesson video', data: { videoId: uploaded.id } },
+    }, { onSuccess: () => setContentTitle('') });
+  };
+
   const editContentBlock = (lessonId: string, block: ContentBlock) => {
     const value = block.type === 'TEXT' ? block.data.text : block.data.url;
     const nextValue = window.prompt('Content value', value ?? '');
@@ -247,131 +229,9 @@ export default function TeacherCourseContentPage() {
     reorderContentBlocks.mutate({ lessonId, blockIds: next.map((block) => block.id) });
   };
 
-  const handleUploadedVideo = (uploaded: { id: string; status?: string; jobId?: string }) => {
-    if (!uploaded) return;
-  };
-
-  const saveUploadedResource = (
-    uploaded: { fileKey: string; publicUrl?: string; fileName: string },
-    type: 'FILE' | 'IMAGE',
-  ) => {
-    if (!uploaded) return;
-    const title =
-      (type === 'IMAGE' ? imageTitle : resourceTitle).trim() ||
-      uploaded.fileName.replace(/\.[^/.]+$/, '') ||
-      'Course resource';
-    addResource.mutate(
-      {
-        title,
-        type,
-        fileUrl: uploaded.publicUrl ?? uploaded.fileKey,
-        fileName: uploaded.fileName,
-        isExternal: true,
-      },
-      {
-        onSuccess: () => (type === 'IMAGE' ? setImageTitle('') : setResourceTitle('')),
-      },
-    );
-  };
-
-  const saveResourceTitle = () => {
-    if (!editingResource?.title.trim()) return;
-    updateResource.mutate(
-      { id: editingResource.id, data: { title: editingResource.title.trim() } },
-      { onSuccess: () => setEditingResource(null) },
-    );
-  };
-
   const confirmDeleteVideo = () => {
     if (!videoToDelete) return;
     deleteVideo.mutate(videoToDelete.id, { onSuccess: () => setVideoToDelete(null) });
-  };
-
-  const renderResource = (resource: Resource, isImage: boolean) => {
-    const editing = editingResource?.id === resource.id;
-    return (
-      <div key={resource.id} className="flex items-center gap-2 rounded-md border p-2 text-sm">
-        {isImage ? (
-          <FileImage className="text-primary h-4 w-4 shrink-0" />
-        ) : (
-          <FileText className="h-4 w-4 shrink-0" />
-        )}
-        {editing ? (
-          <Input
-            autoFocus
-            value={editingResource.title}
-            onChange={(event) =>
-              setEditingResource({ ...editingResource, title: event.target.value })
-            }
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') saveResourceTitle();
-              if (event.key === 'Escape') setEditingResource(null);
-            }}
-            className="h-8 min-w-0 flex-1"
-          />
-        ) : (
-          <span className="min-w-0 flex-1 truncate">{resource.title}</span>
-        )}
-        {!editing && resource.fileUrl && (
-          <a
-            className="text-primary underline"
-            href={resourceUrl(resource.fileUrl)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open
-          </a>
-        )}
-        {editing ? (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Save resource title"
-              disabled={updateResource.isPending}
-              onClick={saveResourceTitle}
-            >
-              <Save className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Cancel editing resource"
-              onClick={() => setEditingResource(null)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`Edit ${resource.title}`}
-              onClick={() => setEditingResource({ id: resource.id, title: resource.title })}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`Delete ${resource.title}`}
-              disabled={deleteResource.isPending}
-              onClick={() => {
-                if (window.confirm(`Delete resource "${resource.title}"?`))
-                  deleteResource.mutate(resource.id);
-              }}
-            >
-              <Trash2 className="text-destructive h-4 w-4" />
-            </Button>
-          </>
-        )}
-      </div>
-    );
   };
 
   if (isLoading) return <LoadingState label="Loading course content..." />;
@@ -385,92 +245,8 @@ export default function TeacherCourseContentPage() {
           Manage lessons, resources, and student access.
         </p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         {accessCodePanel}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">{t('Files and resources')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              value={resourceTitle}
-              onChange={(event) => setResourceTitle(event.target.value)}
-              placeholder={t('Resource title (optional)')}
-            />
-            <R2FileUpload
-              accept="application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-              resourceType="FILE"
-              label={t('Choose file from device')}
-              onUploaded={(file) => saveUploadedResource(file, 'FILE')}
-            />
-            <div className="space-y-2">
-              {fileResources.map((resource) => renderResource(resource, false))}
-              {!fileResources.length && (
-                <p className="text-muted-foreground text-sm">{t('No files uploaded yet.')}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('Images')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              value={imageTitle}
-              onChange={(event) => setImageTitle(event.target.value)}
-              placeholder={t('Image title (optional)')}
-            />
-            <R2FileUpload
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              resourceType="IMAGE"
-              label={t('Choose image')}
-              onUploaded={(file) => saveUploadedResource(file, 'IMAGE')}
-            />
-            <div className="space-y-2">
-              {imageResources.map((resource) => renderResource(resource, true))}
-              {!imageResources.length && (
-                <p className="text-muted-foreground text-sm">{t('No images uploaded yet.')}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('Lesson videos')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-muted-foreground text-sm">
-              {t('Choose a lesson, then upload its video.')}
-            </p>
-            <select
-              className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-              value={uploadLessonId}
-              onChange={(event) => setUploadLessonId(event.target.value)}
-            >
-              <option value="">{t('Choose a lesson')}</option>
-              {chapters.flatMap((chapter) =>
-                (chapter.lessons ?? []).map((lesson) => (
-                  <option key={lesson.id} value={lesson.id}>
-                    {chapter.title} / {lesson.title}
-                  </option>
-                )),
-              )}
-            </select>
-            {uploadLessonId ? (
-              <LessonVideoUpload
-                lessonId={uploadLessonId}
-                label={t('Choose video')}
-                onUploaded={handleUploadedVideo}
-              />
-            ) : (
-              <Button type="button" variant="outline" className="w-full" disabled>
-                <Video className="mr-2 h-4 w-4" />
-                {t('Choose a lesson first')}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Free student access</CardTitle>
@@ -570,7 +346,14 @@ export default function TeacherCourseContentPage() {
             <div className="flex flex-wrap gap-2">
               {['TEXT', 'IMAGE', 'VIDEO', 'PDF', 'FILE', 'EMBED'].map((type) => <Button key={type} type="button" size="sm" variant={contentType === type ? 'default' : 'outline'} onClick={() => setContentType(type)}>{type}</Button>)}
             </div>
-            <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto]"><Input value={contentTitle} onChange={(event) => setContentTitle(event.target.value)} placeholder="Content title" /><Input value={contentValue} onChange={(event) => setContentValue(event.target.value)} placeholder={contentType === 'TEXT' ? 'Explanation text' : 'URL or uploaded file link'} /><Button type="submit" disabled={!contentLessonId || !contentValue.trim() || addContentBlock.isPending}><Plus className="mr-2 h-4 w-4" />Add</Button></div>
+            <Input value={contentTitle} onChange={(event) => setContentTitle(event.target.value)} placeholder="Content title" />
+            {contentType === 'TEXT' || contentType === 'EMBED' ? (
+              <div className="grid gap-2 md:grid-cols-[1fr_auto]"><Input value={contentValue} onChange={(event) => setContentValue(event.target.value)} placeholder={contentType === 'TEXT' ? 'Explanation text' : 'Embed URL'} /><Button type="submit" disabled={!contentLessonId || !contentValue.trim() || addContentBlock.isPending}><Plus className="mr-2 h-4 w-4" />Add</Button></div>
+            ) : contentType === 'VIDEO' ? (
+              contentLessonId ? <LessonVideoUpload lessonId={contentLessonId} label="Upload video from device" onUploaded={addUploadedVideoBlock} /> : <p className="text-muted-foreground text-sm">Choose a lesson first.</p>
+            ) : (
+              contentLessonId ? <R2FileUpload accept={contentType === 'IMAGE' ? 'image/png,image/jpeg,image/webp,image/gif' : contentType === 'PDF' ? 'application/pdf' : 'application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain'} resourceType={contentType === 'IMAGE' ? 'IMAGE' : 'FILE'} label="Upload from device" onUploaded={addUploadedContentBlock} disabled={addContentBlock.isPending} /> : <p className="text-muted-foreground text-sm">Choose a lesson first.</p>
+            )}
           </form>
         </CardContent>
       </Card>
