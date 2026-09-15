@@ -25,8 +25,9 @@ export class StudentCourseService {
     const where = {
       studentId,
       deletedAt: null,
+      course: { deletedAt: null },
       ...statusFilter,
-      ...(search ? { course: { title: { contains: search, mode: 'insensitive' as const } } } : {}),
+      ...(search ? { course: { deletedAt: null, title: { contains: search, mode: 'insensitive' as const } } } : {}),
     };
 
     const enrollments = await this.prisma.courseStudent.findMany({
@@ -106,6 +107,10 @@ export class StudentCourseService {
         },
       },
     });
+
+    if (enrollment?.course.deletedAt) {
+      throw new NotFoundException('Course not found');
+    }
 
     if (!enrollment || enrollment.deletedAt || enrollment.status === 'CANCELED') {
       const access = await this.courseAccessService.canAccessCourse(user.id, courseId);
@@ -409,7 +414,7 @@ export class StudentCourseService {
 
     // Favorites are tracked via the isFavorite flag on the enrollment
     const enrollments = await this.prisma.courseStudent.findMany({
-      where: { studentId, isFavorite: true },
+      where: { studentId, isFavorite: true, course: { deletedAt: null } },
       include: {
         course: { select: { id: true, title: true, slug: true, thumbnailUrl: true, level: true } },
       },

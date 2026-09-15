@@ -58,7 +58,7 @@ export class StudentStatsService {
 
     // Overall progress: average of course progress
     const courseStudents = await this.prisma.courseStudent.findMany({
-      where: { studentId },
+      where: { studentId, deletedAt: null, course: { deletedAt: null } },
       select: { progress: true },
     });
     const avgProgress =
@@ -87,7 +87,7 @@ export class StudentStatsService {
     const studentId = await this.studentHelper.getStudentId(user);
 
     const courseStudents = await this.prisma.courseStudent.findMany({
-      where: { studentId },
+      where: { studentId, deletedAt: null, course: { deletedAt: null } },
       include: {
         course: { select: { id: true, title: true, totalLessons: true } },
       },
