@@ -918,9 +918,18 @@ export class CourseService {
       publishedAt: lesson.publishedAt,
       createdAt: lesson.createdAt,
       updatedAt: lesson.updatedAt,
-      videos: lesson.videos,
-      pdfs: lesson.pdfs,
-      attachments: lesson.attachments,
+      videos: lesson.videos.map((video) => ({
+        ...video,
+        sizeBytes: video.sizeBytes ? Number(video.sizeBytes) : null,
+      })),
+      pdfs: lesson.pdfs.map((pdf) => ({
+        ...pdf,
+        sizeBytes: pdf.sizeBytes ? Number(pdf.sizeBytes) : null,
+      })),
+      attachments: lesson.attachments.map((attachment) => ({
+        ...attachment,
+        sizeBytes: attachment.sizeBytes ? Number(attachment.sizeBytes) : null,
+      })),
       resources: lesson.resources,
       contentBlocks: lesson.contentBlocks.map((block) => ({
         id: block.id,
