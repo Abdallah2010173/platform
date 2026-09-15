@@ -7,6 +7,17 @@ export type Locale = 'en' | 'ar';
 const LOCALE_KEY = 'app-locale';
 const DEFAULT_LOCALE: Locale = 'en';
 
+declare global {
+  interface Window {
+    google?: {
+      translate?: {
+        TranslateElement: new (options: Record<string, unknown>, elementId: string) => unknown;
+      };
+    };
+    googleTranslateElementInit?: () => void;
+  }
+}
+
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
@@ -73,6 +84,33 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
   useEffect(() => {
+    if (document.getElementById('google-translate-script')) return;
+
+    window.googleTranslateElementInit = () => {
+      const TranslateElement = window.google?.translate?.TranslateElement;
+      if (!TranslateElement || !document.getElementById('google_translate_element')) return;
+      new TranslateElement(
+        {
+          pageLanguage: 'en',
+          includedLanguages: 'en,ar',
+          autoDisplay: false,
+        },
+        'google_translate_element',
+      );
+    };
+
+    const script = document.createElement('script');
+    script.id = 'google-translate-script';
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      window.googleTranslateElementInit = undefined;
+    };
+  }, []);
+
+  useEffect(() => {
     setLocaleState(getStoredLocale());
   }, []);
 
@@ -93,6 +131,26 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }
   }, [locale]);
 
+  useEffect(() => {
+    const targetLanguage = locale === 'ar' ? 'ar' : 'en';
+    let attempts = 0;
+    const applyLanguage = () => {
+      const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+      if (select) {
+        if (select.value !== targetLanguage) {
+          select.value = targetLanguage;
+          select.dispatchEvent(new Event('change'));
+        }
+        return;
+      }
+      if (attempts < 30) {
+        attempts += 1;
+        window.setTimeout(applyLanguage, 200);
+      }
+    };
+    applyLanguage();
+  }, [locale]);
+
   const value = useMemo<LocaleContextValue>(
     () => ({
       locale,
@@ -107,7 +165,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     [locale],
   );
 
-  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+  return (
+    <LocaleContext.Provider value={value}>
+      <div id="google_translate_element" aria-hidden="true" />
+      {children}
+    </LocaleContext.Provider>
+  );
 }
 
 export function useLocale() {

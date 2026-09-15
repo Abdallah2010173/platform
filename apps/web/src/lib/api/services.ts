@@ -263,10 +263,61 @@ export const courseApi = {
     getApiData(await apiClient.post(`/courses/${courseId}/chapters`, data)),
   addLesson: async (chapterId: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.post(`/chapters/${chapterId}/lessons`, data)),
-  addCourseLesson: async (courseId: string, data: Record<string, unknown>) =>
-    getApiData(await apiClient.post(`/courses/${courseId}/lessons`, data)),
-  addLessonContentBlock: async (lessonId: string, data: Record<string, unknown>) =>
-    getApiData(await apiClient.post(`/lessons/${lessonId}/content-blocks`, data)),
+  addCourseLesson: async (courseId: string, data: Record<string, unknown>) => {
+    try {
+      return getApiData(await apiClient.post(`/courses/${courseId}/lessons`, data));
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      if (status !== 404) throw error;
+
+      const course = getApiData<{ chapters?: { id: string }[] }>(
+        await apiClient.get(`/courses/${courseId}`),
+      );
+      let chapterId = course.chapters?.[0]?.id;
+      if (!chapterId) {
+        const chapter = getApiData<{ id: string }>(
+          await apiClient.post(`/courses/${courseId}/chapters`, {
+            title: 'Lessons',
+            status: 'PUBLISHED',
+            isPreview: false,
+            isLocked: false,
+          }),
+        );
+        chapterId = chapter.id;
+      }
+      return getApiData(await apiClient.post(`/chapters/${chapterId}/lessons`, data));
+    }
+  },
+  addLessonContentBlock: async (lessonId: string, data: Record<string, unknown>) => {
+    try {
+      return getApiData(await apiClient.post(`/lessons/${lessonId}/content-blocks`, data));
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      if (status !== 404) throw error;
+
+      const type = String(data.type ?? 'FILE');
+      const blockData = (data.data ?? {}) as { text?: string; url?: string; fileName?: string; mimeType?: string };
+      const title = String(data.title ?? blockData.fileName ?? 'Lesson content');
+      if (type === 'PDF') {
+        return getApiData(await apiClient.post(`/lessons/${lessonId}/pdfs`, {
+          title,
+          url: blockData.url,
+        }));
+      }
+      if (type === 'IMAGE' || type === 'FILE') {
+        return getApiData(await apiClient.post(`/lessons/${lessonId}/attachments`, {
+          title,
+          fileName: blockData.fileName ?? title,
+          fileUrl: blockData.url,
+          mimeType: blockData.mimeType,
+        }));
+      }
+      if (type === 'VIDEO') return { success: true };
+      return getApiData(await apiClient.patch(`/lessons/${lessonId}`, {
+        content: { type, title, ...blockData },
+      }));
+    }
+  },
   updateLessonContentBlock: async (id: string, data: Record<string, unknown>) =>
     getApiData(await apiClient.patch(`/lessons/content-blocks/${id}`, data)),
   deleteLessonContentBlock: async (id: string) =>

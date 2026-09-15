@@ -1,5 +1,15 @@
 @import 'tailwindcss';
 
+.goog-te-banner-frame,
+.goog-te-balloon-frame,
+#google_translate_element {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));

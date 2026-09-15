@@ -189,14 +189,14 @@ export default function TeacherCourseContentPage() {
     );
   };
 
-  const addUploadedContentBlock = (uploaded: { fileKey: string; publicUrl?: string; fileName: string }) => {
+  const addUploadedContentBlock = (uploaded: { fileKey: string; publicUrl?: string; fileName: string; contentType: string }) => {
     if (!contentLessonId) return;
     addContentBlock.mutate({
       lessonId: contentLessonId,
       data: {
         type: contentType,
         title: contentTitle.trim() || uploaded.fileName,
-        data: { url: uploaded.publicUrl ?? uploaded.fileKey },
+        data: { url: uploaded.publicUrl ?? uploaded.fileKey, fileName: uploaded.fileName, mimeType: uploaded.contentType },
       },
     }, { onSuccess: () => { setContentTitle(''); setContentValue(''); } });
   };
