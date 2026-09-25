@@ -330,7 +330,6 @@ export const courseApi = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await apiClient.post(`/media/lessons/${lessonId}/videos`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (event) => {
         if (event.total) onUploadProgress?.(Math.round((event.loaded / event.total) * 100));
       },
@@ -341,9 +340,7 @@ export const courseApi = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('title', title);
-    const response = await apiClient.post(`/courses/${courseId}/resources/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await apiClient.post(`/courses/${courseId}/resources/upload`, formData);
     return getApiData(response);
   },
   addCourseResource: async (courseId: string, data: Record<string, unknown>) =>

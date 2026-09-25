@@ -991,20 +991,31 @@ export class CourseService {
   async addLessonContentBlock(lessonId: string, dto: CreateLessonContentBlockDto, user: AuthUser) {
     const lesson = await this.findLessonById(lessonId);
     await this.assertAccess(lesson.courseId, user);
-    const nextOrder = await this.prisma.lessonContentBlock.aggregate({
-      where: { lessonId, deletedAt: null },
-      _max: { orderIndex: true },
-    });
-    const orderIndex = dto.orderIndex ?? (nextOrder._max.orderIndex ?? -1) + 1;
-    await this.prisma.lessonContentBlock.create({
-      data: {
-        lessonId,
-        type: dto.type,
-        title: dto.title,
-        orderIndex,
-        data: dto.data as Prisma.InputJsonValue,
-      },
-    });
+    const maxAttempts = dto.orderIndex === undefined ? 5 : 1;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const currentOrder = await this.prisma.lessonContentBlock.aggregate({
+        where: { lessonId },
+        _max: { orderIndex: true },
+      });
+      const orderIndex = dto.orderIndex ?? (currentOrder._max.orderIndex ?? -1) + 1;
+
+      try {
+        await this.prisma.lessonContentBlock.create({
+          data: {
+            lessonId,
+            type: dto.type,
+            title: dto.title,
+            orderIndex,
+            data: dto.data as Prisma.InputJsonValue,
+          },
+        });
+        break;
+      } catch (error) {
+        const isUniqueConstraintError =
+          typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
+        if (!isUniqueConstraintError || attempt === maxAttempts - 1) throw error;
+      }
+    }
     return this.findLessonById(lessonId);
   }
 
